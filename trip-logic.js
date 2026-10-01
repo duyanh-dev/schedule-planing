@@ -243,7 +243,16 @@ const submitTripFormNew = () => {
             coverUrl: coverUrl,
             budget: budgetStr,
             destCur: destCur, // <--- THÊM DÒNG NÀY VÀO CHỖ TẠO MỚI
-            days: newDays
+            days: newDays,
+
+            // --- THÊM DÒNG NÀY VÀO ---
+            checklist: [
+                { id: 'c1', text: 'Hộ chiếu / CCCD / Giấy tờ tùy thân', isDone: false },
+                { id: 'c2', text: 'Quần áo & Đồ dùng cá nhân', isDone: false },
+                { id: 'c3', text: 'Sạc dự phòng & Phụ kiện điện tử', isDone: false },
+                { id: 'c4', text: 'Tiền mặt & Thẻ thanh toán (Visa/Mastercard)', isDone: false },
+                { id: 'c5', text: 'Thuốc men cơ bản (Tiêu hóa, nhức đầu)', isDone: false }
+            ]
         };
         
         state.trips.push(newTrip);

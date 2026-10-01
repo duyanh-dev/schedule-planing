@@ -1066,3 +1066,101 @@
                 }
             }
         };
+
+
+        // --- CHECKLIST LOGIC ---
+        const getTripChecklist = () => {
+            const trip = state.trips.find(t => t.id === state.activeTripId);
+            // Tương thích ngược: Nếu chuyến đi chưa có danh sách, tự tạo mặc định
+            if (!trip.checklist) {
+                trip.checklist = [
+                    { id: 'c1', text: 'Hộ chiếu / CCCD / Giấy tờ tùy thân', isDone: false },
+                    { id: 'c2', text: 'Quần áo & Đồ dùng cá nhân', isDone: false },
+                    { id: 'c3', text: 'Sạc dự phòng & Cáp sạc', isDone: false },
+                    { id: 'c4', text: 'Tiền mặt & Thẻ thanh toán', isDone: false },
+                    { id: 'c5', text: 'Thuốc men cơ bản', isDone: false }
+                ];
+                saveData();
+            }
+            return trip.checklist;
+        };
+
+        const renderChecklist = () => {
+            const checklist = getTripChecklist();
+            const container = document.getElementById('checklist-container');
+            
+            // Tính toán Progress Bar
+            const total = checklist.length;
+            const done = checklist.filter(c => c.isDone).length;
+            const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+            
+            document.getElementById('checklist-progress-bar').style.width = `${percent}%`;
+            document.getElementById('checklist-progress-text').innerText = `HOÀN THÀNH: ${percent}%`;
+            document.getElementById('checklist-count-text').innerText = `${done}/${total}`;
+
+            if (total === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm font-medium italic">Danh sách trống. Hãy thêm đồ cần chuẩn bị ở trên.</div>`;
+                return;
+            }
+
+            // In danh sách ra UI
+            container.innerHTML = checklist.map(item => `
+                <div class="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 transition-all group ${item.isDone ? 'opacity-50 bg-slate-50' : ''}">
+                    <div class="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer" onclick="toggleChecklist('${item.id}')">
+                        <div class="text-xl ${item.isDone ? 'text-emerald-500' : 'text-slate-200'} transition-colors">
+                            <i class="fa-solid ${item.isDone ? 'fa-circle-check' : 'fa-circle'}"></i>
+                        </div>
+                        <span class="text-sm font-bold truncate ${item.isDone ? 'line-through text-slate-400' : 'text-slate-800'}">${item.text}</span>
+                    </div>
+                    <button onclick="deleteChecklist('${item.id}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 flex-shrink-0">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
+        };
+
+        const openChecklistModal = () => {
+            renderChecklist();
+            document.getElementById('checklist-modal').classList.add('active');
+        };
+
+        const closeChecklistModal = () => {
+            document.getElementById('checklist-modal').classList.remove('active');
+        };
+
+        const addChecklistItem = (e) => {
+            e.preventDefault();
+            const input = document.getElementById('new-checklist-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const trip = state.trips.find(t => t.id === state.activeTripId);
+            trip.checklist.push({
+                id: 'chk_' + Math.random().toString(36).substr(2, 9),
+                text: text,
+                isDone: false
+            });
+            
+            input.value = '';
+            saveData();
+            renderChecklist();
+        };
+
+        const toggleChecklist = (id) => {
+            const trip = state.trips.find(t => t.id === state.activeTripId);
+            const item = trip.checklist.find(c => c.id === id);
+            if (item) {
+                item.isDone = !item.isDone;
+                saveData();
+                renderChecklist();
+            }
+        };
+
+        const deleteChecklist = (id) => {
+            if (confirm("Xóa mục này khỏi danh sách?")) {
+                const trip = state.trips.find(t => t.id === state.activeTripId);
+                trip.checklist = trip.checklist.filter(c => c.id !== id);
+                saveData();
+                renderChecklist();
+            }
+        };
