@@ -39,3 +39,14 @@
             width: 20px; height: 20px; border-radius: 50%; 
             background: #3b82f6; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
+
+        /* Fix Safari iOS Wheel Picker */
+        #wheel-hours li, #wheel-mins li {
+            height: 40px !important;
+            line-height: 40px !important;
+            flex-shrink: 0;
+        }
+        #wheel-hours, #wheel-mins {
+            scroll-snap-type: y mandatory;
+            -webkit-overflow-scrolling: touch;
+        }

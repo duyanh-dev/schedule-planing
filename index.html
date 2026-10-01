@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Itinerary Planner Pro</title>
+
+
+    <!-- Thư viện lịch Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script> <!-- Ngôn ngữ Tiếng Việt -->
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -64,25 +70,34 @@
     <!-- Added pt-16 to prevent header overlapping on mobile -->
     <main class="flex-1 flex flex-col h-[100dvh] overflow-hidden relative pt-16 md:pt-0 w-full bg-slate-50">
         
-        <!-- Sticky Up Next Banner -->
-        <div id="next-activity-banner" class="absolute top-20 md:top-6 left-1/2 -translate-x-1/2 z-30 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-xl shadow-slate-900/20 flex items-center gap-3 text-sm font-semibold transition-all duration-500 transform -translate-y-[150%] opacity-0 pointer-events-none w-[90%] md:w-auto max-w-md border border-slate-700">
-            <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse flex-shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+        <!-- Sticky Up Next Banner (Tinh chỉnh nhỏ gọn hơn, không vướng mắt) -->
+        <div id="next-activity-banner" class="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2.5 text-xs font-semibold transition-all duration-500 transform -translate-y-[150%] opacity-0 pointer-events-none w-[92%] max-w-sm border border-slate-700/50">
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0 shadow-[0_0_6px_rgba(52,211,153,0.8)]"></div>
             <span id="next-activity-text" class="truncate">Tiếp theo: ...</span>
         </div>
 
         <div class="flex-1 overflow-y-auto hide-scrollbar scroll-smooth relative" id="main-scroll">
             
-            <!-- Trip Header (Cover Image with Upload Feature) -->
+           <!-- Trip Header (Cover Image with Upload Feature) -->
             <div id="trip-header-container" class="relative h-64 md:h-80 w-full bg-slate-300 flex-shrink-0 overflow-hidden group">
                 <img id="trip-cover-img" src="" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Cover">
-                <div class="absolute inset-0 cover-gradient"></div>
+                <div class="absolute inset-0 cover-gradient z-0"></div>
                 
-                <!-- Upload input overlapping cover -->
-                <input type="file" id="cover-upload" accept="image/*" capture="environment" onchange="handleImageUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" title="Đổi ảnh bìa">
+                <input type="file" id="cover-upload" accept="image/*" capture="environment" onchange="handleImageUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" title="Đổi ảnh bìa">
                 
-                <div class="absolute bottom-6 left-4 md:bottom-10 md:left-8 z-10 max-w-3xl pr-4 pointer-events-none">
+                <!-- Nút Quản lý chuyến đi (Góc trên phải) -->
+                <div class="absolute top-4 right-4 z-30 flex items-center gap-2">
+                    <button onclick="editCurrentTrip()" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white flex items-center justify-center hover:bg-white/40 transition-colors shadow-sm" title="Sửa chuyến đi">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button onclick="deleteCurrentTrip()" class="w-10 h-10 rounded-full bg-red-500/80 backdrop-blur-md border border-red-500/50 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm" title="Xóa chuyến đi">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+
+                <div class="absolute bottom-16 left-4 md:bottom-20 md:left-8 z-20 max-w-3xl pr-4 pointer-events-none">
                     <span class="px-3 py-1.5 bg-blue-600/90 backdrop-blur-sm rounded-lg text-white text-[10px] font-black uppercase tracking-wider mb-3 inline-block shadow-sm">
-                        <i class="fa-solid fa-camera mr-1"></i> Chạm để đổi ảnh
+                        <i class="fa-solid fa-camera mr-1"></i> Chạm đổi ảnh bìa
                     </span>
                     <h2 id="trip-title-display" class="text-3xl md:text-5xl font-black text-white drop-shadow-md tracking-tight leading-tight">...</h2>
                 </div>
@@ -139,113 +154,122 @@
                 </div>
             </div>
         </div>
+
+        <!-- Floating Action Button (Nút Tròn Thêm HĐ ở góc dưới bên phải) -->
+        <button onclick="openActivityModal()" class="md:hidden fixed right-5 bottom-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl shadow-blue-500/50 flex items-center justify-center text-xl z-40 transition-transform active:scale-95">
+            <i class="fa-solid fa-plus"></i>
+        </button>
     </main>
 
-    <!-- Activity Modal -->
-    <div id="activity-modal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm p-3 md:p-4 flex flex-col justify-end md:justify-center">
-        <div class="modal-content bg-white rounded-3xl w-full max-w-2xl h-[90vh] md:max-h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
+  <!-- Activity Modal (Sử dụng Tiêu đề thay vì Placeholder) -->
+    <div id="activity-modal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm p-0 md:p-4 flex flex-col justify-end md:justify-center z-[5000]">
+        <div class="modal-content bg-slate-50 rounded-t-3xl md:rounded-3xl w-full max-w-2xl h-[92vh] md:max-h-[85vh] flex flex-col shadow-2xl relative overflow-hidden mt-auto md:mt-0">
             
-            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white z-10 shadow-sm">
-                <h2 id="act-modal-title" class="text-xl font-black text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-pen text-blue-500 bg-blue-50 p-2 rounded-lg"></i> Hoạt động
+            <div class="p-4 md:p-5 border-b border-slate-200 flex justify-between items-center bg-white z-10 shadow-sm sticky top-0">
+                <h2 id="act-modal-title" class="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-pen text-blue-500 bg-blue-50 p-2 rounded-lg text-sm"></i> Chi tiết hoạt động
                 </h2>
-                <button onclick="closeActivityModal()" class="w-9 h-9 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+                <button onclick="closeActivityModal()" class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <form id="activity-form" class="p-5 overflow-y-auto hide-scrollbar space-y-6 flex-1 bg-slate-50/50" onsubmit="submitActivityForm(event)">
+            <form id="activity-form" class="p-4 md:p-5 overflow-y-auto hide-scrollbar space-y-5 flex-1" onsubmit="submitActivityForm(event)">
                 <input type="hidden" id="act-id">
                 
+                <!-- Card 1: Thông tin & Thời gian -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-4">
                     <div class="space-y-1.5">
-                        <label class="text-sm font-bold text-slate-700">Tên hoạt động <span class="text-red-500">*</span></label>
-                        <input type="text" id="act-details" required placeholder="VD: Khám phá chợ đêm, Ăn hải sản..." class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-800 transition-all text-base">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Tên hoạt động <span class="text-red-500">*</span></label>
+                        <input type="text" id="act-details" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-400 outline-none font-bold text-slate-800 transition-all">
                     </div>
-
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1.5">
-                            <label class="text-sm font-bold text-slate-700">Từ giờ <span class="text-red-500">*</span></label>
-                            <input type="time" id="act-start" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-800">
+                            <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Từ giờ <span class="text-red-500">*</span></label>
+                            <input type="time" id="act-start" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-lg">
                         </div>
                         <div class="space-y-1.5">
-                            <label class="text-sm font-bold text-slate-700">Đến giờ <span class="text-red-500">*</span></label>
-                            <input type="time" id="act-end" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-800">
+                            <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Đến giờ <span class="text-red-500">*</span></label>
+                            <input type="time" id="act-end" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-lg">
                         </div>
                     </div>
-                </div>
-
-                <!-- Từ -> Đến UI with visual arrow -->
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-3">
-                    <label class="text-sm font-bold text-slate-700 block">Lịch trình di chuyển (Từ <i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i> Đến)</label>
-                    
-                    <div class="flex flex-col md:flex-row gap-3 items-center w-full">
-                        <!-- Origin -->
-                        <div class="flex-1 w-full relative">
-                            <input type="text" id="act-from" placeholder="Điểm xuất phát..." class="w-full p-3.5 pr-12 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
-                            <button type="button" onclick="openMapPicker('act-from')" class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors shadow-sm" title="Chọn trên bản đồ">
-                                <i class="fa-solid fa-map-location-dot"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Visual Arrow -->
-                        <div class="flex-shrink-0 text-slate-300 md:rotate-0 rotate-90 my-1 md:my-0">
-                            <i class="fa-solid fa-arrow-right text-xl"></i>
-                        </div>
-
-                        <!-- Destination -->
-                        <div class="flex-1 w-full relative">
-                            <input type="text" id="act-to" placeholder="Điểm đến..." class="w-full p-3.5 pr-12 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
-                            <button type="button" onclick="openMapPicker('act-to')" class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors shadow-sm" title="Chọn trên bản đồ">
-                                <i class="fa-solid fa-map-location-dot"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Phân loại & Phương tiện -->
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div class="space-y-2">
-                        <label class="text-sm font-bold text-slate-700">Phân loại</label>
-                        <div class="flex gap-2">
-                            <select id="act-icon" class="w-16 p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-center text-xl">
-                                <option value="fa-location-dot">📍</option>
-                                <option value="fa-plane">✈️</option>
-                                <option value="fa-car">🚗</option>
-                                <option value="fa-train">🚆</option>
-                                <option value="fa-utensils">🍽️</option>
-                                <option value="fa-camera">📸</option>
-                                <option value="fa-bag-shopping">🛍️</option>
-                                <option value="fa-bed">🛏️</option>
-                            </select>
-                            <select id="act-type" class="flex-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700 text-sm">
-                                <option value="Tham quan">Tham quan</option><option value="Di chuyển">Di chuyển</option>
-                                <option value="Ăn uống">Ăn uống</option><option value="Mua sắm">Mua sắm</option>
-                                <option value="Khách sạn">Khách sạn</option><option value="Khác">Khác</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="space-y-2">
-                        <label class="text-sm font-bold text-slate-700">Phương tiện</label>
-                        <select id="act-transport-select" onchange="handleTransportChange()" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700 text-sm">
-                            <option value="">Không có</option>
-                            <option value="Đi bộ">🚶 Đi bộ</option>
-                            <option value="Taxi / Grab">🚗 Taxi / Grab</option>
-                            <option value="Tàu hỏa / MRT">🚆 Tàu hỏa / MRT</option>
-                            <option value="Máy bay">✈️ Máy bay</option>
-                            <option value="other">✏️ Khác (Nhập tay)...</option>
+                    <div class="flex gap-2 pt-1">
+                        <select id="act-icon" class="w-20 p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-center text-xl">
+                            <option value="fa-location-crosshairs">📍</option>
+                            <option value="fa-plane">✈️</option>
+                            <option value="fa-car">🚗</option>
+                            <option value="fa-train">🚆</option>
+                            <option value="fa-utensils">🍽️</option>
+                            <option value="fa-camera">📸</option>
+                            <option value="fa-bag-shopping">🛍️</option>
+                            <option value="fa-bed">🛏</option>
                         </select>
-                        <!-- Hidden input for custom transport -->
-                        <input type="text" id="act-transport-input" placeholder="Nhập tên phương tiện..." class="hidden w-full mt-2 p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm transition-all">
+                        <select id="act-type" class="flex-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-700 text-sm"><option value="Tham quan">Tham quan</option><option value="Di chuyển">Di chuyển</option><option value="Ăn uống">Ăn uống</option><option value="Mua sắm">Mua sắm</option><option value="Khách sạn">Khách sạn</option><option value="Khác">Khác</option></select>
                     </div>
                 </div>
+
+                <!-- Card 2: Lịch trình & Di chuyển -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-2"><i class="fa-solid fa-map-location-dot mr-1"></i> Di chuyển & Lịch trình</label>
+                    <div class="flex flex-col gap-3 relative">
+                        <div class="absolute left-4 top-8 bottom-8 w-0.5 bg-slate-200 z-0"></div>
+                        <div class="flex items-center gap-3 relative z-10">
+                            <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-black border border-slate-200">TỪ</div>
+                            <div class="flex-1 relative">
+                                <input type="text" id="act-from" class="w-full p-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-sm">
+                                <button type="button" onclick="openMapPicker('act-from')" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-blue-500 hover:bg-blue-100 rounded-lg"><i class="fa-solid fa-location-crosshairs"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 relative z-10">
+                            <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-black border border-slate-200">ĐẾN</div>
+                            <div class="flex-1 relative">
+                                <input type="text" id="act-to" class="w-full p-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-sm">
+                                <button type="button" onclick="openMapPicker('act-to')" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-blue-500 hover:bg-blue-100 rounded-lg"><i class="fa-solid fa-location-crosshairs"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <select id="act-transport-select" onchange="handleTransportChange()" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-700 text-sm"><option value="">Phương tiện: Không có</option><option value="Đi bộ">🚶 Đi bộ</option><option value="Taxi / Grab">🚗 Taxi / Grab</option><option value="Tàu hỏa / MRT">🚆 Tàu hỏa / MRT</option><option value="Máy bay">✈️ Máy bay</option><option value="other">✏️ Khác (Nhập tay)...</option></select>
+                        <input type="text" id="act-transport-input" class="hidden w-full mt-2 p-3.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-sm">
+                    </div>
+                </div>
+
+                <!-- Card 3: Chi tiết, Hướng dẫn & Đánh giá -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <div>
+                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1.5"><i class="fa-solid fa-align-left mr-1"></i> Chi tiết hoạt động</label>
+                        <textarea id="act-desc" rows="2" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-sm text-slate-700 resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1.5"><i class="fa-solid fa-route mr-1"></i> Hướng dẫn di chuyển</label>
+                        <textarea id="act-guide" rows="2" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-sm text-slate-700 resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-black text-amber-600 uppercase tracking-wider block mb-1.5"><i class="fa-solid fa-star mr-1"></i> Ghi chú & Đánh giá</label>
+                        <textarea id="act-note" rows="2" class="w-full p-3.5 bg-amber-50/50 border border-amber-200 rounded-xl outline-none font-medium text-sm text-amber-900 resize-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- Card 4: Ngân sách Item -->
+                <div class="bg-slate-900 p-4 rounded-2xl shadow-sm space-y-3">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-sack-dollar text-emerald-400 mr-1"></i> Ngân sách Item này</label>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="flex-1 bg-slate-800 rounded-xl border border-slate-700 flex items-center px-3 focus-within:border-emerald-400 transition-all">
+                            <input type="number" id="act-budget-amount" oninput="calculateItemExchange()" class="w-full p-3 outline-none font-black text-white text-sm bg-transparent">
+                        </div>
+                        <select id="act-budget-cur" onchange="calculateItemExchange()" class="w-24 p-3 bg-slate-800 border border-slate-700 rounded-xl font-black text-white text-sm outline-none">
+                            <option value="VND">VND</option><option value="THB">THB</option><option value="JPY">JPY</option><option value="KRW">KRW</option><option value="USD">USD</option><option value="EUR">EUR</option>
+                        </select>
+                    </div>
+                    <div class="text-right text-[11px] font-bold text-emerald-400/80" id="act-budget-converted">~ 0 VND</div>
+                </div>
+
             </form>
             
-            <div class="p-4 md:p-5 flex justify-end gap-3 border-t border-slate-100 bg-white z-10">
-                <button type="button" onclick="closeActivityModal()" class="px-6 py-3 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Hủy</button>
-                <button type="button" onclick="document.getElementById('activity-form').requestSubmit()" class="px-8 py-3 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200/50 transition-transform active:scale-95 flex items-center gap-2">
-                    <i class="fa-solid fa-check"></i> Lưu lại
+            <div class="p-4 border-t border-slate-200 bg-white z-10 pb-6 md:pb-4 flex gap-3 sticky bottom-0">
+                <button type="button" onclick="closeActivityModal()" class="flex-1 py-3.5 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-sm">Hủy</button>
+                <button type="button" onclick="document.getElementById('activity-form').requestSubmit()" class="flex-[2] py-3.5 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200/50 transition-transform active:scale-95 flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-check"></i> Lưu hoạt động
                 </button>
             </div>
         </div>
@@ -324,28 +348,79 @@
         </div>
     </div>
 
-    <!-- New Trip Modal -->
-    <div id="trip-modal" class="modal-overlay fixed inset-0 bg-slate-900/80 backdrop-blur-sm p-4 items-center justify-center z-[9000]">
-        <div class="modal-content bg-white rounded-3xl w-full max-w-md shadow-2xl">
-            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-3xl">
-                <h2 class="text-lg font-black text-slate-900"><i class="fa-solid fa-plane text-blue-500 mr-2"></i> Chuyến đi mới</h2>
-                <button onclick="closeTripModal()" class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+    <!-- New/Edit Trip Modal (Nâng cấp) -->
+    <div id="trip-modal" class="modal-overlay fixed inset-0 bg-slate-900/80 backdrop-blur-sm p-0 md:p-4 flex justify-center items-end md:items-center z-[9000]">
+        <div class="modal-content bg-white rounded-t-3xl md:rounded-3xl w-full max-w-lg shadow-2xl flex flex-col max-h-[95vh] md:max-h-[90vh]">
+            
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white rounded-t-3xl sticky top-0 z-10 shadow-sm">
+                <h2 id="trip-modal-title" class="text-lg md:text-xl font-black text-slate-900 flex items-center">
+                    <i class="fa-solid fa-plane-up text-blue-500 mr-2 bg-blue-50 p-2 rounded-lg"></i> Thông tin chuyến đi
+                </h2>
+                <button onclick="closeTripModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="p-6 space-y-5">
+            
+            <div class="p-5 space-y-6 overflow-y-auto hide-scrollbar pb-8">
+                
+                <!-- 1. Tên chuyến đi (Nhập tự do) -->
                 <div class="space-y-1.5">
-                    <label class="text-sm font-bold text-slate-700">Tên chuyến đi</label>
-                    <input type="text" id="trip-title" required placeholder="VD: Khám phá Vũng Tàu..." class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-sm">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tên chuyến đi <span class="text-red-500">*</span></label>
+                    <input type="text" id="trip-title" placeholder="VD: Khám phá Vũng Tàu, Du hí Thái Lan..." class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-800 text-sm transition-all">
                 </div>
+
+                <!-- 2. Chọn điểm đến (Khu vực -> Nước) để link Tiền tệ -->
                 <div class="space-y-1.5">
-                    <label class="text-sm font-bold text-slate-700">Ngày bắt đầu</label>
-                    <input type="date" id="trip-start-date" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-sm">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Quốc gia đến (Để tính ngoại tệ)</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="trip-region" onchange="renderCountryList()" class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-semibold text-slate-700 text-sm">
+                            <!-- JS gen -->
+                        </select>
+                        <select id="trip-country" onchange="autoSetCurrency()" class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-semibold text-slate-700 text-sm">
+                            <!-- JS gen -->
+                        </select>
+                    </div>
                 </div>
+
+                <!-- 3. Lịch trình -->
                 <div class="space-y-1.5">
-                    <label class="text-sm font-bold text-slate-700">Số ngày dự kiến</label>
-                    <input type="number" id="trip-days-count" min="1" max="30" value="2" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-sm">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Khoảng thời gian <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input type="text" id="trip-date-range" placeholder="Chọn ngày đi - ngày về" class="w-full p-3.5 pl-11 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-800 text-sm cursor-pointer">
+                        <i class="fa-regular fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"></i>
+                    </div>
+                    <p class="text-[11px] font-bold text-blue-500 mt-1.5 bg-blue-50 p-2 rounded-lg" id="trip-days-preview">Hệ thống sẽ tự động tạo các ngày lịch trình.</p>
                 </div>
-                <button onclick="submitTripForm()" class="w-full py-3.5 mt-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200/50 transition-colors flex justify-center items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Tạo chuyến đi
+
+                <!-- 4. Quy đổi ngân sách (UI Clean Card) -->
+                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-4 shadow-inner">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-black text-slate-600 uppercase tracking-wider"><i class="fa-solid fa-wallet text-slate-400 mr-1"></i> Ngân sách (Tùy chọn)</label>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 bg-white rounded-xl border border-slate-200 flex items-center px-3 focus-within:ring-2 focus-within:ring-blue-500 transition-all shadow-sm">
+                            <span class="text-slate-400 font-black text-sm">₫</span>
+                            <input type="number" id="trip-budget-amount" placeholder="Nhập số tiền..." oninput="calculateExchange()" class="w-full p-3 outline-none font-black text-slate-800 text-sm bg-transparent">
+                        </div>
+                        <div class="px-4 py-3 bg-slate-200 text-slate-700 font-black rounded-xl text-sm border border-slate-300">VND</div>
+                    </div>
+                    
+                    <div class="flex justify-center -my-2 relative z-10">
+                        <div class="w-8 h-8 bg-white border border-slate-200 rounded-full flex items-center justify-center text-blue-500 shadow-sm"><i class="fa-solid fa-arrow-right-arrow-left rotate-90 text-xs"></i></div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 p-3 bg-blue-100 border border-blue-200 rounded-xl font-black text-blue-700 text-sm overflow-hidden truncate shadow-sm" id="trip-budget-converted">0</div>
+                        <select id="trip-currency-to" onchange="calculateExchange()" class="w-24 p-3 bg-white border border-slate-200 rounded-xl font-black text-slate-700 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500">
+                            <!-- JS gen -->
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="p-4 border-t border-slate-100 bg-white sticky bottom-0 z-10 pb-6 md:pb-4">
+                <button onclick="submitTripFormNew()" class="w-full py-3.5 font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2 text-sm">
+                    <i class="fa-solid fa-check"></i> <span id="trip-btn-text">Lưu chuyến đi</span>
                 </button>
             </div>
         </div>
@@ -354,7 +429,7 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="index.js"></script>
-
+<script src="trip-logic.js"></script> <!-- FILE LOGIC MỚI -->
   
 </body>
 </html>

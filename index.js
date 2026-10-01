@@ -367,20 +367,51 @@
         const renderSidebar = () => {
             const list = document.getElementById('trips-list');
             list.innerHTML = state.trips.map(trip => `
-                <button onclick="switchTrip('${trip.id}')" class="w-full text-left p-3 rounded-2xl transition-all duration-200 flex items-center gap-3 border ${state.activeTripId === trip.id ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-transparent hover:bg-slate-100 hover:border-slate-200'}">
-                    <img src="${trip.coverUrl}" class="w-12 h-12 rounded-xl object-cover flex-shrink-0 shadow-sm">
-                    <div class="flex-1 min-w-0">
-                        <h4 class="font-bold text-sm truncate ${state.activeTripId === trip.id ? 'text-blue-700' : 'text-slate-800'}">${trip.title}</h4>
-                        <p class="text-xs text-slate-500 font-medium mt-1">${trip.days.length} ngày</p>
+                <div class="flex items-center gap-1 mb-2">
+                    <button onclick="switchTrip('${trip.id}')" class="flex-1 text-left p-3 rounded-2xl transition-all duration-200 flex items-center gap-3 border ${state.activeTripId === trip.id ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-transparent hover:bg-slate-100'}">
+                        <img src="${trip.coverUrl}" class="w-10 h-10 rounded-xl object-cover flex-shrink-0 shadow-sm">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-bold text-sm truncate ${state.activeTripId === trip.id ? 'text-blue-700' : 'text-slate-800'}">${trip.title}</h4>
+                            <p class="text-[11px] text-slate-500 font-medium mt-0.5">${trip.days.length} ngày</p>
+                        </div>
+                    </button>
+                    <!-- Nút phụ Sửa / Xóa -->
+                    <div class="flex flex-col gap-1 pr-1">
+                        <button onclick="editTripFromList('${trip.id}')" class="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-blue-100 hover:text-blue-600 transition-colors" title="Sửa"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                        <button onclick="deleteTripFromList('${trip.id}')" class="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors" title="Xóa"><i class="fa-solid fa-trash text-[10px]"></i></button>
                     </div>
-                </button>
+                </div>
             `).join('');
+        };
+
+        const editTripFromList = (id) => {
+            editingTripId = id; // editingTripId nằm ở trip-logic.js
+            openTripModal(true); 
+            if(window.innerWidth < 768) toggleSidebar(); // Đóng menu nếu ở Mobile
+        };
+
+        const deleteTripFromList = (id) => {
+            if(confirm('🚨 Xóa toàn bộ chuyến đi này?')) {
+                state.trips = state.trips.filter(t => t.id !== id);
+                if(state.trips.length === 0) {
+                    state.trips.push({ id: 't_empty', title: 'Chuyến đi mới', coverUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80', days: [{ date: getRelativeDateStr(0), activities: [] }]});
+                }
+                if(state.activeTripId === id) switchTrip(state.trips[0].id);
+                else renderSidebar();
+                saveData();
+            }
         };
 
         const renderHeader = () => {
             const trip = state.trips.find(t => t.id === state.activeTripId);
             document.getElementById('trip-cover-img').src = trip.coverUrl;
-            document.getElementById('trip-title-display').innerText = trip.title;
+            
+            // Render Title và Budget (Nếu có)
+            let titleHtml = trip.title;
+            if (trip.budget) {
+                titleHtml += `<br><span class="text-sm md:text-base font-medium text-blue-200 mt-2 bg-slate-900/40 inline-block px-3 py-1 rounded-xl backdrop-blur-sm border border-white/10 shadow-sm"><i class="fa-solid fa-wallet mr-1.5"></i> Ngân sách: ${trip.budget}</span>`;
+            }
+            document.getElementById('trip-title-display').innerHTML = titleHtml;
         };
 
         const handleImageUpload = (e) => {
@@ -425,119 +456,193 @@
                     <div class="text-center py-16 px-4 md:pl-20 relative z-10">
                         <div class="w-20 h-20 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-300 mx-auto mb-4 text-4xl shadow-sm"><i class="fa-solid fa-mug-hot"></i></div>
                         <h3 class="text-xl font-black text-slate-700">Chưa có lịch trình</h3>
-                        <p class="text-slate-500 text-sm mt-2 font-medium">Bấm Thêm HĐ để lên kế hoạch cho ngày này.</p>
                     </div>`;
                 return;
             }
 
             let html = '';
-day.activities.forEach((act, index) => {
-                    const status = getActivityStatus(act, day.date);
+            let dailyTotalVND = 0; // Biến tính tổng chi tiêu trong ngày
+            const rates = typeof exchangeRates !== 'undefined' ? exchangeRates : { VND: 1, THB: 720, JPY: 170, KRW: 18.5, USD: 25000, EUR: 27500 };
+
+            day.activities.forEach((act, index) => {
+                const status = getActivityStatus(act, day.date);
                 const isDone = act.isCompleted;
 
-                // Visual From -> To format
-                // --- Cập nhật UI khối Lịch Trình Từ->Đến ---
+                // Cộng dồn chi tiêu
+                if(act.budgetAmt && !isNaN(act.budgetAmt)) {
+                    dailyTotalVND += parseFloat(act.budgetAmt) * (rates[act.budgetCur] || 1);
+                }
+
+// 1. Tuyến đường phẳng (Flat Route)
+                // --- CHUẨN BỊ GIAO DIỆN PHỤ ---
+                // (Thay thế phần nội dung bên trong day.activities.forEach)
+                
                 let routeHtml = '';
                 if (act.from && act.to) {
                     routeHtml = `
-                    <div class="mt-3 bg-blue-50/50 rounded-xl border border-blue-100/50 p-2.5 flex items-center justify-between gap-2">
-                        <div class="flex-1 min-w-0">
-                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Từ</div>
-                            <div class="text-xs font-bold text-slate-700 truncate" title="${act.from}">${act.from}</div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Từ</div>
+                                <div class="text-xs font-bold text-slate-700 truncate">${act.from}</div>
+                            </div>
+                            <i class="fa-solid fa-arrow-right-long text-slate-300"></i>
+                            <div class="flex-1 min-w-0 text-right">
+                                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Đến</div>
+                                <div class="text-xs font-bold text-slate-700 truncate">${act.to}</div>
+                            </div>
                         </div>
-                        <i class="fa-solid fa-arrow-right-long text-blue-300 flex-shrink-0"></i>
-                        <div class="flex-1 min-w-0 text-right">
-                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Đến</div>
-                            <div class="text-xs font-bold text-slate-900 truncate" title="${act.to}">${act.to}</div>
-                        </div>
+                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full py-2 bg-white border border-slate-200 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-blue-50 transition-colors shadow-sm"><i class="fa-solid fa-map-location-dot mr-1"></i> Chỉ đường Google Maps</button>
                     </div>`;
                 } else if (act.to || act.from) {
-                    const loc = act.to || act.from;
-                    routeHtml = `<div class="mt-3 bg-slate-50 rounded-xl border border-slate-100 p-2.5 text-xs font-bold text-slate-700 truncate"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${loc}</div>`;
+                    routeHtml = `<div class="bg-slate-50 border border-slate-200 p-2 rounded-lg text-xs font-bold text-slate-700"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${act.to || act.from}</div>`;
                 }
 
-                // Nút Google Maps
-                let actionHtml = '';
-                if (act.from || act.to) {
-                    actionHtml = `<button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="mt-2 w-full py-2.5 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs transition-colors border border-blue-100 flex items-center justify-center gap-1.5 shadow-sm active:scale-95"><i class="fa-solid fa-diamond-turn-right text-sm"></i> Chuyển sang Google Maps</button>`;
-                }
-
-                const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-location-dot';
+const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-location-crosshairs';
 
                 html += `
-                    <div class="relative flex gap-3 md:gap-5 group mb-6 transition-opacity duration-300 ${isDone ? 'opacity-60' : 'opacity-100'}">
-                        
-                        <!-- Desktop Time Column (Ẩn trên Mobile) -->
+<div class="relative flex gap-3 md:gap-5 group mb-8 transition-opacity duration-300 ${isDone ? 'opacity-60 grayscale-[30%]' : 'opacity-100'}">                        
+                        <!-- Cột thời gian (Được đưa ra ngoài, nằm bên trái ở Desktop) -->
                         <div class="w-16 flex-shrink-0 pt-4 text-right z-10 hidden md:block">
                             <div class="text-lg font-black ${isDone ? 'text-slate-400' : 'text-slate-800'} tracking-tight">${act.start}</div>
                             <div class="text-[13px] text-slate-400 font-bold">${act.end}</div>
                         </div>
 
-                        <!-- Timeline Node/Icon (Đã sửa Line thẳng tắp) -->
+                        <!-- Timeline Line & Node (Đổi border-4 thành ring-4 ring-white) -->
                         <div class="relative flex flex-col items-center z-10 pt-1 px-1 md:px-0">
-                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-4 border-white shadow-sm bg-blue-50 text-blue-500 z-10 relative">
-                                <i class="fa-solid ${iconClass}"></i>
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-sm ${isDone ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600'} z-10 relative ring-4 ring-white">
+                                <i class="fa-solid ${iconClass}${isDone ? '' : 'scale-110'}"></i>
                             </div>
-                            <!-- Đường kẻ dọc tự động căn giữa Icon -->
                             ${index < day.activities.length - 1 ? `<div class="absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200 -translate-x-1/2 z-0 rounded-full"></div>` : ''}
                         </div>
 
-                        <!-- Main Card -->
-                        <div class="flex-1 min-w-0 pr-1 md:pr-0">
-                            <div class="bg-white rounded-[20px] p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 transition-all hover:border-blue-300 relative overflow-hidden flex flex-col">
+<!-- TOÀN BỘ NỘI DUNG CỘT PHẢI -->
+                        <div class="flex-1 min-w-0 pr-1 md:pr-0 pb-1">
+                            
+                            <!-- Thời gian hiển thị nổi bên ngoài ở Mobile -->
+                            <div class="md:hidden flex items-center gap-2 mb-2">
+                                <span class="text-sm font-black text-slate-800">${act.start} -${act.end}</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${status.color}">${status.label}</span>
+                            </div>
+
+                            <!-- MAIN CARD (Bao bọc TẤT CẢ mọi thứ bên trong) -->
+                            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:shadow-md transition-shadow">
                                 
-                                <!-- Hàng 1: Thời gian (Mobile) & Trạng thái -->
-                                <div class="flex justify-between items-center mb-3">
-                                    <div class="md:hidden flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                                        <span class="text-[11px] font-black text-slate-700"><i class="fa-regular fa-clock text-slate-400 mr-1"></i>${act.start}</span>
-                                        <span class="text-slate-300 text-[9px]"><i class="fa-solid fa-arrow-right"></i></span>
-                                        <span class="text-[11px] font-bold text-slate-500">${act.end}</span>
+                                <!-- VÙNG 1: HEADER -->
+                                <div class="p-4 border-b border-slate-100 flex justify-between items-start gap-3 bg-white">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="hidden md:flex items-center gap-2 mb-1.5">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${status.color}">${status.label}</span>
+                                        </div>
+                                        <h3 class="text-base md:text-lg font-black leading-snug ${isDone ? 'line-through text-slate-400' : 'text-slate-800'} break-words">${act.details}</h3>
+                                        
+                                        <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                                            <span class="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase">${act.type}</span>${act.transport ? `<span class="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase"><i class="fa-solid fa-car-side mr-1"></i>${act.transport}</span>` : ''}
+                                        </div>
                                     </div>
-                                    <div class="hidden md:block">
-                                        <h3 class="text-[10px] font-black text-blue-500 uppercase tracking-wider">${act.type}</h3>
-                                    </div>
-                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border ${status.color}">
-                                        ${status.type === 'late' || status.type === 'overdue' ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>' : ''}
-                                        ${status.label}
-                                    </span>
+                                    <button onclick="toggleComplete('${act.id}')" class="text-2xl mt-1 flex-shrink-0 transition-all ${isDone ? 'text-blue-500 hover:text-slate-400' : 'text-slate-200 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-square-check' : 'fa-square'}"></i></button>
                                 </div>
 
-                                <!-- Hàng 2: Nội dung chính -->
-                                <div class="flex items-start gap-3">
-                                    <!-- Nút Checkbox bọc vừa vặn -->
-                                    <button onclick="toggleComplete('${act.id}')" class="flex-shrink-0 mt-0.5 text-2xl transition-all ${isDone ? 'text-blue-500' : 'text-slate-200 hover:text-blue-400'}">
-                                        <i class="fa-solid ${isDone ? 'fa-square-check' : 'fa-square'}"></i>
-                                    </button>
+                                <!-- VÙNG 2: CHI TIẾT & HƯỚNG DẪN (Đã được đưa vào trong thẻ Item) -->
+                                ${(act.desc || act.guide) ? `
+                                <div class="p-4 bg-slate-50/50 border-b border-slate-100 space-y-3">
+                                    ${act.desc ? `
+                                    <div>
+                                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5"><i class="fa-regular fa-comment-dots mr-1"></i>Chi tiết</div>
+                                        <p class="text-sm text-slate-700 font-medium leading-relaxed">${act.desc}</p>
+                                    </div>` : ''}
                                     
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-[15px] md:text-lg font-black leading-snug mb-1.5 ${isDone ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800'} break-words">${act.details}</p>
-                                        
-                                        <!-- Sub-tags (Mobile) -->
-                                        <div class="flex flex-wrap items-center gap-1.5">
-                                            <span class="md:hidden inline-flex items-center text-[9px] font-bold text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wide">${act.type}</span>
-                                            ${act.transport ? `
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-wide">
-                                                <i class="fa-solid fa-car-side mr-1 text-slate-400"></i>${act.transport}
-                                            </span>` : ''}
+                                    ${(act.desc && act.guide) ? `<div class="w-full h-px bg-slate-200 my-1"></div>` : ''}
+
+                                    ${act.guide ? `
+                                    <div>
+                                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5"><i class="fa-solid fa-route mr-1"></i>Hướng dẫn</div>
+                                        <p class="text-sm text-blue-600 font-medium leading-relaxed">${act.guide}</p>
+                                    </div>` : ''}
+                                </div>` : ''}
+
+                                <!-- VÙNG 3: GHI CHÚ (LƯU Ý) -->
+                                ${act.note ? `
+                                <div class="p-4 bg-amber-50/70 border-b border-amber-100/50">
+                                    <div class="text-sm font-bold text-amber-900 leading-relaxed"><i class="fa-solid fa-star text-amber-500 mr-1.5"></i>${act.note}</div>
+                                </div>` : ''}
+
+                                <!-- VÙNG 4: LỘ TRÌNH, NGÂN SÁCH & TOOLBAR -->
+                                <div class="p-4 bg-white flex flex-col gap-3">
+                                    ${routeHtml}
+                                    <div class="flex items-center justify-between mt-1">
+                                        <div>
+                                            ${act.budgetAmt ? `<span class="text-[11px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-lg"><i class="fa-solid fa-sack-dollar mr-1"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)} ${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
+                                        </div>
+                                        <div class="flex gap-4">
+                                            <button onclick="editActivity('${act.id}')" class="text-[11px] font-black text-slate-400 hover:text-blue-600 uppercase transition-colors"><i class="fa-solid fa-pen text-sm"></i></button>
+                                            <button onclick="deleteActivity('${act.id}')" class="text-[11px] font-black text-slate-400 hover:text-red-500 uppercase transition-colors"><i class="fa-solid fa-trash text-sm"></i></button>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Hàng 3: Location / Map Button -->
-                                ${routeHtml}
-                                ${actionHtml}
-
-                                <!-- Hàng 4: Thanh công cụ Edit/Delete -->
-                                <div class="mt-3 pt-3 border-t border-slate-100 flex justify-end gap-3 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onclick="editActivity('${act.id}')" class="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1"><i class="fa-solid fa-pen"></i> Sửa</button>
-                                    <button onclick="deleteActivity('${act.id}')" class="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"><i class="fa-solid fa-trash"></i> Xóa</button>
-                                </div>
-
                             </div>
                         </div>
                     </div>
                 `;
             });
+
+            // --- TẠO BẢNG TỔNG KẾT NGÀY (THỐNG KÊ CHI PHÍ) ---
+            // Parse tổng ngân sách chuyến đi để tính số dư
+            let tripBudgetVND = 0;
+            if(trip.budget) {
+                // Trip budget đang lưu dạng "5.000.000 VND"
+                const amountStr = trip.budget.replace(/[^0-9]/g, '');
+                tripBudgetVND = parseInt(amountStr) || 0;
+            }
+
+            // Tính tổng chi phí TẤT CẢ các ngày trong chuyến đi để tính đúng số dư cuối cùng
+            let totalTripSpentVND = 0;
+            trip.days.forEach(d => {
+                d.activities.forEach(a => {
+                    if(a.budgetAmt && !isNaN(a.budgetAmt)) {
+                        totalTripSpentVND += parseFloat(a.budgetAmt) * (rates[a.budgetCur] || 1);
+                    }
+                });
+            });
+
+            const remainingVND = tripBudgetVND - totalTripSpentVND;
+
+            // Render Danh sách Item có tốn phí trong ngày
+            let expenseListHtml = '';
+            day.activities.filter(a => a.budgetAmt).forEach(a => {
+                expenseListHtml += `<div class="flex justify-between items-center py-1.5 border-b border-slate-700/50 last:border-0">
+                    <span class="text-sm font-medium text-slate-300 truncate pr-4">${a.details}</span>
+                    <span class="text-sm font-black text-white whitespace-nowrap">${new Intl.NumberFormat('vi-VN').format(a.budgetAmt)} ${a.budgetCur}</span>
+                </div>`;
+            });
+            if(expenseListHtml === '') expenseListHtml = '<div class="text-xs text-slate-500 italic">Không có chi tiêu nào được ghi nhận.</div>';
+
+            html += `
+                <!-- Bảng Tổng Kết Cuối Ngày -->
+                <div class="ml-0 md:ml-16 mt-8 mb-10 bg-slate-900 rounded-[24px] p-5 md:p-6 shadow-2xl relative overflow-hidden border border-slate-800">
+                    <div class="absolute top-0 right-0 p-4 opacity-10"><i class="fa-solid fa-wallet text-6xl text-white"></i></div>
+                    
+                    <h3 class="text-emerald-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center"><i class="fa-solid fa-receipt mr-2"></i> Tổng kết chi tiêu ngày</h3>
+                    
+                    <div class="space-y-1 mb-5">
+                        ${expenseListHtml}
+                    </div>
+                    
+                    <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-400">Đã tiêu hôm nay:</span>
+                            <span class="text-base font-black text-emerald-400">~ ${new Intl.NumberFormat('vi-VN').format(dailyTotalVND)} VND</span>
+                        </div>
+                        ${tripBudgetVND > 0 ? `
+                        <div class="flex justify-between items-center border-t border-slate-700/50 pt-2 mt-2">
+                            <span class="text-xs font-bold text-slate-400">Ngân sách còn lại (Cả chuyến):</span>
+                            <span class="text-base font-black ${remainingVND >= 0 ? 'text-white' : 'text-red-400'}">${new Intl.NumberFormat('vi-VN').format(remainingVND)} VND</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
             container.innerHTML = html;
         };
 
@@ -622,11 +727,38 @@ day.activities.forEach((act, index) => {
             renderApp();
         };
 
+        let editingTripId = null; // Biến toàn cục lưu trạng thái sửa chuyến đi
+
+        const deleteCurrentTrip = () => {
+            if(confirm('🚨 Bạn có chắc chắn muốn xóa TOÀN BỘ chuyến đi này và các lịch trình bên trong không? Hành động này không thể hoàn tác!')) {
+                state.trips = state.trips.filter(t => t.id !== state.activeTripId);
+                if(state.trips.length > 0) {
+                    switchTrip(state.trips[0].id);
+                } else {
+                    // Nếu xóa hết, tự động tạo lại 1 chuyến mặc định trống
+                    state.trips.push({
+                        id: 't_empty', title: 'Chuyến đi mới', coverUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80',
+                        days: [{ date: getRelativeDateStr(0), activities: [] }]
+                    });
+                    switchTrip('t_empty');
+                }
+                saveData();
+            }
+        };
+
+        const editCurrentTrip = () => {
+            editingTripId = state.activeTripId;
+            openTripModal(true); // Truyền true để báo cho trip-logic biết là đang Edit
+        };
+
         const switchDay = (dateStr) => {
             state.activeDayDate = dateStr;
             renderDaysTabs();
             renderTimeline();
         };
+
+
+        
 
         const addNewDay = () => {
             const trip = state.trips.find(t => t.id === state.activeTripId);
@@ -693,18 +825,42 @@ day.activities.forEach((act, index) => {
             }
         };
 
-        const openActivityModal = () => {
+        // --- LOGIC XỬ LÝ FORM HOẠT ĐỘNG MỚI ---
+        const calculateItemExchange = () => {
+            const amt = parseFloat(document.getElementById('act-budget-amount').value);
+            const cur = document.getElementById('act-budget-cur').value;
+            const convertedEl = document.getElementById('act-budget-converted');
+            
+            if(isNaN(amt) || amt <= 0) {
+                convertedEl.innerText = '~ 0 VND'; return;
+            }
+            // Quy đổi ngược về VND dựa vào exchangeRates (có sẵn trong trip-logic.js)
+            // Nếu exchangeRates không được load kịp ở scope này, ta khai báo 1 mảng fallback nhanh:
+            const rates = typeof exchangeRates !== 'undefined' ? exchangeRates : { VND: 1, THB: 720, JPY: 170, KRW: 18.5, USD: 25000, EUR: 27500 };
+            const inVND = amt * (rates[cur] || 1);
+            convertedEl.innerText = '~ ' + new Intl.NumberFormat('vi-VN').format(inVND) + ' VND';
+        };
+
+       const openActivityModal = () => {
             state.editingActivityId = null;
             document.getElementById('activity-form').reset();
             document.getElementById('act-id').value = '';
             
-            // Default 1 hour from now
             const d = new Date();
             document.getElementById('act-start').value = `${String(d.getHours()).padStart(2, '0')}:00`;
             document.getElementById('act-end').value = `${String(d.getHours() + 1).padStart(2, '0')}:00`;
             
+            // LẤY TỰ ĐỘNG TIỀN TỆ TỪ TRIP CHÍNH
+            const trip = state.trips.find(t => t.id === state.activeTripId);
+            if (trip && trip.destCur) {
+                document.getElementById('act-budget-cur').value = trip.destCur;
+            } else {
+                document.getElementById('act-budget-cur').value = 'VND';
+            }
+            calculateItemExchange();
+            
             handleTransportChange(); 
-            document.getElementById('act-modal-title').innerHTML = '<i class="fa-solid fa-plus text-blue-500 bg-blue-50 p-2 rounded-lg"></i> Thêm Hoạt Động';
+            document.getElementById('act-modal-title').innerHTML = '<i class="fa-solid fa-plus text-blue-500 bg-blue-50 p-2 rounded-lg text-sm"></i> Thêm hoạt động';
             document.getElementById('activity-modal').classList.add('active');
         };
 
@@ -723,31 +879,39 @@ day.activities.forEach((act, index) => {
             document.getElementById('act-icon').value = act.icon;
             document.getElementById('act-type').value = act.type;
             
-            // Transport Logic Fix: check if it matches standard options, else set 'other'
+            document.getElementById('act-desc').value = act.desc || '';
+            document.getElementById('act-guide').value = act.guide || '';
+            document.getElementById('act-note').value = act.note || '';
+            document.getElementById('act-budget-amount').value = act.budgetAmt || '';
+            
+            // KẾ THỪA TIỀN TỆ KHI SỬA
+            if(act.budgetCur) {
+                document.getElementById('act-budget-cur').value = act.budgetCur;
+            } else if (trip && trip.destCur) {
+                document.getElementById('act-budget-cur').value = trip.destCur;
+            }
+            calculateItemExchange();
+
             const select = document.getElementById('act-transport-select');
             const input = document.getElementById('act-transport-input');
             const standardOptions = Array.from(select.options).map(o => o.value);
             
             if (!act.transport) {
-                select.value = "";
-                input.classList.add('hidden');
+                select.value = ""; input.classList.add('hidden');
             } else if (standardOptions.includes(act.transport)) {
-                select.value = act.transport;
-                input.classList.add('hidden');
+                select.value = act.transport; input.classList.add('hidden');
             } else {
-                select.value = "other";
-                input.value = act.transport;
-                input.classList.remove('hidden');
+                select.value = "other"; input.value = act.transport; input.classList.remove('hidden');
             }
             
-            document.getElementById('act-modal-title').innerHTML = '<i class="fa-solid fa-pen text-blue-500 bg-blue-50 p-2 rounded-lg"></i> Sửa Hoạt Động';
+            document.getElementById('act-modal-title').innerHTML = '<i class="fa-solid fa-pen text-blue-500 bg-blue-50 p-2 rounded-lg text-sm"></i> Sửa hoạt động';
             document.getElementById('activity-modal').classList.add('active');
         };
 
         const closeActivityModal = () => document.getElementById('activity-modal').classList.remove('active');
 
         const submitActivityForm = (e) => {
-            e.preventDefault(); // Prevent page reload
+            e.preventDefault();
             const details = document.getElementById('act-details').value;
             const start = document.getElementById('act-start').value;
             const end = document.getElementById('act-end').value;
@@ -768,6 +932,12 @@ day.activities.forEach((act, index) => {
                 icon: document.getElementById('act-icon').value,
                 type: document.getElementById('act-type').value,
                 transport: transportVal,
+                // Các trường dữ liệu mới
+                desc: document.getElementById('act-desc').value,
+                guide: document.getElementById('act-guide').value,
+                note: document.getElementById('act-note').value,
+                budgetAmt: document.getElementById('act-budget-amount').value,
+                budgetCur: document.getElementById('act-budget-cur').value,
                 isCompleted: false
             };
 
@@ -779,11 +949,9 @@ day.activities.forEach((act, index) => {
             } else {
                 day.activities.push(newAct);
             }
-            // Sort by start time
             day.activities.sort((a, b) => a.start.localeCompare(b.start));
-
-            saveData(); // <--- THÊM DÒNG NÀY VÀO ĐÂY
             
+            saveData();
             closeActivityModal();
             renderApp();
         };
@@ -838,43 +1006,7 @@ day.activities.forEach((act, index) => {
 
         // --- NEW TRIP MODAL ---
         const tripModal = document.getElementById('trip-modal');
-        const openTripModal = () => {
-            document.getElementById('trip-title').value = '';
-            document.getElementById('trip-start-date').value = getRelativeDateStr(0);
-            document.getElementById('trip-days-count').value = 2;
-            tripModal.classList.add('active');
-        };
-        const closeTripModal = () => tripModal.classList.remove('active');
 
-        const submitTripForm = () => {
-            const title = document.getElementById('trip-title').value;
-            const startDateStr = document.getElementById('trip-start-date').value;
-            const daysCount = parseInt(document.getElementById('trip-days-count').value);
-            
-            if(!title || !startDateStr) return alert("Điền đủ thông tin");
-
-            const newDays = [];
-            const startD = new Date(startDateStr);
-            for(let i=0; i<daysCount; i++) {
-                const d = new Date(startD);
-                d.setDate(d.getDate() + i);
-                newDays.push({
-                    date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-                    activities: []
-                });
-            }
-
-            const newTrip = {
-                id: 'trip_' + Math.random().toString(36).substr(2, 9),
-                title: title,
-                coverUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80',
-                days: newDays
-            };
-            state.trips.push(newTrip);
-            saveData(); // <--- THÊM DÒNG NÀY VÀO ĐÂY
-            closeTripModal();
-            switchTrip(newTrip.id);
-        };
 
         // --- INITIALIZATION ---
         // Run loop to check times continuously if not simulating
