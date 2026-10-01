@@ -47,6 +47,68 @@
             ]
         };
 
+        // --- CUSTOM IOS TIME PICKER LOGIC ---
+        let currentPickerTarget = null;
+
+        const generateWheelOptions = () => {
+            let hoursHtml = '';
+            for(let i=0; i<24; i++) hoursHtml += `<li class="h-[40px] snap-center flex items-center justify-center cursor-pointer">${String(i).padStart(2,'0')}</li>`;
+            
+            let minsHtml = '';
+            for(let i=0; i<60; i++) minsHtml += `<li class="h-[40px] snap-center flex items-center justify-center cursor-pointer">${String(i).padStart(2,'0')}</li>`;
+
+            document.getElementById('wheel-hours').innerHTML = hoursHtml;
+            document.getElementById('wheel-mins').innerHTML = minsHtml;
+        };
+
+        const openTimePicker = (inputId) => {
+            currentPickerTarget = document.getElementById(inputId);
+            let [h, m] = currentPickerTarget.value.split(':');
+            h = h ? parseInt(h) : new Date().getHours();
+            m = m ? parseInt(m) : 0;
+
+            const modal = document.getElementById('ios-time-picker-modal');
+            const modalContent = modal.querySelector('div');
+            
+            modal.classList.remove('hidden');
+            
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('translate-y-full');
+                
+                // Cuộn tới giờ hiện tại (mỗi item cao 40px)
+                document.getElementById('wheel-hours').scrollTop = h * 40;
+                document.getElementById('wheel-mins').scrollTop = m * 40;
+            }, 10);
+        };
+
+        const closeTimePicker = () => {
+            const modal = document.getElementById('ios-time-picker-modal');
+            const modalContent = modal.querySelector('div');
+            
+            modal.classList.add('opacity-0');
+            modalContent.classList.add('translate-y-full');
+            
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+
+        const confirmTimePicker = () => {
+            const hourEl = document.getElementById('wheel-hours');
+            const minEl = document.getElementById('wheel-mins');
+            
+            // Tính toán vị trí cuộn để ra giờ
+            let h = Math.round(hourEl.scrollTop / 40);
+            let m = Math.round(minEl.scrollTop / 40);
+            
+            h = Math.max(0, Math.min(23, h));
+            m = Math.max(0, Math.min(59, m));
+            
+            if (currentPickerTarget) {
+                currentPickerTarget.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            }
+            closeTimePicker();
+        };
+
         // Get the current calculating time (Real or Simulated)
         const getCurrentTime = () => {
             if (state.isSimulating) {
@@ -369,94 +431,108 @@
             }
 
             let html = '';
-            day.activities.forEach(act => {
-                const status = getActivityStatus(act, day.date);
+day.activities.forEach((act, index) => {
+                    const status = getActivityStatus(act, day.date);
                 const isDone = act.isCompleted;
 
                 // Visual From -> To format
+                // --- Cập nhật UI khối Lịch Trình Từ->Đến ---
                 let routeHtml = '';
                 if (act.from && act.to) {
-                    routeHtml = `<div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-slate-700 font-semibold text-sm truncate max-w-[120px] md:max-w-[200px]" title="${act.from}">${act.from}</span> 
-                        <i class="fa-solid fa-arrow-right text-[10px] text-blue-400"></i> 
-                        <span class="text-slate-900 font-bold text-sm truncate max-w-[120px] md:max-w-[200px]" title="${act.to}">${act.to}</span>
+                    routeHtml = `
+                    <div class="mt-3 bg-blue-50/50 rounded-xl border border-blue-100/50 p-2.5 flex items-center justify-between gap-2">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Từ</div>
+                            <div class="text-xs font-bold text-slate-700 truncate" title="${act.from}">${act.from}</div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right-long text-blue-300 flex-shrink-0"></i>
+                        <div class="flex-1 min-w-0 text-right">
+                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Đến</div>
+                            <div class="text-xs font-bold text-slate-900 truncate" title="${act.to}">${act.to}</div>
+                        </div>
                     </div>`;
                 } else if (act.to || act.from) {
                     const loc = act.to || act.from;
-                    routeHtml = `<div class="flex items-center gap-1.5 text-sm text-slate-800 font-semibold"><i class="fa-solid fa-location-dot text-slate-400"></i> ${loc}</div>`;
+                    routeHtml = `<div class="mt-3 bg-slate-50 rounded-xl border border-slate-100 p-2.5 text-xs font-bold text-slate-700 truncate"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${loc}</div>`;
+                }
+
+                // Nút Google Maps
+                let actionHtml = '';
+                if (act.from || act.to) {
+                    actionHtml = `<button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="mt-2 w-full py-2.5 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs transition-colors border border-blue-100 flex items-center justify-center gap-1.5 shadow-sm active:scale-95"><i class="fa-solid fa-diamond-turn-right text-sm"></i> Chuyển sang Google Maps</button>`;
                 }
 
                 const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-location-dot';
 
                 html += `
-                    <div class="relative flex gap-3 md:gap-6 group mb-8 transition-opacity duration-300 ${isDone ? 'opacity-60' : 'opacity-100'}">
+                    <div class="relative flex gap-3 md:gap-5 group mb-6 transition-opacity duration-300 ${isDone ? 'opacity-60' : 'opacity-100'}">
                         
-                        <!-- Desktop Time Column -->
-                        <div class="w-16 md:w-20 flex-shrink-0 pt-4 text-right z-10 hidden md:block">
+                        <!-- Desktop Time Column (Ẩn trên Mobile) -->
+                        <div class="w-16 flex-shrink-0 pt-4 text-right z-10 hidden md:block">
                             <div class="text-lg font-black ${isDone ? 'text-slate-400' : 'text-slate-800'} tracking-tight">${act.start}</div>
                             <div class="text-[13px] text-slate-400 font-bold">${act.end}</div>
                         </div>
 
-                        <!-- Timeline Node/Icon -->
-                        <div class="relative flex flex-col items-center z-10 pt-3 md:pt-2 px-1 md:px-0">
-                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-4 border-[#F8FAFC] shadow-sm bg-white text-slate-500 transition-transform duration-300 group-hover:scale-110 group-hover:text-blue-600 group-hover:border-blue-100 text-lg md:text-xl">
+                        <!-- Timeline Node/Icon (Đã sửa Line thẳng tắp) -->
+                        <div class="relative flex flex-col items-center z-10 pt-1 px-1 md:px-0">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-4 border-white shadow-sm bg-blue-50 text-blue-500 z-10 relative">
                                 <i class="fa-solid ${iconClass}"></i>
                             </div>
+                            <!-- Đường kẻ dọc tự động căn giữa Icon -->
+                            ${index < day.activities.length - 1 ? `<div class="absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200 -translate-x-1/2 z-0 rounded-full"></div>` : ''}
                         </div>
 
                         <!-- Main Card -->
-                        <div class="flex-1 min-w-0 pr-2 md:pr-0">
-                            <div class="bg-white rounded-3xl p-4 md:p-6 shadow-sm border border-slate-100 transition-all hover:border-blue-300 hover:shadow-md relative overflow-hidden">
+                        <div class="flex-1 min-w-0 pr-1 md:pr-0">
+                            <div class="bg-white rounded-[20px] p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 transition-all hover:border-blue-300 relative overflow-hidden flex flex-col">
                                 
-                                <div class="flex flex-wrap gap-2 justify-between items-start mb-3">
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <!-- Mobile Time Badge -->
-                                        <div class="md:hidden inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
-                                            <i class="fa-regular fa-clock"></i> ${act.start} - ${act.end}
-                                        </div>
-                                        
-                                        <!-- Real-time Status Tag -->
-                                        <span class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border ${status.color}">
-                                            ${status.type === 'late' || status.type === 'overdue' ? '<i class="fa-solid fa-triangle-exclamation mr-1.5"></i>' : ''}
-                                            ${status.label}
-                                        </span>
-                                        
-                                        <!-- Transport Tag -->
-                                        ${act.transport ? `
-                                        <span class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-slate-50 text-slate-600 border border-slate-200">
-                                            <i class="fa-solid fa-car-side mr-1.5 text-slate-400"></i>${act.transport}
-                                        </span>` : ''}
+                                <!-- Hàng 1: Thời gian (Mobile) & Trạng thái -->
+                                <div class="flex justify-between items-center mb-3">
+                                    <div class="md:hidden flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                        <span class="text-[11px] font-black text-slate-700"><i class="fa-regular fa-clock text-slate-400 mr-1"></i>${act.start}</span>
+                                        <span class="text-slate-300 text-[9px]"><i class="fa-solid fa-arrow-right"></i></span>
+                                        <span class="text-[11px] font-bold text-slate-500">${act.end}</span>
                                     </div>
-                                    
-                                    <!-- Action Buttons -->
-                                    <div class="flex items-center gap-1 bg-slate-50 rounded-xl p-1 md:opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100">
-                                        <button onclick="editActivity('${act.id}')" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg shadow-sm transition-all" title="Sửa"><i class="fa-solid fa-pen text-sm"></i></button>
-                                        <button onclick="deleteActivity('${act.id}')" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-white rounded-lg shadow-sm transition-all" title="Xóa"><i class="fa-solid fa-trash text-sm"></i></button>
+                                    <div class="hidden md:block">
+                                        <h3 class="text-[10px] font-black text-blue-500 uppercase tracking-wider">${act.type}</h3>
                                     </div>
+                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border ${status.color}">
+                                        ${status.type === 'late' || status.type === 'overdue' ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>' : ''}
+                                        ${status.label}
+                                    </span>
                                 </div>
 
-                                <div class="flex items-start gap-4">
-                                    <!-- Big Checkbox -->
-                                    <button onclick="toggleComplete('${act.id}')" class="flex-shrink-0 mt-0.5 text-3xl transition-all ${isDone ? 'text-blue-500 hover:text-slate-400' : 'text-slate-200 hover:text-blue-400'}">
+                                <!-- Hàng 2: Nội dung chính -->
+                                <div class="flex items-start gap-3">
+                                    <!-- Nút Checkbox bọc vừa vặn -->
+                                    <button onclick="toggleComplete('${act.id}')" class="flex-shrink-0 mt-0.5 text-2xl transition-all ${isDone ? 'text-blue-500' : 'text-slate-200 hover:text-blue-400'}">
                                         <i class="fa-solid ${isDone ? 'fa-square-check' : 'fa-square'}"></i>
                                     </button>
                                     
                                     <div class="flex-1 min-w-0">
-                                        <h3 class="text-[11px] font-bold text-blue-500 uppercase tracking-wider mb-1">${act.type}</h3>
-                                        <p class="text-lg md:text-xl font-black leading-tight mb-3 ${isDone ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800'} break-words">${act.details}</p>
+                                        <p class="text-[15px] md:text-lg font-black leading-snug mb-1.5 ${isDone ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800'} break-words">${act.details}</p>
                                         
-                                        <!-- Origin -> Dest Display -->
-                                        ${routeHtml ? `
-                                        <div class="flex flex-wrap items-center gap-2 mt-2">
-                                            <div class="bg-blue-50/50 px-4 py-2.5 rounded-xl border border-blue-100/50 inline-block">
-                                                ${routeHtml}
-                                            </div>
-                                            <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="px-3 py-2.5 bg-slate-100 hover:bg-blue-100 text-blue-600 rounded-xl font-bold text-xs transition-colors border border-slate-200 hover:border-blue-200 flex items-center gap-1.5 shadow-sm active:scale-95">
-                                                <i class="fa-solid fa-diamond-turn-right text-sm"></i> Chỉ đường
-                                            </button>
-                                        </div>` : ''}
+                                        <!-- Sub-tags (Mobile) -->
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <span class="md:hidden inline-flex items-center text-[9px] font-bold text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wide">${act.type}</span>
+                                            ${act.transport ? `
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-wide">
+                                                <i class="fa-solid fa-car-side mr-1 text-slate-400"></i>${act.transport}
+                                            </span>` : ''}
+                                        </div>
                                     </div>
                                 </div>
+                                
+                                <!-- Hàng 3: Location / Map Button -->
+                                ${routeHtml}
+                                ${actionHtml}
+
+                                <!-- Hàng 4: Thanh công cụ Edit/Delete -->
+                                <div class="mt-3 pt-3 border-t border-slate-100 flex justify-end gap-3 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onclick="editActivity('${act.id}')" class="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1"><i class="fa-solid fa-pen"></i> Sửa</button>
+                                    <button onclick="deleteActivity('${act.id}')" class="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"><i class="fa-solid fa-trash"></i> Xóa</button>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -720,12 +796,13 @@
 
             trip.days.forEach((day, idx) => {
                 html += `
-                <div class="mb-8">
-                    <div class="sticky top-0 bg-slate-50 py-3 z-10 border-b border-slate-200 mb-4 flex items-baseline gap-2">
+                <div class="mb-8 relative">
+                    <!-- Đã sửa sticky: bg-white và z-20 -->
+                    <div class="sticky top-0 bg-slate-50/95 backdrop-blur-md py-3 z-20 border-b border-slate-200 mb-4 flex items-baseline gap-2">
                         <span class="font-black text-slate-900 text-lg">Ngày ${idx + 1}</span>
-                        <span class="text-slate-400 font-semibold text-sm">${formatDisplayDate(day.date)}</span>
+                        <span class="text-slate-500 font-bold text-sm">${formatDisplayDate(day.date)}</span>
                     </div>
-                    <div class="space-y-3">
+                    <div class="space-y-3 relative z-10">
                 `;
                 
                 if(day.activities.length === 0) {
