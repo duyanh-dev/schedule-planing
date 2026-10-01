@@ -118,7 +118,7 @@
                     <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4">
                         
                         <!-- Time Simulator -->
-                        <div class="flex-1 w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                        <!-- <div class="flex-1 w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="text-xs font-bold text-slate-500 flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" id="sim-toggle" onchange="toggleSimulator()" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
@@ -129,7 +129,7 @@
                                 </span>
                             </div>
                             <input type="range" id="sim-slider" min="0" max="1439" value="480" disabled oninput="updateSimulatedTime()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none disabled:opacity-50 transition-opacity">
-                        </div>
+                        </div> -->
 
                         <!-- Action Buttons -->
                         <div class="flex items-center gap-3 w-full md:w-auto">
@@ -364,7 +364,7 @@
                         <div class="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <span class="text-white font-bold text-sm flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/30"><i class="fa-solid fa-camera"></i> Chọn hoặc Chụp ảnh</span>
                         </div>
-                        <input type="file" id="trip-modal-cover-upload" accept="image/*" capture="environment" onchange="handleModalImageUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                        <input type="file" id="trip-modal-cover-upload" accept="image/*" onchange="handleModalImageUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                         <input type="hidden" id="trip-cover-url" value="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80">
                     </div>
                 </div>
