@@ -1,0 +1,41 @@
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+        
+        /* Hide scrollbars for clean UI but allow scrolling */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Smooth Modals */
+        .modal-overlay { 
+            transition: opacity 0.3s ease, visibility 0.3s; 
+            opacity: 0; visibility: hidden; z-index: 9999; 
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { 
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            transform: scale(0.95) translateY(20px); 
+        }
+        .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
+
+        /* Timeline vertical line behind elements */
+        .timeline-line::before {
+            content: ''; position: absolute; top: 2rem; bottom: 0; left: 1.5rem; width: 2px;
+            background-color: #e2e8f0; z-index: 0;
+        }
+        @media (min-width: 768px) { .timeline-line::before { left: 4.5rem; width: 3px; } }
+
+        /* Leaflet Map specific fixes */
+        /* #picker-map { height: 100%; width: 100%; z-index: 10; } */
+        
+        /* UI Gradients */
+        .cover-gradient { background: linear-gradient(to top, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.3) 60%, transparent 100%); }
+        
+        /* Custom range slider */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px; border-radius: 50%; 
+            background: #3b82f6; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
