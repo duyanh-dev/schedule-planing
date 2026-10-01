@@ -21,11 +21,11 @@
         .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
 
         /* Timeline vertical line behind elements */
-        .timeline-line::before {
+        /* .timeline-line::before {
             content: ''; position: absolute; top: 2rem; bottom: 0; left: 1.5rem; width: 2px;
             background-color: #e2e8f0; z-index: 0;
         }
-        @media (min-width: 768px) { .timeline-line::before { left: 4.5rem; width: 3px; } }
+        @media (min-width: 768px) { .timeline-line::before { left: 4.5rem; width: 3px; } } */
 
         /* Leaflet Map specific fixes */
         /* #picker-map { height: 100%; width: 100%; z-index: 10; } */
