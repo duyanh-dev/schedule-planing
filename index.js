@@ -406,10 +406,18 @@
             const trip = state.trips.find(t => t.id === state.activeTripId);
             document.getElementById('trip-cover-img').src = trip.coverUrl;
             
-            // Render Title và Budget (Nếu có)
             let titleHtml = trip.title;
             if (trip.budget) {
-                titleHtml += `<br><span class="text-sm md:text-base font-medium text-blue-200 mt-2 bg-slate-900/40 inline-block px-3 py-1 rounded-xl backdrop-blur-sm border border-white/10 shadow-sm"><i class="fa-solid fa-wallet mr-1.5"></i> Ngân sách: ${trip.budget}</span>`;
+                const amt = parseInt(trip.budget.replace(/[^0-9]/g, '')) || 0;
+                let foreignHtml = '';
+                
+                // Nếu có đổi ngoại tệ, hiển thị thêm ở Header
+                if(trip.destCur && trip.destCur !== 'VND' && typeof exchangeRates !== 'undefined' && exchangeRates[trip.destCur]) {
+                    const foreignAmt = amt / exchangeRates[trip.destCur];
+                    foreignHtml = `<span class="text-white/40 mx-2"></span><span class="text-emerald-300 font-black">≈ ${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(foreignAmt)} ${trip.destCur}</span>`;
+                }
+                
+                titleHtml += `<br><div class="mt-2.5 inline-flex items-center bg-slate-900/70 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 shadow-sm"><i class="fa-solid fa-wallet text-emerald-400 mr-2"></i> <span class="text-sm md:text-base font-bold text-white">${trip.budget}</span> ${foreignHtml}</div>`;
             }
             document.getElementById('trip-title-display').innerHTML = titleHtml;
         };
@@ -438,7 +446,7 @@
 
                 return `
                     <button onclick="switchDay('${day.date}')" class="flex-shrink-0 h-16 px-5 md:px-6 rounded-2xl transition-all border-2 text-left relative group flex flex-col justify-center ${isActive ? 'border-blue-500 bg-blue-50/60 shadow-sm' : 'border-slate-100 bg-white hover:border-slate-300'}">
-                        ${isRealToday ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm z-10">NAY</div>` : ''}
+                        ${isRealToday ? `<div class="absolute top-0 right-0 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg rounded-tr-xl shadow-sm z-10">NAY</div>` : ''}
                         <div class="text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-500'} mb-1">Ngày ${idx + 1}</div>
                         <div class="font-bold text-sm ${isActive ? 'text-slate-900' : 'text-slate-600'}">${formatDisplayDate(day.date)}</div>
                     </button>
@@ -456,12 +464,13 @@
                     <div class="text-center py-16 px-4 md:pl-20 relative z-10">
                         <div class="w-20 h-20 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-300 mx-auto mb-4 text-4xl shadow-sm"><i class="fa-solid fa-mug-hot"></i></div>
                         <h3 class="text-xl font-black text-slate-700">Chưa có lịch trình</h3>
+                        <p class="text-slate-500 text-sm mt-2 font-medium">Bấm Thêm HĐ để lên kế hoạch cho ngày này.</p>
                     </div>`;
                 return;
             }
 
             let html = '';
-            let dailyTotalVND = 0; // Biến tính tổng chi tiêu trong ngày
+            let dailyTotalVND = 0; 
             const rates = typeof exchangeRates !== 'undefined' ? exchangeRates : { VND: 1, THB: 720, JPY: 170, KRW: 18.5, USD: 25000, EUR: 27500 };
 
             day.activities.forEach((act, index) => {
@@ -473,55 +482,54 @@
                     dailyTotalVND += parseFloat(act.budgetAmt) * (rates[act.budgetCur] || 1);
                 }
 
-// 1. Tuyến đường phẳng (Flat Route)
-                // --- CHUẨN BỊ GIAO DIỆN PHỤ ---
-                // (Thay thế phần nội dung bên trong day.activities.forEach)
-                
+                // Sửa icon (fix lỗi dính chữ)
+                const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-location-crosshairs';
+
+                // Lộ trình hiển thị
                 let routeHtml = '';
                 if (act.from && act.to) {
                     routeHtml = `
                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
-                        <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-start justify-between gap-3">
                             <div class="flex-1 min-w-0">
-                                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Từ</div>
-                                <div class="text-xs font-bold text-slate-700 truncate">${act.from}</div>
+                                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Từ</div>
+                                <div class="text-xs font-bold text-slate-700 break-words leading-relaxed">${act.from}</div>
                             </div>
-                            <i class="fa-solid fa-arrow-right-long text-slate-300"></i>
+                            <div class="pt-3 text-slate-300 flex-shrink-0"><i class="fa-solid fa-arrow-right-long"></i></div>
                             <div class="flex-1 min-w-0 text-right">
-                                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Đến</div>
-                                <div class="text-xs font-bold text-slate-700 truncate">${act.to}</div>
+                                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Đến</div>
+                                <div class="text-xs font-bold text-slate-700 break-words leading-relaxed">${act.to}</div>
                             </div>
                         </div>
-                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full py-2 bg-white border border-slate-200 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-blue-50 transition-colors shadow-sm"><i class="fa-solid fa-map-location-dot mr-1"></i> Chỉ đường Google Maps</button>
+                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full py-2 bg-white border border-slate-200 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-blue-50 transition-colors shadow-sm mt-1"><i class="fa-solid fa-map-location-dot mr-1"></i> Chỉ đường Google Maps</button>
                     </div>`;
                 } else if (act.to || act.from) {
-                    routeHtml = `<div class="bg-slate-50 border border-slate-200 p-2 rounded-lg text-xs font-bold text-slate-700"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${act.to || act.from}</div>`;
+                    routeHtml = `<div class="bg-slate-50 border border-slate-200 p-2.5 rounded-lg text-xs font-bold text-slate-700 break-words leading-relaxed"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${act.to || act.from}</div>`;
                 }
 
-const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-location-crosshairs';
-
                 html += `
-<div class="relative flex gap-3 md:gap-5 group mb-8 transition-opacity duration-300 ${isDone ? 'opacity-60 grayscale-[30%]' : 'opacity-100'}">                        
-                        <!-- Cột thời gian (Được đưa ra ngoài, nằm bên trái ở Desktop) -->
+                    <div class="relative flex gap-3 md:gap-5 group mb-8 transition-opacity duration-300 ${isDone ? 'opacity-60 grayscale-[30%]' : 'opacity-100'}">
+                        
+                        <!-- Cột thời gian Desktop -->
                         <div class="w-16 flex-shrink-0 pt-4 text-right z-10 hidden md:block">
                             <div class="text-lg font-black ${isDone ? 'text-slate-400' : 'text-slate-800'} tracking-tight">${act.start}</div>
                             <div class="text-[13px] text-slate-400 font-bold">${act.end}</div>
                         </div>
 
-                        <!-- Timeline Line & Node (Đổi border-4 thành ring-4 ring-white) -->
+                        <!-- Timeline Line & Node -->
                         <div class="relative flex flex-col items-center z-10 pt-1 px-1 md:px-0">
                             <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-sm ${isDone ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600'} z-10 relative ring-4 ring-white">
-                                <i class="fa-solid ${iconClass}${isDone ? '' : 'scale-110'}"></i>
+                                <i class="fa-solid ${iconClass} ${isDone ? '' : 'scale-110'}"></i>
                             </div>
                             ${index < day.activities.length - 1 ? `<div class="absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200 -translate-x-1/2 z-0 rounded-full"></div>` : ''}
                         </div>
 
-<!-- TOÀN BỘ NỘI DUNG CỘT PHẢI -->
+                        <!-- TOÀN BỘ NỘI DUNG CỘT PHẢI -->
                         <div class="flex-1 min-w-0 pr-1 md:pr-0 pb-1">
                             
                             <!-- Thời gian hiển thị nổi bên ngoài ở Mobile -->
                             <div class="md:hidden flex items-center gap-2 mb-2">
-                                <span class="text-sm font-black text-slate-800">${act.start} -${act.end}</span>
+                                <span class="text-sm font-black text-slate-800">${act.start} - ${act.end}</span>
                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${status.color}">${status.label}</span>
                             </div>
 
@@ -537,13 +545,14 @@ const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-locati
                                         <h3 class="text-base md:text-lg font-black leading-snug ${isDone ? 'line-through text-slate-400' : 'text-slate-800'} break-words">${act.details}</h3>
                                         
                                         <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                                            <span class="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase">${act.type}</span>${act.transport ? `<span class="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase"><i class="fa-solid fa-car-side mr-1"></i>${act.transport}</span>` : ''}
+                                            <span class="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase">${act.type}</span>
+                                            ${act.transport ? `<span class="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase"><i class="fa-solid fa-car-side mr-1"></i>${act.transport}</span>` : ''}
                                         </div>
                                     </div>
                                     <button onclick="toggleComplete('${act.id}')" class="text-2xl mt-1 flex-shrink-0 transition-all ${isDone ? 'text-blue-500 hover:text-slate-400' : 'text-slate-200 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-square-check' : 'fa-square'}"></i></button>
                                 </div>
 
-                                <!-- VÙNG 2: CHI TIẾT & HƯỚNG DẪN (Đã được đưa vào trong thẻ Item) -->
+                                <!-- VÙNG 2: CHI TIẾT & HƯỚNG DẪN -->
                                 ${(act.desc || act.guide) ? `
                                 <div class="p-4 bg-slate-50/50 border-b border-slate-100 space-y-3">
                                     ${act.desc ? `
@@ -561,7 +570,7 @@ const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-locati
                                     </div>` : ''}
                                 </div>` : ''}
 
-                                <!-- VÙNG 3: GHI CHÚ (LƯU Ý) -->
+                                <!-- VÙNG 3: GHI CHÚ -->
                                 ${act.note ? `
                                 <div class="p-4 bg-amber-50/70 border-b border-amber-100/50">
                                     <div class="text-sm font-bold text-amber-900 leading-relaxed"><i class="fa-solid fa-star text-amber-500 mr-1.5"></i>${act.note}</div>
@@ -572,7 +581,7 @@ const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-locati
                                     ${routeHtml}
                                     <div class="flex items-center justify-between mt-1">
                                         <div>
-                                            ${act.budgetAmt ? `<span class="text-[11px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-lg"><i class="fa-solid fa-sack-dollar mr-1"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)} ${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
+                                            ${act.budgetAmt ? `<span class="text-[11px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-lg"><i class="fa-solid fa-sack-dollar mr-1"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)}${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
                                         </div>
                                         <div class="flex gap-4">
                                             <button onclick="editActivity('${act.id}')" class="text-[11px] font-black text-slate-400 hover:text-blue-600 uppercase transition-colors"><i class="fa-solid fa-pen text-sm"></i></button>
@@ -605,22 +614,28 @@ const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-locati
                 });
             });
 
+            // Tính số dư kép (VND và Ngoại Tệ)
             const remainingVND = tripBudgetVND - totalTripSpentVND;
+            const destCur = trip.destCur || 'VND';
+            const destRate = rates[destCur] || 1;
+            
+            const dailyTotalForeign = dailyTotalVND / destRate;
+            const remainingForeign = remainingVND / destRate;
 
-            // Render Danh sách Item có tốn phí trong ngày
+            // Render Danh sách Item
             let expenseListHtml = '';
             day.activities.filter(a => a.budgetAmt).forEach(a => {
-                expenseListHtml += `<div class="flex justify-between items-center py-1.5 border-b border-slate-700/50 last:border-0">
+                expenseListHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-700/50 last:border-0">
                     <span class="text-sm font-medium text-slate-300 truncate pr-4">${a.details}</span>
                     <span class="text-sm font-black text-white whitespace-nowrap">${new Intl.NumberFormat('vi-VN').format(a.budgetAmt)} ${a.budgetCur}</span>
                 </div>`;
             });
-            if(expenseListHtml === '') expenseListHtml = '<div class="text-xs text-slate-500 italic">Không có chi tiêu nào được ghi nhận.</div>';
+            if(expenseListHtml === '') expenseListHtml = '<div class="text-xs text-slate-500 italic py-2">Không có chi tiêu nào được ghi nhận.</div>';
 
             html += `
-                <!-- Bảng Tổng Kết Cuối Ngày -->
+                <!-- Bảng Tổng Kết Cuối Ngày (Hiển thị 2 loại tiền) -->
                 <div class="ml-0 md:ml-16 mt-8 mb-10 bg-slate-900 rounded-[24px] p-5 md:p-6 shadow-2xl relative overflow-hidden border border-slate-800">
-                    <div class="absolute top-0 right-0 p-4 opacity-10"><i class="fa-solid fa-wallet text-6xl text-white"></i></div>
+                    <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><i class="fa-solid fa-wallet text-6xl text-white"></i></div>
                     
                     <h3 class="text-emerald-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center"><i class="fa-solid fa-receipt mr-2"></i> Tổng kết chi tiêu ngày</h3>
                     
@@ -628,15 +643,20 @@ const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-locati
                         ${expenseListHtml}
                     </div>
                     
-                    <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700 space-y-2">
+                    <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700 space-y-3">
                         <div class="flex justify-between items-center">
                             <span class="text-xs font-bold text-slate-400">Đã tiêu hôm nay:</span>
-                            <span class="text-base font-black text-emerald-400">~ ${new Intl.NumberFormat('vi-VN').format(dailyTotalVND)} VND</span>
+                            <div class="text-right">
+                                <div class="text-base font-black text-emerald-400">~ ${new Intl.NumberFormat('vi-VN').format(dailyTotalVND)} VND</div>
+                                ${destCur !== 'VND' ? `<div class="text-xs font-bold text-emerald-400/60 mt-0.5">${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(dailyTotalForeign)}${destCur}</div>` : ''}
+                            </div>
                         </div>
                         ${tripBudgetVND > 0 ? `
-                        <div class="flex justify-between items-center border-t border-slate-700/50 pt-2 mt-2">
-                            <span class="text-xs font-bold text-slate-400">Ngân sách còn lại (Cả chuyến):</span>
-                            <span class="text-base font-black ${remainingVND >= 0 ? 'text-white' : 'text-red-400'}">${new Intl.NumberFormat('vi-VN').format(remainingVND)} VND</span>
+                        <div class="flex justify-between items-center border-t border-slate-700/50 pt-3 mt-1">
+                            <span class="text-xs font-bold text-slate-400">Ngân sách còn lại:</span>
+                            <div class="text-right">
+                                <div class="text-base font-black ${remainingVND >= 0 ? 'text-white' : 'text-red-400'}">${new Intl.NumberFormat('vi-VN').format(remainingVND)} VND</div>${destCur !== 'VND' ? `<div class="text-[13px] font-black mt-0.5 ${remainingVND >= 0 ? 'text-emerald-300' : 'text-red-400/60'}">≈ ${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(remainingForeign)} ${destCur}</div>` : ''}
+                            </div>
                         </div>
                         ` : ''}
                     </div>

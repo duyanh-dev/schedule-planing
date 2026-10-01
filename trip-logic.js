@@ -78,6 +78,10 @@ const calculateExchange = () => {
     convertedEl.innerText = '~ ' + new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(convertedAmount) + ' ' + toCur;
 };
 
+const formatDateUI = (dateObj) => {
+    return `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
+};
+
 // --- INIT LỊCH & MỞ MODAL ---
 const initTripModal = () => {
     fpInstance = flatpickr("#trip-date-range", {
@@ -85,18 +89,45 @@ const initTripModal = () => {
         onChange: function(selectedDates) {
             selectedDatesRange = selectedDates;
             const previewEl = document.getElementById('trip-days-preview');
-            if (selectedDates.length === 2) {
-                const diffDays = Math.ceil(Math.abs(selectedDates[1] - selectedDates[0]) / (1000 * 60 * 60 * 24)) + 1;
-                previewEl.innerHTML = `Tạo <span class="bg-white text-blue-700 px-1.5 py-0.5 rounded shadow-sm">${diffDays} NGÀY</span> lịch trình.`;
+            const uiStart = document.getElementById('ui-date-start');
+            const uiEnd = document.getElementById('ui-date-end');
+
+            if(selectedDates.length > 0) {
+                uiStart.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>${formatDateUI(selectedDates[0])}`;
             } else {
-                previewEl.innerText = "Hệ thống sẽ tự động tạo các ngày lịch trình.";
+                uiStart.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày`;
+            }
+
+            if (selectedDates.length === 2) {
+                uiEnd.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>${formatDateUI(selectedDates[1])}`;
+                const diffDays = Math.ceil(Math.abs(selectedDates[1] - selectedDates[0]) / (1000 * 60 * 60 * 24)) + 1;
+                previewEl.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Tạo <span class="bg-white text-blue-700 px-1.5 py-0.5 rounded shadow-sm mx-1">${diffDays} NGÀY</span> lịch trình.`;
+            } else {
+                uiEnd.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày`;
+                previewEl.innerHTML = `<i class="fa-solid fa-robot mr-1"></i> Hệ thống sẽ tự động tạo các ngày lịch trình.`;
             }
         }
     });
 };
 
+const handleModalImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const dataUrl = event.target.result;
+            document.getElementById('trip-modal-cover-preview').src = dataUrl;
+            document.getElementById('trip-cover-url').value = dataUrl; // Lưu vào input ẩn
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
 const openTripModal = (isEdit = false) => {
     if(!fpInstance) { initTripModal(); initDropdowns(); }
+    
+    const uiStart = document.getElementById('ui-date-start');
+    const uiEnd = document.getElementById('ui-date-end');
     
     if(isEdit && editingTripId) {
         const trip = state.trips.find(t => t.id === editingTripId);
@@ -104,7 +135,10 @@ const openTripModal = (isEdit = false) => {
         document.getElementById('trip-btn-text').innerText = 'Cập nhật chuyến đi';
         document.getElementById('trip-title').value = trip.title;
         
-        // Extract budget value (if exists, format: "5,000,000 VND")
+        // Gán ảnh bìa hiện tại vào Form
+        document.getElementById('trip-modal-cover-preview').src = trip.coverUrl;
+        document.getElementById('trip-cover-url').value = trip.coverUrl;
+        
         if (trip.budget) {
             document.getElementById('trip-budget-amount').value = trip.budget.replace(/[^0-9]/g, '');
         } else {
@@ -116,7 +150,10 @@ const openTripModal = (isEdit = false) => {
             const endStr = trip.days[trip.days.length-1].date;
             fpInstance.setDate([startStr, endStr]);
             selectedDatesRange = [new Date(startStr), new Date(endStr)];
-            document.getElementById('trip-days-preview').innerHTML = `Ghi đè <span class="bg-white text-blue-700 px-1.5 py-0.5 rounded shadow-sm">${trip.days.length} NGÀY</span> lịch trình cũ.`;
+            
+            uiStart.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>${formatDateUI(new Date(startStr))}`;
+            uiEnd.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>${formatDateUI(new Date(endStr))}`;
+            document.getElementById('trip-days-preview').innerHTML = `Ghi đè <span class="bg-white text-blue-700 px-1.5 py-0.5 rounded shadow-sm mx-1">${trip.days.length} NGÀY</span> cũ.`;
         }
     } else {
         editingTripId = null;
@@ -125,9 +162,18 @@ const openTripModal = (isEdit = false) => {
         document.getElementById('trip-title').value = '';
         document.getElementById('trip-budget-amount').value = '';
         document.getElementById('trip-region').value = "Đông Nam Á";
-        renderCountryList(); // Auto reset to THB
+        
+        // Reset ảnh bìa mặc định
+        const defaultCover = 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80';
+        document.getElementById('trip-modal-cover-preview').src = defaultCover;
+        document.getElementById('trip-cover-url').value = defaultCover;
+        
+        renderCountryList(); 
         fpInstance.clear();
         selectedDatesRange = [];
+        
+        uiStart.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày`;
+        uiEnd.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày`;
     }
 
     calculateExchange();
@@ -143,6 +189,7 @@ const closeTripModal = () => {
 const submitTripFormNew = () => {
     const title = document.getElementById('trip-title').value;
     const budgetAmt = document.getElementById('trip-budget-amount').value;
+    const coverUrl = document.getElementById('trip-cover-url').value; // Lấy ảnh bìa
     
     if(!title || selectedDatesRange.length < 2) {
         alert("Vui lòng điền tên chuyến đi và khoảng thời gian đầy đủ!");
@@ -161,7 +208,8 @@ const submitTripFormNew = () => {
         trip.title = title;
         trip.budget = budgetStr;
         trip.destCur = destCur;
-        
+        trip.coverUrl = coverUrl;
+
         // Cập nhật lại ngày (Giữ lại hoạt động của các ngày trùng khớp)
         const oldDays = [...trip.days];
         trip.days = [];
@@ -192,7 +240,7 @@ const submitTripFormNew = () => {
         const newTrip = {
             id: 'trip_' + Math.random().toString(36).substr(2, 9),
             title: title,
-            coverUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80',
+            coverUrl: coverUrl,
             budget: budgetStr,
             destCur: destCur, // <--- THÊM DÒNG NÀY VÀO CHỖ TẠO MỚI
             days: newDays

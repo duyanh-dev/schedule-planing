@@ -72,18 +72,16 @@
         
         <!-- Sticky Up Next Banner (Tinh chỉnh nhỏ gọn hơn, không vướng mắt) -->
         <div id="next-activity-banner" class="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2.5 text-xs font-semibold transition-all duration-500 transform -translate-y-[150%] opacity-0 pointer-events-none w-[92%] max-w-sm border border-slate-700/50">
-            <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0 shadow-[0_0_6px_rgba(52,211,153,0.8)]"></div>
+            
             <span id="next-activity-text" class="truncate">Tiếp theo: ...</span>
         </div>
 
         <div class="flex-1 overflow-y-auto hide-scrollbar scroll-smooth relative" id="main-scroll">
             
-           <!-- Trip Header (Cover Image with Upload Feature) -->
+           <!-- Trip Header (Đã gỡ chức năng đổi ảnh ngoài UI) -->
             <div id="trip-header-container" class="relative h-64 md:h-80 w-full bg-slate-300 flex-shrink-0 overflow-hidden group">
                 <img id="trip-cover-img" src="" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Cover">
                 <div class="absolute inset-0 cover-gradient z-0"></div>
-                
-                <input type="file" id="cover-upload" accept="image/*" capture="environment" onchange="handleImageUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" title="Đổi ảnh bìa">
                 
                 <!-- Nút Quản lý chuyến đi (Góc trên phải) -->
                 <div class="absolute top-4 right-4 z-30 flex items-center gap-2">
@@ -96,9 +94,6 @@
                 </div>
 
                 <div class="absolute bottom-16 left-4 md:bottom-20 md:left-8 z-20 max-w-3xl pr-4 pointer-events-none">
-                    <span class="px-3 py-1.5 bg-blue-600/90 backdrop-blur-sm rounded-lg text-white text-[10px] font-black uppercase tracking-wider mb-3 inline-block shadow-sm">
-                        <i class="fa-solid fa-camera mr-1"></i> Chạm đổi ảnh bìa
-                    </span>
                     <h2 id="trip-title-display" class="text-3xl md:text-5xl font-black text-white drop-shadow-md tracking-tight leading-tight">...</h2>
                 </div>
             </div>
@@ -181,14 +176,14 @@
                         <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Tên hoạt động <span class="text-red-500">*</span></label>
                         <input type="text" id="act-details" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-400 outline-none font-bold text-slate-800 transition-all">
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="space-y-1.5">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <div class="flex-1 space-y-1.5">
                             <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Từ giờ <span class="text-red-500">*</span></label>
-                            <input type="time" id="act-start" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-lg">
+                            <input type="time" id="act-start" required placeholder="08:00" class="w-full p-2.5 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-base">
                         </div>
-                        <div class="space-y-1.5">
+                        <div class="flex-1 space-y-1.5">
                             <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Đến giờ <span class="text-red-500">*</span></label>
-                            <input type="time" id="act-end" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-lg">
+                            <input type="time" id="act-end" required placeholder="10:00" class="w-full p-2.5 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-base">
                         </div>
                     </div>
                     <div class="flex gap-2 pt-1">
@@ -342,7 +337,7 @@
                 <h2 class="text-xl font-black text-slate-900"><i class="fa-solid fa-list-check text-blue-500 mr-2"></i> Lịch trình toàn cảnh</h2>
                 <button onclick="closeGlobalTimeline()" class="w-9 h-9 rounded-full bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-600 transition"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="p-4 md:p-6 overflow-y-auto hide-scrollbar flex-1 bg-slate-50" id="global-timeline-content">
+            <div class="p-4 pt-0 md:p-6 overflow-y-auto hide-scrollbar flex-1 bg-slate-50" id="global-timeline-content">
                 <!-- Injected via JS -->
             </div>
         </div>
@@ -360,6 +355,19 @@
             </div>
             
             <div class="p-5 space-y-6 overflow-y-auto hide-scrollbar pb-8">
+
+                <!-- 0. Ảnh bìa chuyến đi -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Ảnh bìa <span class="text-red-500">*</span></label>
+                    <div class="relative h-32 md:h-40 w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 group shadow-sm">
+                        <img id="trip-modal-cover-preview" src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80" class="w-full h-full object-cover" alt="Cover Preview">
+                        <div class="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span class="text-white font-bold text-sm flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/30"><i class="fa-solid fa-camera"></i> Chọn hoặc Chụp ảnh</span>
+                        </div>
+                        <input type="file" id="trip-modal-cover-upload" accept="image/*" capture="environment" onchange="handleModalImageUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                        <input type="hidden" id="trip-cover-url" value="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80">
+                    </div>
+                </div>
                 
                 <!-- 1. Tên chuyến đi (Nhập tự do) -->
                 <div class="space-y-1.5">
@@ -380,14 +388,26 @@
                     </div>
                 </div>
 
-                <!-- 3. Lịch trình -->
-                <div class="space-y-1.5">
+                <!-- 3. Lịch trình (Hiển thị 2 Card) -->
+                <div class="space-y-2">
                     <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Khoảng thời gian <span class="text-red-500">*</span></label>
-                    <div class="relative">
-                        <input type="text" id="trip-date-range" placeholder="Chọn ngày đi - ngày về" class="w-full p-3.5 pl-11 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-800 text-sm cursor-pointer">
-                        <i class="fa-regular fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"></i>
+                    <div class="relative cursor-pointer group">
+                        <!-- Input ẩn của Flatpickr phủ lên toàn bộ khối này để click -->
+                        <input type="text" id="trip-date-range" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" placeholder="Chọn ngày">
+                        
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex-1 bg-slate-50 group-hover:bg-blue-50 border border-slate-200 group-hover:border-blue-200 rounded-xl p-3 flex flex-col items-center justify-center transition-colors">
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ngày đi</span>
+                                <span id="ui-date-start" class="text-sm font-bold text-slate-800"><i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày</span>
+                            </div>
+                            <div class="text-slate-300"><i class="fa-solid fa-arrow-right-long"></i></div>
+                            <div class="flex-1 bg-slate-50 group-hover:bg-blue-50 border border-slate-200 group-hover:border-blue-200 rounded-xl p-3 flex flex-col items-center justify-center transition-colors">
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ngày về</span>
+                                <span id="ui-date-end" class="text-sm font-bold text-slate-800"><i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày</span>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-[11px] font-bold text-blue-500 mt-1.5 bg-blue-50 p-2 rounded-lg" id="trip-days-preview">Hệ thống sẽ tự động tạo các ngày lịch trình.</p>
+                    <p class="text-[11px] font-bold text-blue-500 mt-2 bg-blue-50 p-2.5 rounded-xl border border-blue-100" id="trip-days-preview"><i class="fa-solid fa-robot mr-1"></i> Hệ thống sẽ tự động tạo các ngày lịch trình.</p>
                 </div>
 
                 <!-- 4. Quy đổi ngân sách (UI Clean Card) -->
