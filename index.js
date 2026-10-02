@@ -663,6 +663,24 @@
                 </div>
             `;
 
+            html += `
+                <div class="ml-0 md:ml-16 mt-4 mb-8 text-center pb-8">
+                    <div class="inline-flex items-center gap-2 text-slate-300">
+                        <span class="h-px w-8 bg-slate-200"></span>
+                        <i class="fa-solid fa-feather text-[10px]"></i>
+                        <span class="h-px w-8 bg-slate-200"></span>
+                    </div>
+                    <p class="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">TripPlanner v1.0.0</p>
+                    <p class="text-[10px] font-medium text-slate-400 mt-1.5 flex items-center justify-center gap-1.5">
+                        Made with <i class="fa-solid fa-heart text-red-400/70"></i> by duyanh.dev 
+                        <span class="text-slate-300 px-1">•</span> 
+                        <!-- Link Gmail siêu nhỏ -->
+                        <a href="mailto:buiduyanh.17042001@gmail.com" class="text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-envelope"></i> Liên hệ
+                        </a>
+                    </p>
+                </div>
+            `;
             container.innerHTML = html;
         };
 
