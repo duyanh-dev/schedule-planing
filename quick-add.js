@@ -43,24 +43,26 @@ const addBulkFormItem = () => {
             </div>
             
             <div class="space-y-4">
-                <!-- Tên & Giờ -->
+                <!-- Tên HĐ & Giờ (Tách dòng trên Mobile, ghép dòng trên PC) -->
                 <div class="flex flex-col sm:flex-row gap-3">
                     <div class="flex-[2] space-y-1.5">
                         <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Tên HĐ <span class="text-red-500">*</span></label>
                         <input type="text" id="bulk-details-${id}" placeholder="VD: Ăn trưa..." required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-bold text-slate-800 text-sm">
                     </div>
-                    <div class="flex-1 space-y-1.5">
-                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Từ giờ</label>
-                        <input type="time" id="bulk-start-${id}" value="${start}" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center">
-                    </div>
-                    <div class="flex-1 space-y-1.5">
-                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Đến giờ</label>
-                        <input type="time" id="bulk-end-${id}" value="${end}" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center">
+                    <div class="flex flex-row gap-3 flex-1">
+                        <div class="flex-1 min-w-0 space-y-1.5">
+                            <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Từ giờ</label>
+                            <input type="time" id="bulk-start-${id}" value="${start}" required class="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-sm">
+                        </div>
+                        <div class="flex-1 min-w-0 space-y-1.5">
+                            <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Đến giờ</label>
+                            <input type="time" id="bulk-end-${id}" value="${end}" required class="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-sm">
+                        </div>
                     </div>
                 </div>
                 
-                <!-- Lộ trình có Icon Bản đồ -->
-                <div class="grid grid-cols-2 gap-3">
+                <!-- Lộ trình (Đã đổi thành flex-col trên Mobile để xếp chồng) -->
+                <div class="flex flex-col sm:grid sm:grid-cols-2 gap-3">
                     <div class="space-y-1.5">
                         <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Từ điểm</label>
                         <div class="relative">

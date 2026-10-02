@@ -670,6 +670,16 @@
         // --- STREAMING_CHUNK: REAL-TIME & SIMULATION LOGIC ---
         const updateClockAndBanner = () => {
             const now = getCurrentTime();
+
+            const clockEl = document.getElementById('clock-display');
+
+            // Chỉ cập nhật nếu thẻ clock-display còn tồn tại
+            if (clockEl) {
+                clockEl.innerHTML = `
+                    <div class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Hiện tại</div>
+                    <div class="text-3xl font-black text-slate-800 tracking-tighter leading-none">${String(now.getHours()).padStart(2, '0')}<span class="animate-pulse opacity-50">:</span>${String(now.getMinutes()).padStart(2, '0')}</div>
+                `;
+            }
             
             // Update Clock display
             document.getElementById('clock-display').innerHTML = `

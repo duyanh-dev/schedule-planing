@@ -90,6 +90,7 @@ const initTripModal = () => {
         locale: "vn",
         inline: true, // Kích hoạt lịch hiển thị tĩnh (Schedule)
         showMonths: 1, // Hiển thị 1 tháng cho gọn trên Mobile
+        monthSelectorType: "static",
         onChange: function(selectedDates) {
             selectedDatesRange = selectedDates;
             const previewEl = document.getElementById('trip-days-preview');

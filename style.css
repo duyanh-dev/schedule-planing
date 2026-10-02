@@ -51,4 +51,14 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        .flatpickr-calendar.inline { box-shadow: none !important; border: none !important; background: transparent !important; margin: 0 auto; }
+       /* Làm phẳng Lịch Inline & Fix lỗi hiển thị iOS */
+        .flatpickr-calendar.inline { 
+            box-shadow: none !important; 
+            border: none !important; 
+            background: transparent !important; 
+            margin: 0 auto; 
+            width: 100% !important; 
+            max-width: 320px; /* Khóa kích thước tối đa tránh phình to */
+            display: block !important;
+        }
+        .flatpickr-months .flatpickr-month { height: 40px; }
