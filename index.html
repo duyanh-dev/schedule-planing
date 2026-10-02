@@ -190,14 +190,15 @@
                         <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Tên hoạt động <span class="text-red-500">*</span></label>
                         <input type="text" id="act-details" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-400 outline-none font-bold text-slate-800 transition-all">
                     </div>
-                    <div class="flex flex-row gap-3">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <!-- THÊM min-w-0 VÀO ĐÂY ĐỂ TRÁNH TRÀN TRÊN iPHONE -->
                         <div class="flex-1 min-w-0 space-y-1.5">
                             <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Từ giờ <span class="text-red-500">*</span></label>
-                            <input type="time" id="act-start" required class="w-full p-2.5 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-sm sm:text-base">
+                            <input type="time" id="act-start" required placeholder="08:00" class="w-full p-2.5 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-base">
                         </div>
                         <div class="flex-1 min-w-0 space-y-1.5">
                             <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Đến giờ <span class="text-red-500">*</span></label>
-                            <input type="time" id="act-end" required class="w-full p-2.5 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-sm sm:text-base">
+                            <input type="time" id="act-end" required placeholder="10:00" class="w-full p-2.5 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-black text-slate-800 text-center text-base">
                         </div>
                     </div>
                     <div class="flex gap-2 pt-1">
@@ -206,12 +207,19 @@
                             <option value="fa-plane">✈️</option>
                             <option value="fa-car">🚗</option>
                             <option value="fa-train">🚆</option>
-                            <option value="fa-utensils">🍽️</option>
+                            <option value="fa-utensils">🍽️️</option>
                             <option value="fa-camera">📸</option>
                             <option value="fa-bag-shopping">🛍️</option>
                             <option value="fa-bed">🛏</option>
                         </select>
-                        <select id="act-type" class="flex-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-700 text-sm"><option value="Tham quan">Tham quan</option><option value="Di chuyển">Di chuyển</option><option value="Ăn uống">Ăn uống</option><option value="Mua sắm">Mua sắm</option><option value="Khách sạn">Khách sạn</option><option value="Khác">Khác</option></select>
+                        <select id="act-type" class="flex-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-700 text-sm">
+                            <option value="Tham quan">Tham quan</option>
+                            <option value="Di chuyển">Di chuyển</option>
+                            <option value="Ăn uống">Ăn uống</option>
+                            <option value="Mua sắm">Mua sắm</option>
+                            <option value="Khách sạn">Khách sạn</option>
+                            <option value="Khác">Khác</option>
+                        </select>
                     </div>
                 </div>
 
@@ -420,8 +428,8 @@
                     </div>
 
                     <!-- Khung chứa Lịch Hiện đại (Schedule) -->
-                    <div class="bg-white border border-slate-200 rounded-2xl p-2 flex justify-center overflow-hidden shadow-sm">
-                        <input type="text" id="trip-date-range" class="hidden">
+                    <div class="bg-white border border-slate-200 rounded-2xl p-2 flex justify-center overflow-hidden shadow-sm relative">
+                        <input type="text" id="trip-date-range" class="opacity-0 absolute -z-10 w-0 h-0">
                     </div>
 
                     <p class="text-[11px] font-medium text-slate-500 mt-2.5 px-1" id="trip-days-preview">Chạm hoặc vuốt trên lịch để chọn ngày về.</p>

@@ -62,3 +62,19 @@
             display: block !important;
         }
         .flatpickr-months .flatpickr-month { height: 40px; }
+
+        /* Làm phẳng Lịch Inline & Fix lỗi hiển thị iOS */
+        .flatpickr-calendar.inline { 
+            box-shadow: none !important; border: none !important; background: transparent !important; margin: 0 auto; width: 100% !important; max-width: 320px; display: block !important;
+        }
+        .flatpickr-months .flatpickr-month { height: 40px; }
+        
+        /* ĐẶC TRỊ LỖI TRÀN Ô NHẬP GIỜ TRÊN iPHONE */
+        input[type="time"] {
+            min-width: 0 !important;
+            max-width: 100%;
+            -webkit-appearance: none;
+        }
+        input[type="time"]::-webkit-date-and-time-value {
+            text-align: center;
+        }

@@ -669,57 +669,46 @@
 
         // --- STREAMING_CHUNK: REAL-TIME & SIMULATION LOGIC ---
         const updateClockAndBanner = () => {
-            const now = getCurrentTime();
-
+            const now = new Date();
+            
+            // 1. Cập nhật đồng hồ (Chỉ chạy nếu thẻ này còn tồn tại trên HTML)
             const clockEl = document.getElementById('clock-display');
-
-            // Chỉ cập nhật nếu thẻ clock-display còn tồn tại
             if (clockEl) {
                 clockEl.innerHTML = `
                     <div class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Hiện tại</div>
                     <div class="text-3xl font-black text-slate-800 tracking-tighter leading-none">${String(now.getHours()).padStart(2, '0')}<span class="animate-pulse opacity-50">:</span>${String(now.getMinutes()).padStart(2, '0')}</div>
                 `;
             }
-            
-            // Update Clock display
-            document.getElementById('clock-display').innerHTML = `
-                <i class="fa-solid fa-clock text-xl ${state.isSimulating ? 'text-amber-500' : 'text-blue-500'}"></i> 
-                <span>${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-            `;
 
-            // Update Banner
-            const trip = state.trips.find(t => t.id === state.activeTripId);
+            // 2. Cập nhật Banner "Hoạt động tiếp theo"
             const banner = document.getElementById('next-activity-banner');
-            const textEl = document.getElementById('next-activity-text');
+            const bannerText = document.getElementById('next-activity-text');
+            
+            // Nếu không tìm thấy banner thì thoát hàm ngay lập tức, không báo lỗi
+            if (!banner || !bannerText) return; 
 
-            let upcoming = [];
-            trip.days.forEach(day => {
-                day.activities.forEach(act => {
-                    if (!act.isCompleted) {
-                        const startObj = new Date(`${day.date}T${act.start}:00`);
-                        if(state.isSimulating) {
-                            startObj.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
-                        }
-                        const diffMins = Math.floor((startObj - now) / 60000);
-                        if (diffMins > 0) {
-                            upcoming.push({ ...act, dayDate: day.date, diff: diffMins });
-                        }
-                    }
-                });
-            });
+            const trip = state.trips.find(t => t.id === state.activeTripId);
+            if (!trip) return;
+            
+            const day = trip.days.find(d => d.date === state.activeDayDate);
+            if (!day || !day.activities || day.activities.length === 0) {
+                banner.style.transform = 'translate(-50%, -150%)';
+                banner.style.opacity = '0';
+                return;
+            }
 
-            upcoming.sort((a, b) => a.diff - b.diff);
-
-            if (upcoming.length > 0) {
-                const next = upcoming[0];
-                const hrs = Math.floor(next.diff / 60);
-                const mins = next.diff % 60;
-                let timeStr = hrs > 0 ? `${hrs}h ${mins}p` : `${mins} phút`;
-                
-                textEl.innerHTML = `Tiếp theo: <span class="text-blue-300">${next.details}</span> sau ${timeStr}`;
-                banner.classList.remove('opacity-0', '-translate-y-[150%]', 'pointer-events-none');
+            const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            // Tìm hoạt động chưa hoàn thành và sắp diễn ra
+            const nextAct = day.activities.find(a => !a.isCompleted && a.start >= currentTime);
+            
+            if (nextAct) {
+                bannerText.innerText = `Tiếp theo: ${nextAct.start} - ${nextAct.details}`;
+                banner.style.transform = 'translate(-50%, 0)';
+                banner.style.opacity = '1';
             } else {
-                banner.classList.add('opacity-0', '-translate-y-[150%]', 'pointer-events-none');
+                banner.style.transform = 'translate(-50%, -150%)';
+                banner.style.opacity = '0';
             }
         };
 
