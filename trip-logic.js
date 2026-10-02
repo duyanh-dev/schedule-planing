@@ -85,7 +85,11 @@ const formatDateUI = (dateObj) => {
 // --- INIT LỊCH & MỞ MODAL ---
 const initTripModal = () => {
     fpInstance = flatpickr("#trip-date-range", {
-        mode: "range", dateFormat: "Y-m-d", locale: "vn",
+        mode: "range", 
+        dateFormat: "Y-m-d", 
+        locale: "vn",
+        inline: true, // Kích hoạt lịch hiển thị tĩnh (Schedule)
+        showMonths: 1, // Hiển thị 1 tháng cho gọn trên Mobile
         onChange: function(selectedDates) {
             selectedDatesRange = selectedDates;
             const previewEl = document.getElementById('trip-days-preview');
@@ -101,10 +105,16 @@ const initTripModal = () => {
             if (selectedDates.length === 2) {
                 uiEnd.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>${formatDateUI(selectedDates[1])}`;
                 const diffDays = Math.ceil(Math.abs(selectedDates[1] - selectedDates[0]) / (1000 * 60 * 60 * 24)) + 1;
-                previewEl.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Tạo <span class="bg-white text-blue-700 px-1.5 py-0.5 rounded shadow-sm mx-1">${diffDays} NGÀY</span> lịch trình.`;
+                
+                // Text phẳng, không icon màu mè, in đậm số ngày
+                previewEl.className = "text-xs font-medium text-slate-700 mt-2.5 px-1";
+                previewEl.innerHTML = `Sẽ tạo tổng cộng <span class="font-bold">${diffDays} ngày</span> lịch trình.`;
             } else {
                 uiEnd.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày`;
-                previewEl.innerHTML = `<i class="fa-solid fa-robot mr-1"></i> Hệ thống sẽ tự động tạo các ngày lịch trình.`;
+                
+                // Trở về trạng thái xám mờ mặc định
+                previewEl.className = "text-xs font-medium text-slate-400 mt-2.5 px-1";
+                previewEl.innerHTML = `Chạm hoặc vuốt trên lịch để chọn ngày về.`;
             }
         }
     });
@@ -153,7 +163,8 @@ const openTripModal = (isEdit = false) => {
             
             uiStart.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>${formatDateUI(new Date(startStr))}`;
             uiEnd.innerHTML = `<i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>${formatDateUI(new Date(endStr))}`;
-            document.getElementById('trip-days-preview').innerHTML = `Ghi đè <span class="bg-white text-blue-700 px-1.5 py-0.5 rounded shadow-sm mx-1">${trip.days.length} NGÀY</span> cũ.`;
+            document.getElementById('trip-days-preview').className = "text-xs font-medium text-slate-700 mt-2.5 px-1";
+            document.getElementById('trip-days-preview').innerHTML = `Đang sửa đổi <span class="font-bold">${trip.days.length} ngày</span> lịch trình.`;
         }
     } else {
         editingTripId = null;

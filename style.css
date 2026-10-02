@@ -50,3 +50,5 @@
             scroll-snap-type: y mandatory;
             -webkit-overflow-scrolling: touch;
         }
+
+        .flatpickr-calendar.inline { box-shadow: none !important; border: none !important; background: transparent !important; margin: 0 auto; }
