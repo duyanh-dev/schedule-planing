@@ -362,6 +362,10 @@
             renderDaysTabs();
             renderTimeline();
             updateClockAndBanner();
+
+            setTimeout(() => {
+                scrollToActiveTab();
+            }, 50); // Delay 50ms đợi HTML vẽ xong mới cuộn
         };
 
         const renderSidebar = () => {
@@ -445,7 +449,8 @@
                 const isRealToday = day.date === getRelativeDateStr(0);
 
                 return `
-                    <button onclick="switchDay('${day.date}')" class="flex-shrink-0 h-16 px-5 md:px-6 rounded-2xl transition-all border-2 text-left relative group flex flex-col justify-center ${isActive ? 'border-blue-500 bg-blue-50/60 shadow-sm' : 'border-slate-100 bg-white hover:border-slate-300'}">
+                    <!-- Đã thêm id="tab-${day.date}" vào đây -->
+                    <button id="tab-${day.date}" onclick="switchDay('${day.date}')" class="flex-shrink-0 h-16 px-5 md:px-6 rounded-2xl transition-all border-2 text-left relative group flex flex-col justify-center ${isActive ? 'border-blue-500 bg-blue-50/60 shadow-sm' : 'border-slate-100 bg-white hover:border-slate-300'}">
                         ${isRealToday ? `<div class="absolute top-0 right-0 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg rounded-tr-xl shadow-sm z-10">NAY</div>` : ''}
                         <div class="text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-500'} mb-1">Ngày ${idx + 1}</div>
                         <div class="font-bold text-sm ${isActive ? 'text-slate-900' : 'text-slate-600'}">${formatDisplayDate(day.date)}</div>
@@ -754,12 +759,24 @@
             updateClockAndBanner();
         };
 
+        // Hàm lấy ngày hôm nay theo format YYYY-MM-DD
+        const getTodayDateStr = () => {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+
 
         // --- STREAMING_CHUNK: INTERACTION & FORMS LOGIC ---
         const switchTrip = (id) => {
             state.activeTripId = id;
             const trip = state.trips.find(t => t.id === id);
-            if(trip.days.length > 0) state.activeDayDate = trip.days[0].date;
+            if (trip && trip.days.length > 0) {
+                const todayStr = getTodayDateStr();
+                const isTodayInTrip = trip.days.some(d => d.date === todayStr);
+                
+                // Ưu tiên ngày hôm nay nếu chuyến đi đang diễn ra, ngược lại lấy ngày đầu tiên
+                state.activeDayDate = isTodayInTrip ? todayStr : trip.days[0].date;
+            }
             if(window.innerWidth < 768) toggleSidebar();
             renderApp();
         };
@@ -1057,6 +1074,9 @@
         window.onload = () => {
             loadData(); // Khôi phục dữ liệu từ bộ nhớ trước khi render UI
             renderApp();
+
+            // Kích hoạt chức năng kéo thả tab
+            initDragToScroll();
         };
 
 
@@ -1180,4 +1200,37 @@
                 saveData();
                 renderChecklist();
             }
+        };
+
+        // --- CHỨC NĂNG KÉO THẢ ĐỂ CUỘN TABS TRÊN PC ---
+        const initDragToScroll = () => {
+            const slider = document.getElementById('days-tabs');
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            slider.addEventListener('mousedown', (e) => {
+                isDown = true;
+                slider.style.scrollBehavior = 'auto'; // Tắt cuộn mượt khi đang kéo tay để phản hồi tức thì
+                startX = e.pageX - slider.offsetLeft;
+                scrollLeft = slider.scrollLeft;
+            });
+
+            slider.addEventListener('mouseleave', () => {
+                isDown = false;
+                slider.style.scrollBehavior = 'smooth';
+            });
+
+            slider.addEventListener('mouseup', () => {
+                isDown = false;
+                slider.style.scrollBehavior = 'smooth';
+            });
+
+            slider.addEventListener('mousemove', (e) => {
+                if (!isDown) return; // Nếu không nhấn giữ chuột thì không làm gì cả
+                e.preventDefault(); // Ngăn hành vi mặc định (như kéo ảnh/text)
+                const x = e.pageX - slider.offsetLeft;
+                const walk = (x - startX) * 1.5; // Nhân 1.5 để tốc độ cuộn nhanh hơn tay kéo một chút
+                slider.scrollLeft = scrollLeft - walk;
+            });
         };
