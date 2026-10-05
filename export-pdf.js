@@ -23,15 +23,14 @@
             }
         }
 // ==========================================
-        // LOGIC XUẤT FULL UI RA PDF (Phiên bản an toàn, giữ nguyên layout)
+        // LOGIC XUẤT FULL UI RA PDF (CHUẨN NATIVE & CHỐNG LỆCH LAYOUT)
         // ==========================================
         function exportFullPDF() {
-            // Lấy trực tiếp phần tử cuộn chứa lịch trình
             const element = document.getElementById('main-scroll'); 
             
-            // Xử lý nút đang tải
+            // Xử lý nút UI
             const btnPC = document.getElementById('btn-pdf-pc');
-            const btnMobile = document.getElementById('btn-pdf-mobile').querySelector('span');
+            const btnMobile = document.getElementById('btn-pdf-mobile') ? document.getElementById('btn-pdf-mobile').querySelector('span') : null;
             const originalPCText = btnPC ? btnPC.innerHTML : '';
             const originalMobileText = btnMobile ? btnMobile.innerText : '';
             
@@ -41,38 +40,81 @@
                 btnMobile.innerText = 'Đang xuất...';
             }
 
-            // Đảm bảo cuộn lên đầu trang trước khi chụp để không bị khoảng trắng
+            // Khôi phục thanh cuộn về 0 để không bị lệch/trắng trang
             window.scrollTo({ top: 0, behavior: 'instant' });
             if(element) element.scrollTop = 0;
 
-            // Cấu hình PDF tối ưu
+            const isMobile = window.innerWidth <= 768;
+
+            // Cấu hình PDF
             const opt = {
                 margin:       0,
                 filename:     'Lich-Trinh-TripPlanner.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
+                image:        { type: 'jpeg', quality: 1 }, // Tăng chất lượng ảnh lên tối đa
                 html2canvas:  { 
                     scale: 2, 
                     useCORS: true,
-                    // Giúp chụp chuẩn xác chiều rộng thực tế của khung nhìn hiện tại
-                    windowWidth: element ? element.scrollWidth : document.body.scrollWidth,
                     scrollY: 0,
-                    scrollX: 0
+                    scrollX: 0,
+                    // KHÓA CHIỀU RỘNG: 
+                    // - SP: Khóa đúng bằng chiều rộng điện thoại để giữ nguyên UI Mobile
+                    // - PC: Khóa bằng chiều rộng thực của thẻ chứa để không bị lệch lề
+                    windowWidth: isMobile ? window.innerWidth : element.clientWidth,
                 }, 
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // Tiến hành xuất
-            html2pdf().set(opt).from(element).save().then(() => {
-                // Khôi phục nút bấm
-                if(window.innerWidth > 768 && btnPC) {
-                    btnPC.innerHTML = originalPCText;
-                } else if(btnMobile) {
-                    btnMobile.innerText = originalMobileText;
+            // Tiến hành xuất ra file thô (Blob)
+            html2pdf().set(opt).from(element).outputPdf('blob').then(async (pdfBlob) => {
+                const fileName = 'Lich-Trinh-TripPlanner.pdf';
+                const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                
+                // Nhận diện thiết bị iOS
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+                // NẾU LÀ IOS VÀ HỖ TRỢ NATIVE SHARE
+                if (isIOS && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        // Gọi menu Share gốc của iPhone (Lưu vào tệp, Zalo, AirDrop...)
+                        await navigator.share({
+                            files: [file],
+                            title: 'Lịch Trình Chuyến Đi',
+                            text: 'Gửi bạn lịch trình chuyến đi từ TripPlanner'
+                        });
+                    } catch (err) {
+                        console.log("Người dùng hủy hoặc lỗi Share:", err);
+                        fallbackDownload(pdfBlob, fileName);
+                    }
+                } else {
+                    // Nếu là Android / PC, ép tải xuống bình thường
+                    fallbackDownload(pdfBlob, fileName);
                 }
+
+                restoreButtons();
             }).catch(err => {
                 console.error("Lỗi xuất PDF:", err);
                 alert("Có lỗi xảy ra khi xuất PDF, vui lòng thử lại!");
+                restoreButtons();
+            });
+
+            // Hàm tải xuống truyền thống
+            function fallbackDownload(blob, name) {
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = blobUrl;
+                a.download = name;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(blobUrl);
+                }, 200);
+            }
+
+            // Hàm phục hồi nút bấm
+            function restoreButtons() {
                 if(window.innerWidth > 768 && btnPC) btnPC.innerHTML = originalPCText;
                 if(btnMobile) btnMobile.innerText = originalMobileText;
-            });
+            }
         }
