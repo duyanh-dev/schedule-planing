@@ -116,11 +116,11 @@
             <div class="max-w-4xl mx-auto px-3 md:px-8 pb-20 -mt-10 relative z-20">
                 
                 <!-- Info Card (Tabs, Clock, Simulator) -->
-                <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-4 md:p-6 mb-6 flex flex-col gap-5">
+                <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-4 md:p-6 mb-6 flex flex-col gap-2">
                     
                     <div class="flex items-center gap-2">
-                        <!-- Đã thêm cursor-grab và active:cursor-grabbing -->
-                        <div id="days-tabs" class="flex overflow-x-auto hide-scrollbar gap-3 pb-2 flex-1 scroll-smooth cursor-grab active:cursor-grabbing select-none">
+                        <!-- Đã thêm pt-2 (khoảng đệm trong) và mt-1 (khoảng cách ngoài) -->
+                        <div id="days-tabs" class="flex overflow-x-auto hide-scrollbar gap-3 pb-2 pt-2 mt-1 flex-1 scroll-smooth cursor-grab active:cursor-grabbing select-none">
                             <!-- Tabs injected via JS -->
                         </div>
                         <button onclick="addNewDay()" class="flex-shrink-0 h-16 px-4 md:px-6 rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-slate-400 hover:text-blue-500 transition-colors flex flex-col items-center justify-center font-bold text-xs gap-1 group">
@@ -129,7 +129,7 @@
                     </div>
 
                     <!-- Simulator & Actions -->
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-slate-100">
                         
                         <!-- Time Simulator -->
                         <!-- <div class="flex-1 w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">

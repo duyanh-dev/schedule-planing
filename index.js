@@ -449,11 +449,17 @@
                 const isRealToday = day.date === getRelativeDateStr(0);
 
                 return `
-                    <!-- Đã thêm id="tab-${day.date}" vào đây -->
-                    <button id="tab-${day.date}" onclick="switchDay('${day.date}')" class="flex-shrink-0 h-16 px-5 md:px-6 rounded-2xl transition-all border-2 text-left relative group flex flex-col justify-center ${isActive ? 'border-blue-500 bg-blue-50/60 shadow-sm' : 'border-slate-100 bg-white hover:border-slate-300'}">
-                        ${isRealToday ? `<div class="absolute top-0 right-0 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg rounded-tr-xl shadow-sm z-10">NAY</div>` : ''}
-                        <div class="text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-500'} mb-1">Ngày ${idx + 1}</div>
-                        <div class="font-bold text-sm ${isActive ? 'text-slate-900' : 'text-slate-600'}">${formatDisplayDate(day.date)}</div>
+                    <!-- Đã thêm các class responsive md: để tách biệt UI SP và PC -->
+                    <button id="tab-${day.date}" onclick="switchDay('${day.date}')" class="flex-shrink-0 h-10 md:h-16 px-4 md:px-6 rounded-full md:rounded-2xl transition-all border-2 text-center md:text-left relative group flex flex-col justify-center items-center md:items-start ${isActive ? 'border-blue-500 bg-blue-50/60 shadow-sm' : 'border-slate-100 bg-white hover:border-slate-300'}">
+                        
+                        <!-- Badge "NAY" (SP: hình tròn chườm ra ngoài | PC: góc vuông bám góc) -->
+                        ${isRealToday ? `<div class="absolute -top-1.5 -right-1 md:top-0 md:right-0 bg-red-500 text-white text-[8px] md:text-[9px] font-black px-1.5 py-0.5 rounded-full md:rounded-none md:rounded-bl-lg md:rounded-tr-xl shadow-sm z-10 border-2 border-white md:border-0">NAY</div>` : ''}
+                        
+                        <!-- Chữ "Ngày X" (SP: Ẩn đi | PC: Hiển thị bằng md:block) -->
+                        <div class="hidden md:block text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-500'} mb-1">Ngày ${idx + 1}</div>
+                        
+                        <!-- Ngày hiển thị (SP: font nhỏ hơn | PC: font text-sm) -->
+                        <div class="font-bold text-xs md:text-sm ${isActive ? 'text-slate-900' : 'text-slate-600'}">${formatDisplayDate(day.date)}</div>
                     </button>
                 `;
             }).join('');
@@ -881,15 +887,18 @@
 
         // --- LOGIC XỬ LÝ FORM HOẠT ĐỘNG MỚI ---
         const calculateItemExchange = () => {
-            const amt = parseFloat(document.getElementById('act-budget-amount').value);
+            // Đã thêm .replace(/\./g, '') để xóa hết dấu chấm trước khi tính toán
+            const rawValue = document.getElementById('act-budget-amount').value.replace(/\./g, '');
+            const amt = parseFloat(rawValue);
+            
             const cur = document.getElementById('act-budget-cur').value;
             const convertedEl = document.getElementById('act-budget-converted');
             
             if(isNaN(amt) || amt <= 0) {
                 convertedEl.innerText = '~ 0 VND'; return;
             }
-            // Quy đổi ngược về VND dựa vào exchangeRates (có sẵn trong trip-logic.js)
-            // Nếu exchangeRates không được load kịp ở scope này, ta khai báo 1 mảng fallback nhanh:
+            
+            // Quy đổi ngược về VND
             const rates = typeof exchangeRates !== 'undefined' ? exchangeRates : { VND: 1, THB: 720, JPY: 170, KRW: 18.5, USD: 25000, EUR: 27500 };
             const inVND = amt * (rates[cur] || 1);
             convertedEl.innerText = '~ ' + new Intl.NumberFormat('vi-VN').format(inVND) + ' VND';
@@ -917,6 +926,8 @@
             document.getElementById('act-modal-title').innerHTML = '<i class="fa-solid fa-plus text-blue-500 bg-blue-50 p-2 rounded-lg text-sm"></i> Thêm hoạt động';
             document.getElementById('activity-modal').classList.add('active');
         };
+
+        
 
         const editActivity = (actId) => {
             state.editingActivityId = actId;

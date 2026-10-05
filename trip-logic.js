@@ -64,19 +64,50 @@ const autoSetCurrency = () => {
     }
 };
 
-const calculateExchange = () => {
-    const amount = parseFloat(document.getElementById('trip-budget-amount').value);
-    const convertedEl = document.getElementById('trip-budget-converted');
-    const toCur = document.getElementById('trip-currency-to').value;
-    
-    if (isNaN(amount) || amount <= 0) {
-        convertedEl.innerText = `0 ${toCur}`;
-        return;
-    }
+// --- LOGIC XỬ LÝ FORM TẠO CHUYẾN ĐI (NGÂN SÁCH) ---
+        const calculateExchange = () => {
+            const amountInput = document.getElementById('trip-budget-amount');
+            const currencyTo = document.getElementById('trip-currency-to').value;
+            const convertedEl = document.getElementById('trip-budget-converted');
+            
+            // 1. Nếu ô nhập rỗng, reset về 0
+            if (!amountInput.value) {
+                convertedEl.innerText = '0';
+                return;
+            }
 
-    const convertedAmount = amount / exchangeRates[toCur];
-    convertedEl.innerText = '~ ' + new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(convertedAmount) + ' ' + toCur;
-};
+            // 2. Tẩy sạch dấu chấm phân cách rồi ép sang số
+            const rawValue = amountInput.value.replace(/\./g, '');
+            const amtVND = parseFloat(rawValue);
+            
+            // 3. Chặn lỗi khi người dùng gõ sai hoặc rỗng
+            if (isNaN(amtVND) || amtVND <= 0) {
+                convertedEl.innerText = '0';
+                return;
+            }
+            
+            // 4. Bảng tỉ giá (Bao nhiêu VND đổi 1 đơn vị ngoại tệ)
+            const rates = typeof exchangeRates !== 'undefined' ? exchangeRates : { 
+                VND: 1, 
+                THB: 720, 
+                JPY: 170, 
+                KRW: 18.5, 
+                USD: 25000, 
+                EUR: 27500 
+            };
+            
+            const rate = rates[currencyTo] || 1;
+            
+            // 5. Tính ra ngoại tệ (Lấy tiền VND chia cho Tỉ giá)
+            const convertedAmt = amtVND / rate;
+            
+            // 6. Format thông minh (Ví dụ: USD, EUR lấy 2 số thập phân, còn lại làm tròn nguyên)
+            const fractionDigits = (currencyTo === 'USD' || currencyTo === 'EUR') ? 2 : 0;
+            
+            convertedEl.innerText = new Intl.NumberFormat('vi-VN', {
+                maximumFractionDigits: fractionDigits
+            }).format(convertedAmt);
+        };
 
 const formatDateUI = (dateObj) => {
     return `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
