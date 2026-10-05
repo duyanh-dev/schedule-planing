@@ -398,7 +398,7 @@
                     <button onclick="getUserLocation()" class="flex-shrink-0 px-4 py-2.5 bg-blue-600/90 backdrop-blur-md text-white text-[13px] font-bold rounded-full shadow-md whitespace-nowrap active:scale-95 transition-transform border border-blue-500/50">
                         <i class="fa-solid fa-location-crosshairs mr-1"></i> Vị trí của tôi
                     </button>
-                    <!-- <button onclick="quickSearch('Nhà hàng')" class="flex-shrink-0 px-4 py-2.5 bg-white/70 backdrop-blur-md text-slate-700 text-[13px] font-bold rounded-full shadow-sm border border-white/60 whitespace-nowrap active:scale-95 transition-transform hover:bg-white/90">
+                    <button onclick="quickSearch('Nhà hàng')" class="flex-shrink-0 px-4 py-2.5 bg-white/70 backdrop-blur-md text-slate-700 text-[13px] font-bold rounded-full shadow-sm border border-white/60 whitespace-nowrap active:scale-95 transition-transform hover:bg-white/90">
                         🍕 Nhà hàng
                     </button>
                     <button onclick="quickSearch('Khách sạn')" class="flex-shrink-0 px-4 py-2.5 bg-white/70 backdrop-blur-md text-slate-700 text-[13px] font-bold rounded-full shadow-sm border border-white/60 whitespace-nowrap active:scale-95 transition-transform hover:bg-white/90">
@@ -406,7 +406,7 @@
                     </button>
                     <button onclick="quickSearch('Quán cà phê')" class="flex-shrink-0 px-4 py-2.5 bg-white/70 backdrop-blur-md text-slate-700 text-[13px] font-bold rounded-full shadow-sm border border-white/60 whitespace-nowrap active:scale-95 transition-transform hover:bg-white/90">
                         ☕ Cafe
-                    </button> -->
+                    </button>
                 </div>
             </div>
 
@@ -634,12 +634,12 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    
+    <script src="config.js"></script>
     <script src="index.js"></script>
 <script src="trip-logic.js"></script> <!-- FILE LOGIC MỚI -->
 <script src="./quick-add.js"></script> <!-- FILE LOGIC MỚI -->
 <script src="./export-pdf.js"></script> <!-- FILE LOGIC MỚI -->
-<script src="./maps-picker.js"></script> <!-- FILE LOGIC MỚI -->
+<script type="module" src="./maps-logic.js"></script> <!-- FILE LOGIC MỚI -->
   
 </body>
 </html>
