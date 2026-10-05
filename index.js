@@ -1234,3 +1234,24 @@
                 slider.scrollLeft = scrollLeft - walk;
             });
         };
+
+        // ==========================================
+        // TỰ ĐỘNG FORMAT TIỀN TỆ & ÉP NHẬP SỐ
+        // ==========================================
+        document.addEventListener('input', function(e) {
+            // Kiểm tra xem ô đang gõ có phải là ô nhập tiền không
+            if (e.target.classList.contains('currency-input')) {
+                
+                // 1. Lọc bỏ toàn bộ các ký tự không phải là số (chữ cái, ký tự đặc biệt...)
+                let rawValue = e.target.value.replace(/\D/g, '');
+                
+                // 2. Nếu xóa hết thì để trống
+                if (rawValue === '') {
+                    e.target.value = '';
+                    return;
+                }
+                
+                // 3. Định dạng lại thành chuẩn Việt Nam (1.000.000) và gán ngược lại vào ô input
+                e.target.value = parseInt(rawValue, 10).toLocaleString('vi-VN');
+            }
+        });

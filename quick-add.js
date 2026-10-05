@@ -102,7 +102,7 @@ const addBulkFormItem = () => {
                 <div class="flex gap-2">
                     <div class="flex-1 space-y-1.5">
                         <label class="text-[11px] font-black text-emerald-500 uppercase tracking-wider">Ngân sách (Tùy chọn)</label>
-                        <input type="number" id="bulk-budget-${id}" class="w-full p-3 bg-slate-50 border border-emerald-200 focus:bg-white rounded-xl outline-none font-black text-slate-800 text-sm" placeholder="Số tiền...">
+                        <input type="text" inputmode="numeric" id="bulk-budget-${id}" class="currency-input w-full p-3 bg-slate-50 border border-emerald-200 focus:bg-white rounded-xl outline-none font-black text-slate-800 text-sm" placeholder="Số tiền...">
                     </div>
                     <div class="w-24 space-y-1.5">
                         <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Tiền tệ</label>
