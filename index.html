@@ -145,28 +145,34 @@
                             <input type="range" id="sim-slider" min="0" max="1439" value="480" disabled oninput="updateSimulatedTime()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none disabled:opacity-50 transition-opacity">
                         </div> -->
 
-<!-- Action Buttons -->
-                    <div class="grid grid-cols-2 md:flex md:flex-row gap-3 w-full pt-4 border-t border-slate-100">
+<!-- CỤM NÚT TRÊN MÀN HÌNH CHÍNH (Đã bỏ vào ignore để không bị in dính vào PDF) -->
+                    <div class="grid grid-cols-2 md:flex md:flex-row gap-3 w-full pt-4 border-t border-slate-100" data-html2canvas-ignore>
                         
                         <!-- Nút Checklist -->
-                        <button onclick="openChecklistModal()" class="w-full md:flex-1 h-[50px] bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2 border border-amber-200/50 shadow-sm active:scale-95">
+                        <button onclick="openChecklistModal()" class="w-full md:flex-[1] h-[50px] bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2 border border-amber-200/50 shadow-sm active:scale-95">
                             <i class="fa-solid fa-clipboard-list"></i> Checklist
                         </button>
 
                         <!-- Nút Toàn cảnh -->
-                        <button onclick="openGlobalTimeline()" class="w-full md:flex-1 h-[50px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2 shadow-sm border border-slate-200/50 active:scale-95">
+                        <button onclick="openGlobalTimeline()" class="w-full md:flex-[1] h-[50px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2 shadow-sm border border-slate-200/50 active:scale-95">
                             <i class="fa-solid fa-calendar-days text-slate-400"></i> Toàn cảnh
                         </button>
 
-                        <!-- Nút Tạo Hàng Loạt (Thêm 'col-span-2' để tràn viền 2 cột trên Mobile) -->
-                        <button onclick="openBulkModal()" class="col-span-2 md:col-span-1 w-full md:flex-1 h-[50px] bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2 border border-blue-200/50 shadow-sm active:scale-95">
-                            <i class="fa-solid fa-layer-group"></i> Tạo nhiều hoạt động
+                        <!-- Nút Tạo Hàng Loạt (SP: Tràn 2 cột | PC: 1 phần) -->
+                        <button onclick="openBulkModal()" class="col-span-2 md:col-span-1 w-full md:flex-[1.2] h-[50px] bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2 border border-blue-200/50 shadow-sm active:scale-95">
+                            <i class="fa-solid fa-layer-group"></i> Tạo nhiều
                         </button>
 
-                        <!-- Nút Thêm 1 HĐ (Thêm 'hidden md:flex' để ẩn trên Mobile, chỉ hiện PC) -->
-                        <button onclick="openActivityModal()" class="hidden md:flex w-full md:flex-[1.2] h-[50px] bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-200 transition-transform active:scale-95 justify-center items-center gap-2">
-                            <i class="fa-solid fa-plus"></i> Thêm hoạt động
+                        <!-- Nút Xuất PDF (Chỉ hiện PC) -->
+                        <button onclick="exportFullPDF()" class="hidden md:flex w-full md:flex-[1] h-[50px] bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-lg shadow-slate-900/20 transition-transform active:scale-95 justify-center items-center gap-2" id="btn-pdf-pc">
+                            <i class="fa-solid fa-file-pdf text-red-400"></i> PDF
                         </button>
+
+                        <!-- Nút Thêm 1 HĐ (Chỉ hiện PC) -->
+                        <button onclick="openActivityModal()" class="hidden md:flex w-full md:flex-[1.2] h-[50px] bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-200 transition-transform active:scale-95 justify-center items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Thêm hạot động
+                        </button>
+
                     </div>
                     </div>
                 </div>
@@ -178,10 +184,33 @@
             </div>
         </div>
 
-        <!-- Floating Action Button (Nút Tròn Thêm HĐ ở góc dưới bên phải) -->
-        <button onclick="openActivityModal()" class="md:hidden fixed right-5 bottom-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl shadow-blue-500/50 flex items-center justify-center text-xl z-40 transition-transform active:scale-95">
-            <i class="fa-solid fa-plus"></i>
-        </button>
+        <!-- ============================================== -->
+        <!-- MENU NỔI KÍNH MỜ CHO MOBILE (SP)               -->
+        <!-- ============================================== -->
+        <div class="md:hidden fixed right-5 bottom-6 z-[60]" data-html2canvas-ignore>
+            
+            <!-- Danh sách các nút mở rộng (Ẩn mặc định) -->
+            <div id="fab-menu" class="absolute bottom-16 right-0 flex flex-col items-end gap-3 transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none origin-bottom">
+                
+                <!-- Nút Xuất PDF (Mobile) -->
+                <button onclick="exportFullPDF(); toggleFab()" id="btn-pdf-mobile" class="flex items-center gap-3 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-slate-100 active:scale-95 transition-transform whitespace-nowrap">
+                    <span class="text-slate-700 font-bold text-sm">PDF (BETA)</span>
+                    <div class="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center border border-red-100"><i class="fa-solid fa-file-pdf"></i></div>
+                </button>
+                
+                <!-- Nút Thêm hoạt động (Mobile) -->
+                <button onclick="openActivityModal(); toggleFab()" class="flex items-center gap-3 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-slate-100 active:scale-95 transition-transform whitespace-nowrap">
+                    <span class="text-slate-700 font-bold text-sm">Thêm hoạt động</span>
+                    <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100"><i class="fa-solid fa-plus"></i></div>
+                </button>
+
+            </div>
+
+            <!-- Nút FAB Chính (Mũi tên) -->
+            <button onclick="toggleFab()" id="fab-main-btn" class="w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl shadow-blue-500/50 flex items-center justify-center text-xl transition-all active:scale-95 relative z-10 border border-blue-400/30">
+                <i class="fa-solid fa-chevron-up transition-transform duration-300" id="fab-icon"></i>
+            </button>
+        </div>
     </main>
 
   <!-- Activity Modal (Sử dụng Tiêu đề thay vì Placeholder) -->
@@ -562,11 +591,17 @@
         </div>
     </div>
 
+    <!-- Thư viện xuất PDF (html2pdf) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    
     <script src="index.js"></script>
 <script src="trip-logic.js"></script> <!-- FILE LOGIC MỚI -->
 <script src="./quick-add.js"></script> <!-- FILE LOGIC MỚI -->
+<script src="././export-pdf.js"></script> <!-- FILE LOGIC MỚI -->
   
 </body>
 </html>

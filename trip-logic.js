@@ -65,49 +65,49 @@ const autoSetCurrency = () => {
 };
 
 // --- LOGIC XỬ LÝ FORM TẠO CHUYẾN ĐI (NGÂN SÁCH) ---
-        const calculateExchange = () => {
-            const amountInput = document.getElementById('trip-budget-amount');
-            const currencyTo = document.getElementById('trip-currency-to').value;
-            const convertedEl = document.getElementById('trip-budget-converted');
-            
-            // 1. Nếu ô nhập rỗng, reset về 0
-            if (!amountInput.value) {
-                convertedEl.innerText = '0';
-                return;
-            }
+const calculateExchange = () => {
+    const amountInput = document.getElementById('trip-budget-amount');
+    const currencyTo = document.getElementById('trip-currency-to').value;
+    const convertedEl = document.getElementById('trip-budget-converted');
+    
+    if (!amountInput.value) {
+        convertedEl.innerText = '0';
+        return;
+    }
 
-            // 2. Tẩy sạch dấu chấm phân cách rồi ép sang số
-            const rawValue = amountInput.value.replace(/\./g, '');
-            const amtVND = parseFloat(rawValue);
-            
-            // 3. Chặn lỗi khi người dùng gõ sai hoặc rỗng
-            if (isNaN(amtVND) || amtVND <= 0) {
-                convertedEl.innerText = '0';
-                return;
-            }
-            
-            // 4. Bảng tỉ giá (Bao nhiêu VND đổi 1 đơn vị ngoại tệ)
-            const rates = typeof exchangeRates !== 'undefined' ? exchangeRates : { 
-                VND: 1, 
-                THB: 720, 
-                JPY: 170, 
-                KRW: 18.5, 
-                USD: 25000, 
-                EUR: 27500 
-            };
-            
-            const rate = rates[currencyTo] || 1;
-            
-            // 5. Tính ra ngoại tệ (Lấy tiền VND chia cho Tỉ giá)
-            const convertedAmt = amtVND / rate;
-            
-            // 6. Format thông minh (Ví dụ: USD, EUR lấy 2 số thập phân, còn lại làm tròn nguyên)
-            const fractionDigits = (currencyTo === 'USD' || currencyTo === 'EUR') ? 2 : 0;
-            
-            convertedEl.innerText = new Intl.NumberFormat('vi-VN', {
-                maximumFractionDigits: fractionDigits
-            }).format(convertedAmt);
-        };
+    const rawValue = amountInput.value.replace(/\./g, '');
+    const amtVND = parseFloat(rawValue);
+    
+    if (isNaN(amtVND) || amtVND <= 0) {
+        convertedEl.innerText = '0';
+        return;
+    }
+    
+    const rates = typeof exchangeRates !== 'undefined' ? exchangeRates : { 
+        VND: 1, THB: 720, SGD: 18500, MYR: 5300, IDR: 1.6,
+        JPY: 170, KRW: 18.5, TWD: 800, CNY: 3500, EUR: 27500,
+        USD: 25000, AUD: 16500 
+    };
+    
+    const rate = rates[currencyTo] || 1;
+    const convertedAmt = amtVND / rate;
+    
+    // Tự động phân bổ số thập phân tùy giá trị tiền
+    const fractionDigits = (['VND', 'KRW', 'JPY', 'IDR'].includes(currencyTo)) ? 0 : 2;
+    
+    let formattedResult = new Intl.NumberFormat('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: fractionDigits
+    }).format(convertedAmt);
+
+    // Xử lý các khoản tiền quá bé
+    if (convertedAmt > 0 && convertedAmt < 0.01) {
+        formattedResult = "< 0,01";
+    }
+
+    // Tiền Việt thì không cần dấu ~ 
+    convertedEl.innerText = (currencyTo === 'VND') ? formattedResult : '~ ' + formattedResult;
+};
 
 const formatDateUI = (dateObj) => {
     return `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
@@ -177,12 +177,13 @@ const openTripModal = (isEdit = false) => {
         document.getElementById('trip-btn-text').innerText = 'Cập nhật chuyến đi';
         document.getElementById('trip-title').value = trip.title;
         
-        // Gán ảnh bìa hiện tại vào Form
         document.getElementById('trip-modal-cover-preview').src = trip.coverUrl;
         document.getElementById('trip-cover-url').value = trip.coverUrl;
         
+        // SỬA Ở ĐÂY: Hiển thị lại số tiền phải có dấu chấm chuẩn
         if (trip.budget) {
-            document.getElementById('trip-budget-amount').value = trip.budget.replace(/[^0-9]/g, '');
+            const rawNum = parseInt(trip.budget.replace(/[^0-9]/g, ''), 10);
+            document.getElementById('trip-budget-amount').value = new Intl.NumberFormat('vi-VN').format(rawNum);
         } else {
             document.getElementById('trip-budget-amount').value = '';
         }
@@ -206,7 +207,6 @@ const openTripModal = (isEdit = false) => {
         document.getElementById('trip-budget-amount').value = '';
         document.getElementById('trip-region').value = "Đông Nam Á";
         
-        // Reset ảnh bìa mặc định
         const defaultCover = 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80';
         document.getElementById('trip-modal-cover-preview').src = defaultCover;
         document.getElementById('trip-cover-url').value = defaultCover;
@@ -231,8 +231,11 @@ const closeTripModal = () => {
 // --- XỬ LÝ LƯU (THÊM / SỬA) ---
 const submitTripFormNew = () => {
     const title = document.getElementById('trip-title').value;
-    const budgetAmt = document.getElementById('trip-budget-amount').value;
-    const coverUrl = document.getElementById('trip-cover-url').value; // Lấy ảnh bìa
+    const coverUrl = document.getElementById('trip-cover-url').value; 
+    
+    // SỬA Ở ĐÂY: Xóa dấu chấm trước khi xử lý, để 26.000 hiểu đúng là 26000
+    const budgetRaw = document.getElementById('trip-budget-amount').value.replace(/\./g, '');
+    const parsedBudget = parseInt(budgetRaw, 10);
     
     if(!title || selectedDatesRange.length < 2) {
         alert("Vui lòng điền tên chuyến đi và khoảng thời gian đầy đủ!");
@@ -241,9 +244,13 @@ const submitTripFormNew = () => {
 
     const startDate = selectedDatesRange[0];
     const daysCount = Math.ceil(Math.abs(selectedDatesRange[1] - startDate) / (1000 * 60 * 60 * 24)) + 1;
-    const budgetStr = budgetAmt ? `${new Intl.NumberFormat('vi-VN').format(budgetAmt)} VND` : null;
+    
+    // Đã parse chuẩn, giờ format lại thành chuỗi "26.000 VND" cất vào data
+    const budgetStr = (!isNaN(parsedBudget) && parsedBudget > 0) 
+        ? `${new Intl.NumberFormat('vi-VN').format(parsedBudget)} VND` 
+        : null;
 
-    const destCur = document.getElementById('trip-currency-to').value; // Lấy mã tiền (VD: THB)
+    const destCur = document.getElementById('trip-currency-to').value; 
 
     if (editingTripId) {
         // CẬP NHẬT
@@ -253,7 +260,6 @@ const submitTripFormNew = () => {
         trip.destCur = destCur;
         trip.coverUrl = coverUrl;
 
-        // Cập nhật lại ngày (Giữ lại hoạt động của các ngày trùng khớp)
         const oldDays = [...trip.days];
         trip.days = [];
         for(let i = 0; i < daysCount; i++) {
@@ -261,7 +267,6 @@ const submitTripFormNew = () => {
             d.setDate(d.getDate() + i);
             const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             
-            // Tìm ngày cũ tương ứng (hoặc theo index, hoặc theo dateStr. Ở đây dùng Index cho an toàn nếu đổi cả lịch)
             const oldDay = oldDays[i]; 
             trip.days.push({
                 date: dateStr,
@@ -285,10 +290,8 @@ const submitTripFormNew = () => {
             title: title,
             coverUrl: coverUrl,
             budget: budgetStr,
-            destCur: destCur, // <--- THÊM DÒNG NÀY VÀO CHỖ TẠO MỚI
+            destCur: destCur, 
             days: newDays,
-
-            // --- THÊM DÒNG NÀY VÀO ---
             checklist: [
                 { id: 'c1', text: 'Hộ chiếu / CCCD / Giấy tờ tùy thân', isDone: false },
                 { id: 'c2', text: 'Quần áo & Đồ dùng cá nhân', isDone: false },
