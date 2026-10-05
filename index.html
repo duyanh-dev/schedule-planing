@@ -189,23 +189,23 @@
         <!-- ============================================== -->
         <div class="md:hidden fixed right-5 bottom-6 z-[60]" data-html2canvas-ignore>
             
-            <!-- Danh sách các nút mở rộng trên Mobile (Đã tách thành 2 tùy chọn PDF) -->
-            <div id="fab-menu" class="absolute bottom-16 right-0 flex flex-col items-end gap-3 transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none origin-bottom">
+            <!-- Danh sách các nút mở rộng trên Mobile -->
+            <div id="fab-menu" class="absolute bottom-16 right-0 flex flex-col items-end gap-3 transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none origin-bottom z-50">
                 
-                <!-- 1. Tùy chọn: Tải về PDF -->
-                <button onclick="exportFullPDF('download'); toggleFab()" class="flex items-center gap-3 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-slate-100 active:scale-95 transition-transform whitespace-nowrap">
+                <!-- 1. Tải về PDF -->
+                <button onclick="handleMobilePDF('download')" class="flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-slate-100 active:scale-95 transition-transform whitespace-nowrap">
                     <span class="text-slate-700 font-bold text-sm">Tải về PDF</span>
                     <div class="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center border border-red-100"><i class="fa-solid fa-download"></i></div>
                 </button>
 
-                <!-- 2. Tùy chọn: Xem trước PDF -->
-                <button onclick="exportFullPDF('preview'); toggleFab()" class="flex items-center gap-3 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-slate-100 active:scale-95 transition-transform whitespace-nowrap">
+                <!-- 2. Xem trước PDF -->
+                <button onclick="handleMobilePDF('preview')" class="flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-slate-100 active:scale-95 transition-transform whitespace-nowrap">
                     <span class="text-slate-700 font-bold text-sm">Xem trước PDF</span>
                     <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100"><i class="fa-solid fa-eye"></i></div>
                 </button>
                 
-                <!-- Nút Thêm hoạt động (Mobile) -->
-                <button onclick="openActivityModal(); toggleFab()" class="flex items-center gap-3 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-slate-100 active:scale-95 transition-transform whitespace-nowrap">
+                <!-- Thêm hoạt động -->
+                <button onclick="openActivityModal(); toggleFab()" class="flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-slate-100 active:scale-95 transition-transform whitespace-nowrap">
                     <span class="text-slate-700 font-bold text-sm">Thêm hoạt động</span>
                     <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100"><i class="fa-solid fa-plus"></i></div>
                 </button>

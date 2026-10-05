@@ -23,24 +23,38 @@
             }
         }
 // ==========================================
-        // LOGIC XUẤT FULL UI RA PDF (Phiên bản an toàn, giữ nguyên layout)
+        // HÀM TRUNG GIAO DỰNG CHO MOBILE (Đóng menu + Gọi PDF)
         // ==========================================
+        function handleMobilePDF(action) {
+            // 1. Đóng menu nổi ngay lập tức để tránh kẹt sự kiện
+            toggleFab();
+            
+            // 2. Chạy hàm xuất PDF sau 150ms để hiệu ứng đóng menu mượt mà trước
+            setTimeout(() => {
+                exportFullPDF(action);
+            }, 150);
+        }
+
         // ==========================================
-        // LOGIC XUẤT FULL UI RA PDF (Hỗ trợ Download & Preview)
+        // LOGIC XUẤT PDF CHUẨN BLOB (Tương thích tuyệt đối iPhone/Android/PC)
         // ==========================================
         function exportFullPDF(action = 'download') {
             const element = document.getElementById('main-scroll'); 
-            
-            // Xử lý đổi text nút bấm đang tải
+            if (!element) {
+                alert("Không tìm thấy khung nội dung lịch trình!");
+                return;
+            }
+
+            // Đổi text thông báo đang xử lý (nếu có trên PC)
             const btnPC = document.getElementById('btn-pdf-pc');
             const originalPCText = btnPC ? btnPC.innerHTML : '';
             if(window.innerWidth > 768 && btnPC) {
                 btnPC.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất...';
             }
 
-            // Đưa thanh cuộn về đỉnh để tránh lỗi trắng đầu trang
+            // Đưa trang về đỉnh
             window.scrollTo({ top: 0, behavior: 'instant' });
-            if(element) element.scrollTop = 0;
+            element.scrollTop = 0;
 
             const opt = {
                 margin:       0,
@@ -49,33 +63,41 @@
                 html2canvas:  { 
                     scale: 2, 
                     useCORS: true,
-                    windowWidth: element ? element.scrollWidth : document.body.scrollWidth,
+                    windowWidth: element.scrollWidth || document.body.scrollWidth,
                     scrollY: 0,
                     scrollX: 0
                 }, 
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // Tiến hành tạo file PDF bằng html2pdf
-            const worker = html2pdf().set(opt).from(element);
+            // Sử dụng cơ chế tạo Blob (Tệp ảo an toàn cho Mobile)
+            html2pdf().set(opt).from(element).outputPdf('blob').then(function(pdfBlob) {
+                const blobUrl = URL.createObjectURL(pdfBlob);
+                
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                
+                if (action === 'preview') {
+                    // Xem trước: Mở tab mới chứa PDF
+                    a.target = '_blank';
+                } else {
+                    // Tải về: Ép trình duyệt tải tệp xuống
+                    a.download = 'Lich-Trinh-TripPlanner.pdf';
+                }
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
 
-            if (action === 'preview') {
-                // --- TÙY CHỌN 1: XEM TRƯỚC (Mở tab mới dạng PDF) ---
-                worker.outputPdf('datauristring').then(function(pdfDataUri) {
-                    const win = window.open();
-                    win.document.write('<iframe src="' + pdfDataUri + '" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>');
-                    
-                    if(window.innerWidth > 768 && btnPC) btnPC.innerHTML = originalPCText;
-                });
-            } else {
-                // --- TÙY CHỌN 2: TẢI VỀ NGAY (Download) ---
-                worker.save().then(() => {
-                    if(window.innerWidth > 768 && btnPC) {
-                        btnPC.innerHTML = originalPCText;
-                    }
-                }).catch(err => {
-                    console.error("Lỗi tải PDF:", err);
-                    if(window.innerWidth > 768 && btnPC) btnPC.innerHTML = originalPCText;
-                });
-            }
+                // Khôi phục nút trên PC
+                if(window.innerWidth > 768 && btnPC) {
+                    btnPC.innerHTML = originalPCText;
+                }
+            }).catch(err => {
+                console.error("Lỗi tạo PDF:", err);
+                alert("Có lỗi xảy ra khi tạo PDF. Vui lòng thử lại!");
+                if(window.innerWidth > 768 && btnPC) {
+                    btnPC.innerHTML = originalPCText;
+                }
+            });
         }
