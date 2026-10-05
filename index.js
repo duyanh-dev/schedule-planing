@@ -509,6 +509,19 @@
         };
 
 
+        // --- 4. HÀM MỞ GOOGLE MAPS (Giữ nguyên) ---
+        const openGoogleMaps = (from, to) => {
+            let url = 'https://www.google.com/maps/dir/?api=1';
+            if (from && to) {
+                url += `&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}`;
+            } else if (to) {
+                url += `&destination=${encodeURIComponent(to)}`;
+            } else if (from) {
+                url += `&destination=${encodeURIComponent(from)}`;
+            }
+            if(from || to) window.open(url, '_blank');
+        };
+
         // --- STREAMING_CHUNK: REAL-TIME & SIMULATION LOGIC ---
         const updateClockAndBanner = () => {
             const now = new Date();
