@@ -494,7 +494,7 @@
                         <i class="fa-solid fa-feather text-[10px]"></i>
                         <span class="h-px w-8 bg-slate-200"></span>
                     </div>
-                    <p class="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">TripPlanner v1.0.0</p>
+                    <p class="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">TripPlanner v1.2.0</p>
                     <p class="text-[10px] font-medium text-slate-400 mt-1.5 flex items-center justify-center gap-1.5">
                         Made with <i class="fa-solid fa-heart text-red-400/70"></i> by duyanh.dev 
                         <span class="text-slate-300 px-1">•</span> 
