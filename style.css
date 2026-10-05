@@ -3,6 +3,11 @@
             background-color: #f8fafc; 
             -webkit-tap-highlight-color: transparent; 
         }
+
+        /* Tắt tính năng double-tap to zoom trên toàn bộ UI nhưng vẫn cho phép vuốt/cuộn */
+body, button, input, div {
+    touch-action: manipulation;
+}
         
         /* Hide scrollbars for clean UI but allow scrolling */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
