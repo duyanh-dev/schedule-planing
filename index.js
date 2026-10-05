@@ -802,6 +802,10 @@
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const day = trip.days.find(d => d.date === state.activeDayDate);
             
+            // --- XỬ LÝ LỌC DẤU CHẤM TRƯỚC KHI LƯU ---
+            const rawBudget = document.getElementById('act-budget-amount').value;
+            const cleanBudget = rawBudget ? rawBudget.replace(/\./g, '') : '';
+            
             const newAct = {
                 id: document.getElementById('act-id').value || Math.random().toString(36).substr(2, 9),
                 start: start, end: end, details: details,
@@ -810,11 +814,12 @@
                 icon: document.getElementById('act-icon').value,
                 type: document.getElementById('act-type').value,
                 transport: transportVal,
-                // Các trường dữ liệu mới
                 desc: document.getElementById('act-desc').value,
                 guide: document.getElementById('act-guide').value,
                 note: document.getElementById('act-note').value,
-                budgetAmt: document.getElementById('act-budget-amount').value,
+                
+                // Lưu số tiền đã được tẩy sạch dấu chấm (Ví dụ: 11000)
+                budgetAmt: cleanBudget, 
                 budgetCur: document.getElementById('act-budget-cur').value,
                 isCompleted: false
             };
