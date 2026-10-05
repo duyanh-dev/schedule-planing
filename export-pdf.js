@@ -23,39 +23,29 @@
             }
         }
 // ==========================================
-        // HÀM TRUNG GIAO DỰNG CHO MOBILE (Đóng menu + Gọi PDF)
+        // LOGIC XUẤT FULL UI RA PDF (Phiên bản an toàn, giữ nguyên layout)
         // ==========================================
-        function handleMobilePDF(action) {
-            // 1. Đóng menu nổi ngay lập tức để tránh kẹt sự kiện
-            toggleFab();
-            
-            // 2. Chạy hàm xuất PDF sau 150ms để hiệu ứng đóng menu mượt mà trước
-            setTimeout(() => {
-                exportFullPDF(action);
-            }, 150);
-        }
-
-        // ==========================================
-        // LOGIC XUẤT PDF CHUẨN BLOB (Tương thích tuyệt đối iPhone/Android/PC)
-        // ==========================================
-        function exportFullPDF(action = 'download') {
+        function exportFullPDF() {
+            // Lấy trực tiếp phần tử cuộn chứa lịch trình
             const element = document.getElementById('main-scroll'); 
-            if (!element) {
-                alert("Không tìm thấy khung nội dung lịch trình!");
-                return;
-            }
-
-            // Đổi text thông báo đang xử lý (nếu có trên PC)
+            
+            // Xử lý nút đang tải
             const btnPC = document.getElementById('btn-pdf-pc');
+            const btnMobile = document.getElementById('btn-pdf-mobile').querySelector('span');
             const originalPCText = btnPC ? btnPC.innerHTML : '';
+            const originalMobileText = btnMobile ? btnMobile.innerText : '';
+            
             if(window.innerWidth > 768 && btnPC) {
                 btnPC.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất...';
+            } else if(btnMobile) {
+                btnMobile.innerText = 'Đang xuất...';
             }
 
-            // Đưa trang về đỉnh
+            // Đảm bảo cuộn lên đầu trang trước khi chụp để không bị khoảng trắng
             window.scrollTo({ top: 0, behavior: 'instant' });
-            element.scrollTop = 0;
+            if(element) element.scrollTop = 0;
 
+            // Cấu hình PDF tối ưu
             const opt = {
                 margin:       0,
                 filename:     'Lich-Trinh-TripPlanner.pdf',
@@ -63,41 +53,26 @@
                 html2canvas:  { 
                     scale: 2, 
                     useCORS: true,
-                    windowWidth: element.scrollWidth || document.body.scrollWidth,
+                    // Giúp chụp chuẩn xác chiều rộng thực tế của khung nhìn hiện tại
+                    windowWidth: element ? element.scrollWidth : document.body.scrollWidth,
                     scrollY: 0,
                     scrollX: 0
                 }, 
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // Sử dụng cơ chế tạo Blob (Tệp ảo an toàn cho Mobile)
-            html2pdf().set(opt).from(element).outputPdf('blob').then(function(pdfBlob) {
-                const blobUrl = URL.createObjectURL(pdfBlob);
-                
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                
-                if (action === 'preview') {
-                    // Xem trước: Mở tab mới chứa PDF
-                    a.target = '_blank';
-                } else {
-                    // Tải về: Ép trình duyệt tải tệp xuống
-                    a.download = 'Lich-Trinh-TripPlanner.pdf';
-                }
-                
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-
-                // Khôi phục nút trên PC
+            // Tiến hành xuất
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Khôi phục nút bấm
                 if(window.innerWidth > 768 && btnPC) {
                     btnPC.innerHTML = originalPCText;
+                } else if(btnMobile) {
+                    btnMobile.innerText = originalMobileText;
                 }
             }).catch(err => {
-                console.error("Lỗi tạo PDF:", err);
-                alert("Có lỗi xảy ra khi tạo PDF. Vui lòng thử lại!");
-                if(window.innerWidth > 768 && btnPC) {
-                    btnPC.innerHTML = originalPCText;
-                }
+                console.error("Lỗi xuất PDF:", err);
+                alert("Có lỗi xảy ra khi xuất PDF, vui lòng thử lại!");
+                if(window.innerWidth > 768 && btnPC) btnPC.innerHTML = originalPCText;
+                if(btnMobile) btnMobile.innerText = originalMobileText;
             });
         }
