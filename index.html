@@ -25,8 +25,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- Leaflet CSS for Map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+   <!-- Mapbox GL JS CSS & JS -->
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js'></script>
     
     <link rel="stylesheet" href="./style.css">
 </head>
@@ -180,7 +181,7 @@
 
                         <!-- Nút Thêm 1 HĐ (Chỉ hiện PC) -->
                         <button onclick="openActivityModal()" class="hidden md:flex w-full md:flex-[1.2] h-[50px] bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-200 transition-transform active:scale-95 justify-center items-center gap-2">
-                            <i class="fa-solid fa-plus"></i> Thêm hạot động
+                            <i class="fa-solid fa-plus"></i> Thêm hoạt động
                         </button>
 
                     </div>
@@ -350,63 +351,89 @@
         </div>
     </div>
 
-    <!-- Map Picker Modal (Leaflet) -->
-    <div id="map-picker-modal" class="modal-overlay fixed inset-0 bg-slate-900/95 backdrop-blur-sm p-0 md:p-6 flex-col z-[10000]">
-        <div class="modal-content bg-white w-full h-full md:h-[85vh] md:max-w-4xl md:rounded-3xl flex flex-col overflow-hidden shadow-2xl relative">
+    <!-- Map Picker Modal (Apple Liquid Glass Style) -->
+    <div id="map-picker-modal" class="modal-overlay fixed inset-0 bg-slate-900/40 backdrop-blur-md flex justify-center items-end md:items-center z-[10000] p-0 md:p-6 opacity-0 pointer-events-none transition-all duration-300">
+        
+        <!-- Modal Content (Tràn viền, bo góc lớn) -->
+        <div class="modal-content bg-white w-full h-[92vh] md:h-[85vh] md:max-w-5xl rounded-t-[2.5rem] md:rounded-[2.5rem] flex flex-col overflow-hidden shadow-2xl relative transform translate-y-10 transition-transform duration-300 border border-white/50">
             
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white z-20 shadow-sm">
-                <h3 class="font-black text-slate-900 text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-map-location-dot text-blue-500"></i> Chọn vị trí trên bản đồ
+            <!-- Map Container (Tràn viền 100% làm nền) -->
+            <div class="absolute inset-0 bg-slate-100 z-0" id="picker-map-container">
+                <div id="picker-map" class="w-full h-full"></div>
+            </div>
+
+            <!-- Header Kính mờ (Nổi) -->
+            <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20 bg-gradient-to-b from-white/90 to-transparent backdrop-blur-[2px] pt-5 md:pt-6 px-5 md:px-8 pointer-events-none">
+                <h3 class="font-black text-slate-800 text-lg md:text-xl drop-shadow-sm flex items-center gap-2 pointer-events-auto">
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm shadow-md"><i class="fa-solid fa-location-dot"></i></div>
+                    Chọn vị trí
                 </h3>
-                <button onclick="closeMapPicker()" class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-200"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            
-            <!-- Map Container -->
-            <div class="flex-1 relative bg-slate-200 w-full min-h-[400px]" id="picker-map-container">
-                <div id="picker-map" class="absolute inset-0 w-full h-full z-10"></div>
-                
-                <!-- Thanh tìm kiếm & Gợi ý (Nổi trên bản đồ) -->
-                <div class="absolute top-2 left-2 right-2 md:top-4 md:left-4 md:right-4 z-[1000] space-y-2 pointer-events-none">
-                    
-                    <!-- Ô nhập liệu -->
-                    <div class="flex gap-2 pointer-events-auto shadow-xl rounded-xl">
-                        <div class="relative flex-1 bg-white/95 backdrop-blur rounded-xl border border-slate-100 flex items-center px-3">
-                            <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
-                            <input type="text" id="map-search-input" placeholder="Tìm kiếm địa điểm..." class="w-full py-3 px-3 outline-none text-sm font-semibold bg-transparent text-slate-800" onkeydown="if(event.key==='Enter') searchMapLocation()">
-                            <button onclick="document.getElementById('map-search-input').value = ''; document.getElementById('search-results').classList.add('hidden')" class="text-slate-300 hover:text-red-500 px-2 transition-colors"><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                        <button onclick="searchMapLocation()" class="bg-blue-600 text-white px-4 rounded-xl shadow-lg hover:bg-blue-700 font-bold text-sm pointer-events-auto transition-colors"><i class="fa-solid fa-arrow-right"></i></button>
-                    </div>
-                    
-                    <!-- Dropdown Kết quả tìm kiếm -->
-                    <div id="search-results" class="bg-white/95 backdrop-blur rounded-xl shadow-xl border border-slate-100 max-h-48 overflow-y-auto hidden pointer-events-auto">
-                        <!-- Kết quả JS đổ vào đây -->
-                    </div>
-
-                    <!-- Các nút gợi ý nhanh -->
-                    <div class="flex gap-2 overflow-x-auto hide-scrollbar pointer-events-auto pb-1">
-                        <button onclick="getUserLocation()" class="flex-shrink-0 px-3 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-md whitespace-nowrap hover:bg-slate-800 transition-colors"><i class="fa-solid fa-location-crosshairs mr-1 text-blue-400"></i> Vị trí của tôi</button>
-                        <button onclick="quickSearch('Nhà hàng')" class="flex-shrink-0 px-3 py-2 bg-white text-slate-700 text-xs font-bold rounded-lg shadow-md whitespace-nowrap hover:bg-blue-50 border border-slate-100 transition-colors"><i class="fa-solid fa-utensils text-orange-500 mr-1"></i> Nhà hàng</button>
-                        <button onclick="quickSearch('Khách sạn')" class="flex-shrink-0 px-3 py-2 bg-white text-slate-700 text-xs font-bold rounded-lg shadow-md whitespace-nowrap hover:bg-blue-50 border border-slate-100 transition-colors"><i class="fa-solid fa-bed text-blue-500 mr-1"></i> Khách sạn</button>
-                        <button onclick="quickSearch('Quán cà phê')" class="flex-shrink-0 px-3 py-2 bg-white text-slate-700 text-xs font-bold rounded-lg shadow-md whitespace-nowrap hover:bg-blue-50 border border-slate-100 transition-colors"><i class="fa-solid fa-mug-hot text-amber-700 mr-1"></i> Cafe</button>
-                    </div>
-                </div>
-
-                <!-- Loading indicator -->
-                <div id="map-loading" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/95 backdrop-blur px-5 py-3 rounded-full shadow-2xl font-bold text-sm text-slate-700 items-center gap-2 hidden z-[1000] border border-slate-100">
-                    <i class="fa-solid fa-spinner fa-spin text-blue-600"></i> Đang tải...
-                </div>
-            </div>
-
-            <div class="p-5 bg-white border-t border-slate-100 z-20 flex flex-col sm:flex-row gap-4 items-center justify-between shadow-[0_-10px_20px_rgba(0,0,0,0.05)] pb-8 md:pb-5">
-                <div class="flex-1 w-full min-w-0 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Địa chỉ đã chọn:</p>
-                    <p id="map-selected-address" class="text-sm font-bold text-slate-800 truncate">Chạm vào bản đồ để chọn vị trí</p>
-                </div>
-                <button onclick="confirmMapSelection()" id="btn-confirm-map" disabled class="w-full sm:w-auto px-8 py-3.5 font-bold text-white bg-slate-900 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
-                    Xác nhận chọn
+                <button onclick="closeMapPicker()" class="w-10 h-10 bg-white/70 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-600 hover:bg-white shadow-sm border border-white pointer-events-auto transition-transform active:scale-95">
+                    <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
+
+            <!-- Thanh công cụ Tìm kiếm nổi (Floating Search) -->
+            <div class="absolute top-20 md:top-6 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-md z-30 pointer-events-none flex flex-col gap-3">
+                
+                <!-- Thanh Search Liquid Glass -->
+                <div class="flex gap-2 pointer-events-auto bg-white/80 backdrop-blur-2xl p-1.5 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/60 transition-all focus-within:bg-white/95 focus-within:shadow-xl">
+                    <div class="flex-1 flex items-center pl-4">
+                        <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                        <input type="text" id="map-search-input" placeholder="Tìm kiếm địa điểm..." class="w-full py-2.5 px-3 outline-none text-sm font-semibold bg-transparent text-slate-800 placeholder-slate-400" onkeydown="if(event.key==='Enter') searchMapLocation()">
+                        <button onclick="document.getElementById('map-search-input').value = ''; document.getElementById('search-results').classList.add('hidden')" class="text-slate-300 hover:text-red-500 pr-2 transition-colors"><i class="fa-solid fa-circle-xmark text-lg"></i></button>
+                    </div>
+                    <button onclick="searchMapLocation()" class="w-11 h-11 bg-blue-600 text-white rounded-full shadow-md hover:bg-blue-700 font-bold transition-transform active:scale-95 flex items-center justify-center">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Dropdown Kết quả tìm kiếm (Kính mờ) -->
+                <div id="search-results" class="bg-white/85 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/60 max-h-56 overflow-y-auto hidden pointer-events-auto hide-scrollbar p-2">
+                    <!-- Kết quả JS đổ vào đây -->
+                </div>
+
+                <!-- Chips Gợi ý (Liquid Pills) -->
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar pointer-events-auto px-1">
+                    <button onclick="getUserLocation()" class="flex-shrink-0 px-4 py-2.5 bg-blue-600/90 backdrop-blur-md text-white text-[13px] font-bold rounded-full shadow-md whitespace-nowrap active:scale-95 transition-transform border border-blue-500/50">
+                        <i class="fa-solid fa-location-crosshairs mr-1"></i> Vị trí của tôi
+                    </button>
+                    <!-- <button onclick="quickSearch('Nhà hàng')" class="flex-shrink-0 px-4 py-2.5 bg-white/70 backdrop-blur-md text-slate-700 text-[13px] font-bold rounded-full shadow-sm border border-white/60 whitespace-nowrap active:scale-95 transition-transform hover:bg-white/90">
+                        🍕 Nhà hàng
+                    </button>
+                    <button onclick="quickSearch('Khách sạn')" class="flex-shrink-0 px-4 py-2.5 bg-white/70 backdrop-blur-md text-slate-700 text-[13px] font-bold rounded-full shadow-sm border border-white/60 whitespace-nowrap active:scale-95 transition-transform hover:bg-white/90">
+                        🛏 Khách sạn
+                    </button>
+                    <button onclick="quickSearch('Quán cà phê')" class="flex-shrink-0 px-4 py-2.5 bg-white/70 backdrop-blur-md text-slate-700 text-[13px] font-bold rounded-full shadow-sm border border-white/60 whitespace-nowrap active:scale-95 transition-transform hover:bg-white/90">
+                        ☕ Cafe
+                    </button> -->
+                </div>
+            </div>
+
+            <!-- Loading indicator (Nổi giữa màn hình) -->
+            <div id="map-loading" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900/80 backdrop-blur-xl px-6 py-4 rounded-2xl shadow-2xl font-bold text-sm text-white flex-col items-center gap-3 hidden z-50">
+                <i class="fa-solid fa-spinner fa-spin text-2xl text-blue-400"></i>
+                <span class="tracking-wide text-xs uppercase">Đang tìm...</span>
+            </div>
+
+            <!-- Dynamic Island Footer (Thẻ xác nhận nổi bên dưới) -->
+            <div class="absolute bottom-6 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-md z-40">
+                <div class="bg-white/85 backdrop-blur-3xl p-4 md:p-5 rounded-[2rem] shadow-[0_20px_40px_rgba(0,0,0,0.1)] border border-white/60 flex flex-col gap-4 transform transition-all">
+                    <div class="flex items-center gap-3 px-2">
+                        <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex flex-shrink-0 items-center justify-center">
+                            <i class="fa-solid fa-thumbtack text-lg"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Địa chỉ đã chọn</p>
+                            <p id="map-selected-address" class="text-sm font-bold text-slate-800 truncate">Chạm vào bản đồ để ghim...</p>
+                        </div>
+                    </div>
+                    <button onclick="confirmMapSelection()" id="btn-confirm-map" disabled class="w-full py-3.5 font-bold text-white bg-slate-900 rounded-2xl transition-all disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed shadow-md hover:shadow-xl active:scale-95 flex items-center justify-center gap-2">
+                        Xác nhận điểm này <i class="fa-solid fa-check"></i>
+                    </button>
+                </div>
+            </div>
+            
         </div>
     </div>
 
@@ -611,7 +638,8 @@
     <script src="index.js"></script>
 <script src="trip-logic.js"></script> <!-- FILE LOGIC MỚI -->
 <script src="./quick-add.js"></script> <!-- FILE LOGIC MỚI -->
-<script src="././export-pdf.js"></script> <!-- FILE LOGIC MỚI -->
+<script src="./export-pdf.js"></script> <!-- FILE LOGIC MỚI -->
+<script src="./maps-picker.js"></script> <!-- FILE LOGIC MỚI -->
   
 </body>
 </html>
