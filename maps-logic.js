@@ -3,7 +3,7 @@
         // ==========================================
         
         // ĐIỀN TOKEN CỦA BẠN VÀO ĐÂY (Lấy miễn phí tại account.mapbox.com)
-        mapboxgl.accessToken = CONFIG.MAPBOX_TOKEN;
+        mapboxgl.accessToken = 'pk.eyJ1Ijoia3dlaXRlaSIsImEiOiJjbXV2N2JvdmgwMThiMnlxMmowMXR3eDV5In0.rNVMC-UhJOxVf58JDThU_A';
 
         let pickerMap = null;
         let pickerMarker = null;
