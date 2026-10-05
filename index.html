@@ -48,15 +48,25 @@
     <!-- Sidebar -->
     <div id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white/95 backdrop-blur-xl border-r border-slate-200 z-[7000] transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl md:shadow-none">
         
+        
         <!-- Các phần header và danh sách chuyến đi giữ nguyên -->
         <!-- ... -->
         
         <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Chuyến đi của bạn</h3>
+
+            <button onclick="openTripModal()" class="my-3 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs md:text-sm rounded-xl shadow-md shadow-blue-200 transition-transform active:scale-95 flex items-center gap-2">
+            <i class="fa-solid fa-plus"></i> 
+            <span>Thêm chuyến đi</span>
+        </button>
             <div id="trips-list" class="space-y-1">
                 <!-- Trip List JS gen -->
             </div>
+            <!-- Nút Thêm chuyến đi (Gắn vào Header hoặc Sidebar) -->
+
         </div>
+
+        
 
         <!-- PHẦN ĐÓNG DẤU BẢN QUYỀN MỚI THÊM VÀO ĐÂY -->
         <div class="mt-auto p-5 border-t border-slate-100 bg-slate-50/50">
