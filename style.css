@@ -97,5 +97,15 @@ body, button, input, div {
             visibility: visible !important;
             pointer-events: auto !important; /* Bắt lại click khi form hiện lên */
             transition: all 0.3s ease-in-out;
-        }
         
+        
+        }
+
+.leaflet-container img.leaflet-tile {
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+        
+
