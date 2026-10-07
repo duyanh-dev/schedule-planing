@@ -314,11 +314,13 @@
                     <!-- Gắn sự kiện touch/mouse để bắt đầu nhấn giữ (Long-press) -->
                     <button id="tab-${day.date}" 
                         ${isEditMode ? '' : `onclick="switchDay('${day.date}')"`}
-                        onmousedown="startDayPress('${day.date}')" 
+                        onmousedown="startDayPress('${day.date}', event)" 
+                        onmousemove="moveDayPress(event)"
                         onmouseup="endDayPress()" 
                         onmouseleave="endDayPress()" 
-                        ontouchstart="startDayPress('${day.date}')" 
-                        ontouchend="endDayPress()" 
+                        ontouchstart="startDayPress('${day.date}', event)" 
+                        ontouchmove="moveDayPress(event)"
+                        ontouchend="endDayPress()"
                         class="flex-shrink-0 h-8 md:h-16 px-3.5 md:px-6 rounded-full md:rounded-[1.25rem] transition-all relative group flex flex-col justify-center items-center md:items-start ${activeClass} ${pastClass} ${jiggleClass}">
                         
                         <!-- Nếu đang Edit Mode -> Hiện nút X để xóa (Kính lỏng) | Nếu không -> Hiện badge NAY (nếu có) -->
@@ -401,8 +403,8 @@
                             </div>
                         </div>
                         <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-blue-600/85 backdrop-blur-2xl border border-blue-400/70 hover:bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 mt-2 shadow-[inset_0_2px_5px_rgba(255,255,255,0.4),inset_0_-3px_5px_rgba(0,0,0,0.15)]">
-    <i class="fa-solid fa-map-location-dot mr-1.5 text-blue-200 drop-shadow-sm"></i> Chỉ đường Google Maps
-</button>
+                            <i class="fa-solid fa-map-location-dot mr-1.5 text-blue-200 drop-shadow-sm"></i> Chỉ đường Google Maps
+                        </button>
                     </div>`;
                 } else if (act.to || act.from) {
                     routeHtml = `<div class="bg-white/50 backdrop-blur-md border border-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-2.5 rounded-xl text-[13px] font-semibold text-slate-700 break-words leading-relaxed"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${act.to || act.from}</div>`;
@@ -479,11 +481,17 @@
                                             ${act.budgetAmt ? `<span class="text-[11px] font-black text-emerald-700 bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 shadow-[0_2px_8px_rgba(16,185,129,0.1)] px-2.5 py-1.5 rounded-lg"><i class="fa-solid fa-sack-dollar mr-1"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)}${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
                                         </div>
                                         
-                                        <!-- CỤM NÚT NHÂN BẢN / SỬA / XÓA (Tối ưu Mobile gap) -->
-                                        <div class="flex gap-2 md:gap-3">
-                                            <button onclick="duplicateActivity('${act.id}')" title="Nhân bản" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 shadow-sm transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-regular fa-copy text-xs"></i></button>
-                                            <button onclick="editActivity('${act.id}')" title="Sửa" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 shadow-sm transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-pen text-xs"></i></button>
-                                            <button onclick="deleteActivity('${act.id}')" title="Xóa" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-red-50 text-slate-500 hover:text-red-500 shadow-sm transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-trash text-xs"></i></button>
+                                        <!-- CỤM NÚT NHÂN BẢN / SỬA / XÓA (Liquid Glass Pill) -->
+                                        <div class="flex gap-1.5 md:gap-2">
+                                            <!-- Nút Duplicate (Thanh thoát, Kính lỏng) -->
+                                            <button onclick="duplicateActivity('${act.id}')" title="Duplicate" class="px-3 md:px-3.5 h-8 rounded-full bg-white/40 backdrop-blur-md border border-white/80 hover:bg-emerald-50/80 text-slate-500 hover:text-emerald-600 shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 flex items-center justify-center gap-1.5 touch-manipulation">
+                                                <i class="fa-regular fa-copy text-[11px] drop-shadow-sm"></i>
+                                                <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest drop-shadow-sm">Duplicate</span>
+                                            </button>
+                                            
+                                            <button onclick="editActivity('${act.id}')" title="Sửa" class="w-8 h-8 rounded-full bg-white/40 backdrop-blur-md border border-white/80 hover:bg-blue-50/80 text-slate-500 hover:text-blue-600 shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-pen text-xs"></i></button>
+                                            
+                                            <button onclick="deleteActivity('${act.id}')" title="Xóa" class="w-8 h-8 rounded-full bg-white/40 backdrop-blur-md border border-white/80 hover:bg-red-50/80 text-slate-500 hover:text-red-500 shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-trash text-xs"></i></button>
                                         </div>
                                     </div>
                                 </div>
@@ -1201,30 +1209,128 @@
             }
         });
 
-        // ==========================================
-// NHÂN BẢN HOẠT ĐỘNG (DUPLICATE)
+
 // ==========================================
+// TÍNH NĂNG NHÂN BẢN (DUPLICATE) & ĐỔI GIỜ
+// ==========================================
+
 window.duplicateActivity = (actId) => {
     const trip = state.trips.find(t => t.id === state.activeTripId);
-    if (!trip) return;
-    
     const day = trip.days.find(d => d.date === state.activeDayDate);
-    if (!day) return;
+    const act = day.activities.find(a => a.id === actId);
     
+    if (!act) return;
+
+    // Giao diện Action Sheet chuẩn iOS Liquid Glass (Bo cong cực sâu, mờ sương)
+    // Giao diện Action Sheet chuẩn iOS Liquid Glass
+    const modalHtml = `
+        <div id="dup-action-modal" class="fixed inset-0 z-[9999] flex justify-center items-end md:items-center p-0 md:p-4 transition-opacity duration-300 opacity-0">
+            <!-- Nền tối mờ -->
+            <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]" onclick="closeDupModal()"></div>
+            
+            <!-- Action Sheet (Bo cong 40px) -->
+            <div class="bg-white/70 backdrop-blur-3xl w-full max-w-sm rounded-t-[2.5rem] md:rounded-[2.5rem] p-5 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-white/80 transform translate-y-full md:translate-y-0 md:scale-95 transition-transform duration-300 relative z-10 flex flex-col gap-3">
+                
+                <!-- Thanh Handle bar -->
+                <div class="w-12 h-1.5 bg-slate-300/50 rounded-full mx-auto mb-1 md:hidden"></div>
+                
+                <div class="text-center mb-1">
+                    <div class="w-12 h-12 bg-emerald-500/10 text-emerald-600 rounded-[1.25rem] flex items-center justify-center text-xl mx-auto mb-3 border border-emerald-500/20 shadow-inner"><i class="fa-regular fa-copy"></i></div>
+                    <h3 class="text-[17px] md:text-lg font-black text-slate-800 drop-shadow-sm">Duplicate Activity</h3>
+                    <p class="text-[13px] text-slate-500 font-medium mt-1 line-clamp-1 truncate px-4">"${act.details}"</p>
+                </div>
+                
+                <div class="space-y-2.5 mt-2">
+                    <!-- Tùy chọn 1: Giữ nguyên giờ -->
+                    <button onclick="executeDuplicate('${actId}', false)" class="w-full py-3.5 bg-white/60 hover:bg-white backdrop-blur-md rounded-2xl font-bold text-slate-700 text-[13px] md:text-sm shadow-sm border border-white transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-copy text-slate-400"></i> Giữ nguyên giờ (${act.start} - ${act.end})
+                    </button>
+                    
+                    <!-- Tùy chọn 2: Mở khung đổi giờ -->
+                    <button onclick="document.getElementById('dup-time-picker').classList.toggle('hidden')" class="w-full py-3.5 bg-blue-600/85 hover:bg-blue-600 backdrop-blur-md rounded-2xl font-bold text-white text-[13px] md:text-sm shadow-[0_8px_25px_rgba(37,99,235,0.3)] border border-blue-400/50 transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-clock"></i> Đổi sang giờ khác
+                    </button>
+                    
+                    <!-- Khung Nhập Giờ (Đã fix lỗi tràn UI bằng min-w-0 và gap-1.5) -->
+                    <div id="dup-time-picker" class="hidden transition-all bg-white/40 backdrop-blur-md rounded-3xl p-3 md:p-4 border border-white shadow-inner mt-1">
+                        <div class="flex items-center justify-between gap-1.5 md:gap-3 mb-3">
+                            
+                            <!-- Bắt đầu -->
+                            <div class="flex-1 min-w-0 flex flex-col gap-1">
+                                <label class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-wider pl-1 drop-shadow-sm">Bắt đầu</label>
+                                <input type="time" id="dup-new-start" value="${act.start}" class="w-full p-2.5 bg-white/80 backdrop-blur-sm border border-white shadow-sm rounded-xl outline-none font-black text-slate-800 text-center focus:border-blue-400 transition-all text-base md:text-sm">
+                            </div>
+                            
+                            <!-- Mũi tên -->
+                            <div class="mt-4 flex-shrink-0 text-slate-400"><i class="fa-solid fa-arrow-right-long text-[10px] md:text-xs"></i></div>
+                            
+                            <!-- Kết thúc -->
+                            <div class="flex-1 min-w-0 flex flex-col gap-1">
+                                <label class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-wider pl-1 drop-shadow-sm">Kết thúc</label>
+                                <input type="time" id="dup-new-end" value="${act.end}" class="w-full p-2.5 bg-white/80 backdrop-blur-sm border border-white shadow-sm rounded-xl outline-none font-black text-slate-800 text-center focus:border-blue-400 transition-all text-base md:text-sm">
+                            </div>
+
+                        </div>
+                        <button onclick="executeDuplicate('${actId}', true)" class="w-full py-3 bg-emerald-500/90 hover:bg-emerald-500 backdrop-blur-md text-white font-bold rounded-xl shadow-[0_8px_20px_rgba(16,185,129,0.3)] border border-emerald-400/50 transition-all active:scale-95 touch-manipulation">
+                            <i class="fa-solid fa-check mr-1.5"></i> Xác nhận đổi giờ
+                        </button>
+                    </div>
+                </div>
+                
+                <button onclick="closeDupModal()" class="w-full mt-1.5 py-3.5 bg-slate-100/50 hover:bg-slate-200/60 backdrop-blur-sm rounded-2xl font-bold text-slate-500 text-[13px] md:text-sm transition-all active:scale-95 touch-manipulation">
+                    Hủy bỏ
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Animation kích hoạt mượt mà
+    requestAnimationFrame(() => {
+        const modal = document.getElementById('dup-action-modal');
+        modal.classList.remove('opacity-0');
+        modal.querySelector('.bg-white\\/70').classList.remove('translate-y-full', 'md:scale-95');
+    });
+};
+
+window.closeDupModal = () => {
+    const modal = document.getElementById('dup-action-modal');
+    if (modal) {
+        modal.classList.add('opacity-0');
+        modal.querySelector('.bg-white\\/70').classList.add('translate-y-full', 'md:scale-95');
+        setTimeout(() => modal.remove(), 300); // Đợi animation đóng
+    }
+};
+
+window.executeDuplicate = (actId, changeTime) => {
+    const trip = state.trips.find(t => t.id === state.activeTripId);
+    const day = trip.days.find(d => d.date === state.activeDayDate);
     const actIndex = day.activities.findIndex(a => a.id === actId);
+    
     if (actIndex > -1) {
         const actToCopy = day.activities[actIndex];
+        const newAct = JSON.parse(JSON.stringify(actToCopy)); // Deep Clone
         
-        // Tạo một bản sao chép (Deep copy) và cấp phát ID mới
-        const newAct = JSON.parse(JSON.stringify(actToCopy)); 
+        // Cấp phát ID và đánh dấu chưa hoàn thành
         newAct.id = 'act_' + Date.now() + Math.random().toString(36).substr(2, 9);
-        newAct.isCompleted = false; // Reset trạng thái chưa hoàn thành cho bản sao
+        newAct.isCompleted = false;
         
-        // Chèn bản sao ngay phía dưới bản gốc
-        day.activities.splice(actIndex + 1, 0, newAct);
+        // Nếu chọn Đổi giờ: Lấy dữ liệu từ cả 2 ô Start & End
+        if (changeTime) {
+            const newStart = document.getElementById('dup-new-start').value;
+            const newEnd = document.getElementById('dup-new-end').value;
+            if (newStart) newAct.start = newStart;
+            if (newEnd) newAct.end = newEnd;
+        }
         
-        // Lưu và Cập nhật lại UI
+        // Thêm vào mảng và Sort lại theo thời gian bắt đầu
+        day.activities.push(newAct);
+        day.activities.sort((a, b) => a.start.localeCompare(b.start));
+
+        // Lưu và render
         if(typeof saveState === 'function') saveState();
         renderTimeline();
+        closeDupModal();
     }
 };
