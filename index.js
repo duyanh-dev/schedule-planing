@@ -485,8 +485,7 @@
                                         <div class="flex gap-1.5 md:gap-2">
                                             <!-- Nút Duplicate (Thanh thoát, Kính lỏng) -->
                                             <button onclick="duplicateActivity('${act.id}')" title="Duplicate" class="px-3 md:px-3.5 h-8 rounded-full bg-white/40 backdrop-blur-md border border-white/80 hover:bg-emerald-50/80 text-slate-500 hover:text-emerald-600 shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 flex items-center justify-center gap-1.5 touch-manipulation">
-                                                <i class="fa-regular fa-copy text-[11px] drop-shadow-sm"></i>
-                                                <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest drop-shadow-sm">Duplicate</span>
+                                                <span class="text-[8px] md:text-[10px] font-black uppercase tracking-widest drop-shadow-sm">Duplicate</span>
                                             </button>
                                             
                                             <button onclick="editActivity('${act.id}')" title="Sửa" class="w-8 h-8 rounded-full bg-white/40 backdrop-blur-md border border-white/80 hover:bg-blue-50/80 text-slate-500 hover:text-blue-600 shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-pen text-xs"></i></button>

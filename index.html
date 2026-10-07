@@ -189,37 +189,55 @@
                         </button>
                     </div>
 
-                    <!-- CỤM NÚT TRÊN MÀN HÌNH CHÍNH (Apple Pastel Style & Responsive Smart Grid) -->
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 w-full pt-0 md:pt-4 border-t border-slate-100/50" data-html2canvas-ignore>
+                    <!-- CỤM NÚT TRÊN MÀN HÌNH CHÍNH (Apple Liquid Glass - Darker & Richer) -->
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-3.5 w-full pt-2 md:pt-4 border-t border-slate-200/60 relative z-10" data-html2canvas-ignore>
                             
-                            <!-- Nút Checklist (Tone Cam nhạt) -->
-                            <button onclick="openChecklistModal()" class="col-span-1 h-12 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-xl font-semibold text-[13px] transition-all flex justify-center items-center gap-2 border border-orange-200/50 shadow-sm active:scale-95">
-                                <i class="fa-solid fa-clipboard-list text-orange-500"></i> Checklist
+                            <!-- Nút Checklist (Tone Cam đậm hơn) -->
+                            <button onclick="openChecklistModal()" class="col-span-1 h-[3.25rem] bg-orange-100/80 backdrop-blur-xl hover:bg-orange-200/80 text-orange-800 rounded-[1.25rem] font-bold text-[12px] md:text-[13px] transition-all flex justify-start pl-2 md:pl-2.5 items-center gap-2 md:gap-2.5 border border-orange-200/70 shadow-[0_4px_12px_rgba(234,88,12,0.06),inset_0_2px_4px_rgba(255,255,255,0.8)] active:scale-95 touch-manipulation group">
+                                <div class="w-8 h-8 flex-shrink-0 rounded-full bg-white/90 flex items-center justify-center border border-orange-200 shadow-[0_2px_5px_rgba(0,0,0,0.06)] group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-clipboard-list text-orange-600 text-[13px]"></i>
+                                </div>
+                                <span class="drop-shadow-sm pr-1 truncate">Checklist</span>
                             </button>
 
-                            <!-- Nút Toàn cảnh (Tone Xám/Bạc) -->
-                            <button onclick="openGlobalTimeline()" class="col-span-1 h-12 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-semibold text-[13px] transition-all flex justify-center items-center gap-2 border border-slate-200/60 shadow-sm active:scale-95">
-                                <i class="fa-solid fa-calendar-days text-slate-500"></i> Toàn cảnh
+                            <!-- Nút Toàn cảnh (Tone Xám đậm hơn) -->
+                            <button onclick="openGlobalTimeline()" class="col-span-1 h-[3.25rem] bg-slate-200/70 backdrop-blur-xl hover:bg-slate-300/70 text-slate-800 rounded-[1.25rem] font-bold text-[12px] md:text-[13px] transition-all flex justify-start pl-2 md:pl-2.5 items-center gap-2 md:gap-2.5 border border-slate-300/60 shadow-[0_4px_12px_rgba(0,0,0,0.04),inset_0_2px_4px_rgba(255,255,255,0.8)] active:scale-95 touch-manipulation group">
+                                <div class="w-8 h-8 flex-shrink-0 rounded-full bg-white/90 flex items-center justify-center border border-slate-200 shadow-[0_2px_5px_rgba(0,0,0,0.06)] group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-calendar-days text-slate-600 text-[13px]"></i>
+                                </div>
+                                <span class="drop-shadow-sm pr-1 truncate">Toàn cảnh</span>
                             </button>
 
-                            <!-- Nút Tạo Hàng Loạt (Tone Tím nhạt) -->
-                            <button onclick="openBulkModal()" class="col-span-2 md:col-span-1 h-12 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-semibold text-[13px] transition-all flex justify-center items-center gap-2 border border-indigo-200/50 shadow-sm active:scale-95">
-                                <i class="fa-solid fa-layer-group text-indigo-500"></i> Tạo nhiều
+                            <!-- Nút Tạo Hàng Loạt (Tone Tím đậm hơn) -->
+                            <button onclick="openBulkModal()" class="col-span-2 md:col-span-1 h-[3.25rem] bg-indigo-100/80 backdrop-blur-xl hover:bg-indigo-200/80 text-indigo-900 rounded-[1.25rem] font-bold text-[12px] md:text-[13px] transition-all flex justify-center md:justify-start pl-0 md:pl-2.5 items-center gap-2.5 border border-indigo-200/70 shadow-[0_4px_12px_rgba(99,102,241,0.06),inset_0_2px_4px_rgba(255,255,255,0.8)] active:scale-95 touch-manipulation group">
+                                <div class="w-8 h-8 flex-shrink-0 rounded-full bg-white/90 flex items-center justify-center border border-indigo-200 shadow-[0_2px_5px_rgba(0,0,0,0.06)] group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-layer-group text-indigo-600 text-[13px]"></i>
+                                </div>
+                                <span class="drop-shadow-sm pr-1 truncate">Tạo nhiều</span>
                             </button>
 
-                            <!-- Nút Xuất PDF (Tone Đỏ nhạt - Ẩn trên Mobile) -->
-                            <button onclick="exportFullPDF()" id="btn-pdf-pc" class="hidden md:flex col-span-1 h-12 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-semibold text-[13px] shadow-sm transition-all active:scale-95 justify-center items-center gap-2 border border-rose-200/50">
-                                <i class="fa-solid fa-file-pdf text-rose-500"></i> PDF
+                            <!-- Nút Xuất PDF (Tone Đỏ đậm hơn - Ẩn trên Mobile) -->
+                            <button onclick="exportFullPDF()" id="btn-pdf-pc" class="hidden md:flex col-span-1 h-[3.25rem] bg-rose-100/80 backdrop-blur-xl hover:bg-rose-200/80 text-rose-900 rounded-[1.25rem] font-bold text-[13px] transition-all justify-start pl-2.5 items-center gap-2.5 border border-rose-200/70 shadow-[0_4px_12px_rgba(244,63,94,0.06),inset_0_2px_4px_rgba(255,255,255,0.8)] active:scale-95 touch-manipulation group">
+                                <div class="w-8 h-8 flex-shrink-0 rounded-full bg-white/90 flex items-center justify-center border border-rose-200 shadow-[0_2px_5px_rgba(0,0,0,0.06)] group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-file-pdf text-rose-600 text-[13px]"></i>
+                                </div>
+                                <span class="drop-shadow-sm pr-1 truncate">PDF</span>
                             </button>
 
-                            <!-- Nút Thêm Hoạt Động (Nút Chính: Solid Xanh dương - Kéo dài 2 cột trên md để lấp đầy khoảng trống) -->
-                            <button onclick="openActivityModal()" class="hidden md:flex col-span-1 md:col-span-2 lg:col-span-1 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-[13px] shadow-[0_4px_12px_rgba(37,99,235,0.25)] transition-all active:scale-95 justify-center items-center gap-2 border border-blue-500">
-                                <i class="fa-solid fa-plus text-white/80"></i> Thêm
+                            <!-- Nút Thêm Hoạt Động (Solid Blue đậm đà, nổi bật) -->
+                            <button onclick="openActivityModal()" class="hidden md:flex col-span-1 md:col-span-2 lg:col-span-1 h-[3.25rem] bg-blue-600 hover:bg-blue-700 text-white rounded-[1.25rem] font-bold text-[13px] transition-all justify-center items-center gap-2 border border-blue-500 shadow-[0_8px_20px_rgba(37,99,235,0.35),inset_0_2px_5px_rgba(255,255,255,0.35)] active:scale-95 touch-manipulation group">
+                                <div class="w-8 h-8 flex-shrink-0 rounded-full bg-white/20 flex items-center justify-center border border-white/30 shadow-inner group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-plus text-white text-[13px] drop-shadow-sm"></i>
+                                </div>
+                                <span class="drop-shadow-sm pr-1">Thêm HĐ</span>
                             </button>
 
-                            <!-- Nút Tải về máy (Nằm dưới cùng, trải dài 100% nhờ col-span-full) -->
-                            <button onclick="exportSingleTrip()" class="hidden md:flex col-span-full h-12 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-semibold text-[13px] transition-all justify-center items-center gap-2 border border-emerald-200/50 shadow-sm active:scale-95">
-                                <i class="fa-solid fa-cloud-arrow-down text-emerald-500"></i> Tải File Lịch Trình
+                            <!-- Nút Tải về máy (Tone Emerald đậm hơn - Full width PC) -->
+                            <button onclick="exportSingleTrip()" class="hidden md:flex col-span-full h-[3.25rem] bg-emerald-100/80 backdrop-blur-xl hover:bg-emerald-200/80 text-emerald-900 rounded-[1.25rem] font-bold text-[13px] transition-all justify-center items-center gap-2.5 border border-emerald-200/70 shadow-[0_4px_12px_rgba(16,185,129,0.06),inset_0_2px_4px_rgba(255,255,255,0.8)] active:scale-95 touch-manipulation group">
+                                <div class="w-8 h-8 flex-shrink-0 rounded-full bg-white/90 flex items-center justify-center border border-emerald-200 shadow-[0_2px_5px_rgba(0,0,0,0.06)] group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-cloud-arrow-down text-emerald-600 text-[13px]"></i>
+                                </div>
+                                <span class="drop-shadow-sm">Tải File Lịch Trình (JSON)</span>
                             </button>
 
                         </div>
