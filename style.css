@@ -109,3 +109,12 @@ body, button, input, div {
 }
         
 
+/* Hiệu ứng rung lắc Jiggle chuẩn iOS */
+@keyframes jiggle {
+    0% { transform: rotate(-2deg); }
+    50% { transform: rotate(2deg); }
+    100% { transform: rotate(-2deg); }
+}
+.animate-jiggle {
+    animation: jiggle 0.3s ease-in-out infinite;
+}

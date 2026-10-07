@@ -270,48 +270,39 @@
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const container = document.getElementById('days-tabs');
             
-            // Lấy ngày hôm nay (hỗ trợ cả hàm getRelativeDateStr của bạn hoặc Date mặc định)
             const todayStr = typeof getRelativeDateStr === 'function' ? getRelativeDateStr(0) : new Date().toISOString().slice(0, 10);
 
-            // ==========================================
-            // LOGIC 1: ƯU TIÊN NGÀY HIỆN TẠI (CHỈ KHI MỞ APP / CHUYỂN TRIP / RELOAD)
-            // ==========================================
-            // Biến window._lastRenderedTripId giúp nhận biết đây là lần load đầu tiên của chuyến đi
+            // LOGIC ƯU TIÊN NGÀY HIỆN TẠI (Giữ nguyên)
             if (window._lastRenderedTripId !== state.activeTripId) {
                 const hasToday = trip.days.find(d => d.date === todayStr);
                 let dayForceChanged = false;
                 
-                // Nếu chuyến đi có ngày hôm nay -> Ép chọn ngày hôm nay
                 if (hasToday && state.activeDayDate !== todayStr) {
                     state.activeDayDate = todayStr;
                     dayForceChanged = true;
-                } 
-                // Nếu không có hôm nay và ngày đang lưu không hợp lệ -> Chọn ngày đầu tiên
-                else if (trip.days.length > 0 && !trip.days.find(d => d.date === state.activeDayDate)) {
+                } else if (trip.days.length > 0 && !trip.days.find(d => d.date === state.activeDayDate)) {
                     state.activeDayDate = trip.days[0].date;
                     dayForceChanged = true;
                 }
-                
                 window._lastRenderedTripId = state.activeTripId;
-                
-                // Đồng bộ lại Timeline bên dưới nếu hệ thống vừa tự động chuyển ngày
-                if (dayForceChanged && typeof renderTimeline === 'function') {
-                    setTimeout(() => renderTimeline(), 0);
-                }
+                if (dayForceChanged && typeof renderTimeline === 'function') setTimeout(() => renderTimeline(), 0);
             }
 
-            // ==========================================
-            // LOGIC 2: RENDER GIAO DIỆN LIQUID GLASS & MOBILE COMPACT
-            // ==========================================
+            // RENDER GIAO DIỆN
             container.innerHTML = trip.days.map((day, idx) => {
                 const isActive = state.activeDayDate === day.date;
                 const isRealToday = day.date === todayStr;
-                const isPast = day.date < todayStr; // Xác định những ngày đã lùi vào quá khứ
+                const isPast = day.date < todayStr;
+                
+                // Lấy cờ trạng thái Edit Mode từ window
+                const isEditMode = window.isDayEditMode || false;
 
-                // Hiệu ứng mờ cho ngày đã qua (Nếu đang được chọn thì vẫn sáng)
                 const pastClass = (isPast && !isActive) ? 'opacity-40 grayscale-[40%]' : 'opacity-100';
+                
+                // Hiệu ứng Jiggle nếu đang bật Edit Mode
+                const jiggleClass = isEditMode ? 'animate-jiggle' : '';
 
-                // Giao diện Liquid Glass cho thẻ Active (Nổi khối 3D nhờ shadow-inner, KHÔNG CÓ shadow ngoài)
+                // Liquid Glass UI (Không dùng shadow ngoài)
                 const activeClass = isActive 
                     ? 'bg-gradient-to-br from-blue-400 to-blue-500 border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.1)]' 
                     : 'bg-white/50 border border-white/60 hover:bg-white/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.8)]';
@@ -320,33 +311,40 @@
                 const subtitleColor = isActive ? 'text-blue-100' : 'text-slate-400 group-hover:text-slate-500';
 
                 return `
-                    <!-- Chỉnh h-8, px-3.5 cho Mobile (SP) để nhỏ gọn tối đa -->
-                    <button id="tab-${day.date}" onclick="switchDay('${day.date}')" class="flex-shrink-0 h-8 md:h-16 px-3.5 md:px-6 rounded-full md:rounded-[1.25rem] transition-all relative group flex flex-col justify-center items-center md:items-start ${activeClass} ${pastClass}">
+                    <!-- Gắn sự kiện touch/mouse để bắt đầu nhấn giữ (Long-press) -->
+                    <button id="tab-${day.date}" 
+                        ${isEditMode ? '' : `onclick="switchDay('${day.date}')"`}
+                        onmousedown="startDayPress('${day.date}')" 
+                        onmouseup="endDayPress()" 
+                        onmouseleave="endDayPress()" 
+                        ontouchstart="startDayPress('${day.date}')" 
+                        ontouchend="endDayPress()" 
+                        class="flex-shrink-0 h-8 md:h-16 px-3.5 md:px-6 rounded-full md:rounded-[1.25rem] transition-all relative group flex flex-col justify-center items-center md:items-start ${activeClass} ${pastClass} ${jiggleClass}">
                         
-                        <!-- Badge "NAY" (Apple Notification Pill Style) -->
-                        ${isRealToday ? `<div class="absolute -top-2 -right-1 md:-top-2 md:-right-1.5 bg-red-500/90 backdrop-blur-md text-white text-[7px] md:text-[8px] font-black px-2 py-0.5 rounded-full z-10  shadow-[0_2px_8px_rgba(239,68,68,0.4)] tracking-wider">NAY</div>` : ''}
+                        <!-- Nếu đang Edit Mode -> Hiện nút X để xóa (Kính lỏng) | Nếu không -> Hiện badge NAY (nếu có) -->
+                        ${isEditMode ? `
+                            <div onclick="confirmDeleteDay('${day.date}')" class="absolute -top-1.5 -left-1.5 md:-top-2 md:-left-2 w-5 h-5 md:w-6 md:h-6 bg-slate-200/90 backdrop-blur-md border border-white shadow-[0_2px_8px_rgba(0,0,0,0.2)] rounded-full flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-100 z-20 touch-manipulation cursor-pointer">
+                                <i class="fa-solid fa-xmark text-[10px] md:text-xs"></i>
+                            </div>
+                        ` : (isRealToday ? `
+                            <div class="absolute -top-1.5 -right-1 md:-top-2 md:-right-1.5 bg-red-500/90 backdrop-blur-md text-white text-[7px] md:text-[8px] font-black px-2 py-0.5 rounded-full z-10 border border-white/90 shadow-[0_2px_8px_rgba(239,68,68,0.4)] tracking-wider">NAY</div>
+                        ` : '')}
                         
-                        <!-- Chữ "Ngày X" (Chỉ hiện PC) -->
-                        <div class="hidden md:block text-[10px] font-black uppercase tracking-wider ${subtitleColor} mb-1 drop-shadow-sm">Ngày ${idx + 1}</div>
-                        
-                        <!-- Ngày hiển thị (SP: font cực nhỏ text-[11px] | PC: text-sm) -->
-                        <div class="font-bold text-[11px] md:text-sm ${textColor} drop-shadow-sm">${formatDisplayDate(day.date)}</div>
+                        <div class="hidden md:block text-[10px] font-black uppercase tracking-wider ${subtitleColor} mb-1 drop-shadow-sm pointer-events-none">Ngày ${idx + 1}</div>
+                        <div class="font-bold text-[11px] md:text-sm ${textColor} drop-shadow-sm pointer-events-none">${formatDisplayDate(day.date)}</div>
                     </button>
                 `;
             }).join('');
 
-            // ==========================================
-            // LOGIC 3: TỰ ĐỘNG CUỘN (SCROLL) TỚI VỊ TRÍ 30% ĐẦU
-            // ==========================================
+            // LOGIC TỰ ĐỘNG CUỘN (Giữ nguyên)
             setTimeout(() => {
                 const activeTab = document.getElementById(`tab-${state.activeDayDate}`);
                 if (activeTab && container) {
                     const containerWidth = container.offsetWidth;
-                    // Lấy vị trí của tab trừ đi 30% chiều rộng khung để căn nó nằm gần đầu
                     const scrollLeftPos = activeTab.offsetLeft - (containerWidth * 0.3);
                     container.scrollTo({ left: Math.max(0, scrollLeftPos), behavior: 'smooth' });
                 }
-            }, 50); // Chờ 50ms để DOM kịp vẽ HTML xong mới cuộn
+            }, 50);
         };
 
         const renderTimeline = () => {
@@ -354,12 +352,20 @@
             const day = trip.days.find(d => d.date === state.activeDayDate);
             const container = document.getElementById('timeline-container');
             
+            // 1. TRƯỜNG HỢP NGÀY TRỐNG (THÊM NÚT XÓA NGÀY)
             if (!day || day.activities.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-16 px-4 md:ml-16 relative z-10 bg-white/50 backdrop-blur-2xl border border-white/80 shadow-[0_10px_40px_rgba(0,0,0,0.03)] rounded-[2rem] mb-10">
+                    <div class="text-center py-12 md:py-16 px-4 md:ml-16 relative z-10 bg-white/50 backdrop-blur-2xl border border-white/80 shadow-[0_10px_40px_rgba(0,0,0,0.03)] rounded-[2rem] mb-10">
                         <div class="w-20 h-20 rounded-full bg-white/80 backdrop-blur-md border border-white flex items-center justify-center text-slate-300 mx-auto mb-4 text-4xl shadow-[0_8px_20px_rgba(0,0,0,0.04)]"><i class="fa-solid fa-mug-hot"></i></div>
                         <h3 class="text-xl font-black text-slate-700">Chưa có lịch trình</h3>
-                        <p class="text-slate-500 text-sm mt-2 font-medium">Bấm <strong class="text-blue-600">Thêm HĐ</strong> để lên kế hoạch cho ngày này.</p>
+                        <p class="text-slate-500 text-[13px] md:text-sm mt-2 font-medium">Bấm <strong class="text-blue-600">Thêm HĐ</strong> để lên kế hoạch cho ngày này.</p>
+                        
+                        <!-- Nút Xóa Ngày (Kính lỏng, xuất hiện khi ngày không có hoạt động) -->
+                        <div class="mt-6 flex justify-center">
+                            <button onclick="confirmDeleteDay('${day.date}')" class="px-5 py-2.5 bg-red-50/60 backdrop-blur-md border border-red-200/60 hover:bg-red-100 hover:border-red-300 text-red-500 rounded-xl text-[13px] font-bold transition-all shadow-[0_2px_10px_rgba(239,68,68,0.05)] active:scale-95 flex items-center gap-2 touch-manipulation">
+                                <i class="fa-solid fa-trash-can"></i> Xóa ngày này
+                            </button>
+                        </div>
                     </div>`;
                 return;
             }
@@ -372,15 +378,13 @@
                 const status = getActivityStatus(act, day.date);
                 const isDone = act.isCompleted;
 
-                // Cộng dồn chi tiêu
                 if(act.budgetAmt && !isNaN(act.budgetAmt)) {
                     dailyTotalVND += parseFloat(act.budgetAmt) * (rates[act.budgetCur] || 1);
                 }
 
-                // Sửa icon
                 const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-location-crosshairs';
 
-                // Lộ trình hiển thị (Glassmorphism inset)
+                // Lộ trình hiển thị (UI 2 khối hộp kính đối xứng đã làm ở bước trước)
                 let routeHtml = '';
                 if (act.from && act.to) {
                     routeHtml = `
@@ -430,10 +434,8 @@
                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${status.color}">${status.label}</span>
                             </div>
 
-                            <!-- MAIN CARD (Hiệu ứng kính lỏng, đổ bóng mềm mại) -->
                             <div class="bg-white/60 backdrop-blur-3xl rounded-[1.5rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 flex flex-col overflow-hidden hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] transition-all">
                                 
-                                <!-- VÙNG 1: HEADER -->
                                 <div class="p-4 md:p-5 border-b border-white flex justify-between items-start gap-3 bg-white/40">
                                     <div class="flex-1 min-w-0">
                                         <div class="hidden md:flex items-center gap-2 mb-1.5">
@@ -449,7 +451,6 @@
                                     <button onclick="toggleComplete('${act.id}')" class="text-3xl flex-shrink-0 transition-transform active:scale-90 ${isDone ? 'text-blue-500 drop-shadow-md hover:text-slate-400' : 'text-slate-300 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i></button>
                                 </div>
 
-                                <!-- VÙNG 2: CHI TIẾT & HƯỚNG DẪN (Nền kính mờ đục hơn) -->
                                 ${(act.desc || act.guide) ? `
                                 <div class="p-4 md:p-5 bg-slate-50/40 backdrop-blur-md border-b border-white space-y-3">
                                     ${act.desc ? `
@@ -457,9 +458,7 @@
                                         <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5"><i class="fa-regular fa-comment-dots mr-1"></i>Chi tiết</div>
                                         <p class="text-[13px] text-slate-700 font-medium leading-relaxed">${act.desc}</p>
                                     </div>` : ''}
-                                    
                                     ${(act.desc && act.guide) ? `<div class="w-full h-px bg-white/60 my-1"></div>` : ''}
-
                                     ${act.guide ? `
                                     <div>
                                         <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5"><i class="fa-solid fa-route mr-1"></i>Hướng dẫn</div>
@@ -467,7 +466,6 @@
                                     </div>` : ''}
                                 </div>` : ''}
 
-                                <!-- VÙNG 3: GHI CHÚ -->
                                 ${act.note ? `
                                 <div class="p-4 md:p-5 bg-amber-50/40 backdrop-blur-md border-b border-white">
                                     <div class="text-[13px] font-semibold text-amber-900 leading-relaxed"><i class="fa-solid fa-star text-amber-500 mr-1.5"></i>${act.note}</div>
@@ -480,9 +478,12 @@
                                         <div>
                                             ${act.budgetAmt ? `<span class="text-[11px] font-black text-emerald-700 bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 shadow-[0_2px_8px_rgba(16,185,129,0.1)] px-2.5 py-1.5 rounded-lg"><i class="fa-solid fa-sack-dollar mr-1"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)}${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
                                         </div>
-                                        <div class="flex gap-4">
-                                            <button onclick="editActivity('${act.id}')" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-white text-slate-500 hover:text-blue-600 shadow-sm transition-all active:scale-95 flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
-                                            <button onclick="deleteActivity('${act.id}')" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-red-50 text-slate-500 hover:text-red-500 shadow-sm transition-all active:scale-95 flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button>
+                                        
+                                        <!-- CỤM NÚT NHÂN BẢN / SỬA / XÓA (Tối ưu Mobile gap) -->
+                                        <div class="flex gap-2 md:gap-3">
+                                            <button onclick="duplicateActivity('${act.id}')" title="Nhân bản" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 shadow-sm transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-regular fa-copy text-xs"></i></button>
+                                            <button onclick="editActivity('${act.id}')" title="Sửa" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 shadow-sm transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-pen text-xs"></i></button>
+                                            <button onclick="deleteActivity('${act.id}')" title="Xóa" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-red-50 text-slate-500 hover:text-red-500 shadow-sm transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-trash text-xs"></i></button>
                                         </div>
                                     </div>
                                 </div>
@@ -492,7 +493,7 @@
                 `;
             });
 
-            // --- TẠO BẢNG TỔNG KẾT NGÀY (THỐNG KÊ CHI PHÍ) ---
+            // BẢNG TỔNG KẾT NGÀY (Giữ nguyên)
             let tripBudgetVND = 0;
             if(trip.budget) {
                 const amountStr = trip.budget.replace(/[^0-9]/g, '');
@@ -525,22 +526,16 @@
             if(expenseListHtml === '') expenseListHtml = '<div class="text-[13px] text-slate-500 italic py-2">Không có chi tiêu nào được ghi nhận.</div>';
 
             html += `
-                <!-- Bảng Tổng Kết Cuối Ngày (Dark Glassmorphism chuẩn Apple) -->
                 <div class="ml-0 md:ml-16 mt-8 mb-10 bg-slate-900/85 backdrop-blur-3xl rounded-[2rem] p-5 md:p-7 shadow-[0_20px_50px_rgba(15,23,42,0.25)] relative overflow-hidden border border-slate-700/50">
                     <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><i class="fa-solid fa-wallet text-6xl text-white"></i></div>
-
                     <h3 class="text-emerald-400 font-black text-[11px] uppercase tracking-widest mb-5 flex items-center drop-shadow-md"><i class="fa-solid fa-receipt mr-2"></i> Tổng kết chi tiêu ngày</h3>
-
-                    <div class="space-y-1 mb-6 relative z-10">
-                        ${expenseListHtml}
-                    </div>
-
+                    <div class="space-y-1 mb-6 relative z-10">${expenseListHtml}</div>
                     <div class="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 border border-slate-700/50 space-y-4 shadow-inner">
                         <div class="flex justify-between items-start gap-3">
                             <span class="text-[12px] md:text-[13px] font-semibold text-slate-400 whitespace-nowrap flex-shrink-0 pt-1">Đã tiêu hôm nay:</span>
                             <div class="text-right min-w-0">
                                 <div class="text-base md:text-lg font-black text-emerald-400 drop-shadow-sm whitespace-nowrap">~ ${new Intl.NumberFormat('vi-VN').format(dailyTotalVND)} VND</div>
-                                ${destCur !== 'VND' ? `<div class="text-xs font-bold text-emerald-400/60 mt-0.5 whitespace-nowrap">${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(dailyTotalForeign)} ${destCur}</div>` : ''}
+                                ${destCur !== 'VND' ? `<div class="text-xs font-bold text-emerald-400/60 mt-0.5 whitespace-nowrap">${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(dailyTotalForeign)}${destCur}</div>` : ''}
                             </div>
                         </div>
                         ${tripBudgetVND > 0 ? `
@@ -558,9 +553,7 @@
             html += `
                 <div class="ml-0 md:ml-16 mt-4 mb-8 text-center pb-8 opacity-70">
                     <div class="inline-flex items-center gap-2 text-slate-300">
-                        <span class="h-px w-8 bg-slate-300/50"></span>
-                        <i class="fa-solid fa-feather text-[10px]"></i>
-                        <span class="h-px w-8 bg-slate-300/50"></span>
+                        <span class="h-px w-8 bg-slate-300/50"></span><i class="fa-solid fa-feather text-[10px]"></i><span class="h-px w-8 bg-slate-300/50"></span>
                     </div>
                     <p class="text-[10px] font-bold text-slate-400 mt-2.5 uppercase tracking-widest">TripPlanner v1.2.0</p>
                     <p class="text-[10px] font-medium text-slate-500 mt-1.5 flex items-center justify-center gap-1.5">
@@ -1207,3 +1200,31 @@
                 e.target.value = parseInt(rawValue, 10).toLocaleString('vi-VN');
             }
         });
+
+        // ==========================================
+// NHÂN BẢN HOẠT ĐỘNG (DUPLICATE)
+// ==========================================
+window.duplicateActivity = (actId) => {
+    const trip = state.trips.find(t => t.id === state.activeTripId);
+    if (!trip) return;
+    
+    const day = trip.days.find(d => d.date === state.activeDayDate);
+    if (!day) return;
+    
+    const actIndex = day.activities.findIndex(a => a.id === actId);
+    if (actIndex > -1) {
+        const actToCopy = day.activities[actIndex];
+        
+        // Tạo một bản sao chép (Deep copy) và cấp phát ID mới
+        const newAct = JSON.parse(JSON.stringify(actToCopy)); 
+        newAct.id = 'act_' + Date.now() + Math.random().toString(36).substr(2, 9);
+        newAct.isCompleted = false; // Reset trạng thái chưa hoàn thành cho bản sao
+        
+        // Chèn bản sao ngay phía dưới bản gốc
+        day.activities.splice(actIndex + 1, 0, newAct);
+        
+        // Lưu và Cập nhật lại UI
+        if(typeof saveState === 'function') saveState();
+        renderTimeline();
+    }
+};
