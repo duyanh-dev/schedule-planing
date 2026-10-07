@@ -333,7 +333,7 @@
                         <div class="hidden md:block text-[10px] font-black uppercase tracking-wider ${subtitleColor} mb-1 drop-shadow-sm pointer-events-none">Ngày ${idx + 1}</div>
                         <div class="font-bold text-[11px] md:text-sm ${textColor} drop-shadow-sm pointer-events-none">${formatDisplayDate(day.date)}</div>
                     </button>
-                `;
+                `; 
             }).join('');
 
             // LOGIC TỰ ĐỘNG CUỘN (Giữ nguyên)
