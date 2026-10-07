@@ -117,23 +117,26 @@
 
         <div class="flex-1 hide-scrollbar scroll-smooth relative" id="main-scroll">
             
-            <!-- Trip Header -->
+            <!-- Trip Header (Liquid Glass Style) -->
             <div id="trip-header-container" class="relative h-64 md:h-80 w-full bg-slate-300 flex-shrink-0 overflow-hidden group">
                 <img id="trip-cover-img" src="" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Cover">
                 <div class="absolute inset-0 cover-gradient z-0"></div>
                 
                 <!-- Nút Quản lý chuyến đi (Kính nổi góc trên phải) -->
                 <div class="absolute top-4 right-4 z-30 flex items-center gap-2">
-                    <button onclick="editCurrentTrip()" class="w-10 h-10 rounded-full bg-white/30 backdrop-blur-xl border border-white/50 text-white flex items-center justify-center hover:bg-white/50 transition-all shadow-[0_8px_16px_rgba(0,0,0,0.1)] active:scale-95" title="Sửa chuyến đi">
-                        <i class="fa-solid fa-pen"></i>
+                    <button onclick="editCurrentTrip()" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-xl border border-white/50 text-white flex items-center justify-center hover:bg-white/40 transition-all shadow-[0_8px_20px_rgba(0,0,0,0.15)] active:scale-95 touch-manipulation" title="Sửa chuyến đi">
+                        <i class="fa-solid fa-pen drop-shadow-md"></i>
                     </button>
-                    <button onclick="deleteCurrentTrip()" class="w-10 h-10 rounded-full bg-red-500/80 backdrop-blur-xl border border-red-400/50 text-white flex items-center justify-center hover:bg-red-500 transition-all shadow-[0_8px_16px_rgba(239,68,68,0.3)] active:scale-95" title="Xóa chuyến đi">
-                        <i class="fa-solid fa-trash"></i>
+                    <button onclick="deleteCurrentTrip()" class="w-10 h-10 rounded-full bg-red-500/60 backdrop-blur-xl border border-red-400/60 text-white flex items-center justify-center hover:bg-red-500/80 transition-all shadow-[0_8px_20px_rgba(239,68,68,0.3)] active:scale-95 touch-manipulation" title="Xóa chuyến đi">
+                        <i class="fa-solid fa-trash drop-shadow-md"></i>
                     </button>
                 </div>
 
+                <!-- Tiêu đề & Ngân sách (Nổi 3D) -->
                 <div class="absolute bottom-16 left-4 md:bottom-20 md:left-8 z-20 max-w-3xl pr-4 pointer-events-none">
-                    <h2 id="trip-title-display" class="text-3xl md:text-5xl font-black text-white drop-shadow-md tracking-tight leading-tight">...</h2>
+                    <h2 id="trip-title-display" class="text-3xl md:text-5xl font-black text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.6)] tracking-tight leading-tight">
+                        <!-- JS gen vào đây -->
+                    </h2>
                 </div>
             </div>
 
@@ -521,97 +524,104 @@
             </div>
         </div>
 
-        <!-- New/Edit Trip Modal (Nâng cấp) -->
-        <div id="trip-modal" class="modal-overlay fixed inset-0 bg-slate-900/80 backdrop-blur-sm p-0 md:p-4 flex justify-center items-end md:items-center z-[9000]">
-            <div class="modal-content bg-white rounded-t-3xl md:rounded-3xl w-full max-w-lg shadow-2xl flex flex-col max-h-[95vh] md:max-h-[90vh]">
+       <!-- New/Edit Trip Modal (Liquid Glass Style & Anti-Zoom Mobile) -->
+        <div id="trip-modal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-md p-0 md:p-4 flex justify-center items-end md:items-center z-[9000]">
+            
+            <!-- Cửa sổ Modal (Tràn viền 100% Mobile, Bo tròn trên PC) -->
+            <div class="modal-content bg-white/70 backdrop-blur-3xl rounded-none md:rounded-[2rem] border-0 md:border md:border-white/80 w-full max-w-lg shadow-[0_20px_60px_rgba(0,0,0,0.15)] flex flex-col h-full md:h-auto md:max-h-[90vh] overflow-hidden relative">
                 
-                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white rounded-t-3xl sticky top-0 z-10 shadow-sm">
-                    <h2 id="trip-modal-title" class="text-lg md:text-xl font-black text-slate-900 flex items-center">
-                        <i class="fa-solid fa-plane-up text-blue-500 mr-2 bg-blue-50 p-2 rounded-lg"></i> Thông tin chuyến đi
+                <!-- Header (Kính mờ xuyên thấu) -->
+                <div class="p-4 md:p-5 border-b border-white/60 flex justify-between items-center bg-white/40 backdrop-blur-xl sticky top-0 z-20">
+                    <h2 id="trip-modal-title" class="text-lg md:text-xl font-black text-slate-800 flex items-center drop-shadow-sm">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center text-white shadow-sm border border-blue-400 mr-2.5">
+                            <i class="fa-solid fa-plane-up text-sm"></i>
+                        </div>
+                        Thông tin chuyến đi
                     </h2>
-                    <button onclick="closeTripModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"><i class="fa-solid fa-xmark"></i></button>
+                    <button onclick="closeTripModal()" class="w-8 h-8 rounded-full bg-white/60 hover:bg-white flex items-center justify-center text-slate-500 border border-white/80 shadow-sm transition-all active:scale-95 touch-manipulation">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
                 
-                <div class="p-5 space-y-6 overflow-y-auto hide-scrollbar pb-8">
+                <div class="p-4 md:p-5 space-y-5 md:space-y-6 overflow-y-auto hide-scrollbar pb-8 bg-slate-50/30 flex-1">
 
-                    <!-- 0. Ảnh bìa chuyến đi -->
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Ảnh bìa <span class="text-red-500">*</span></label>
-                        <div class="relative h-32 md:h-40 w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 group shadow-sm">
-                            <img id="trip-modal-cover-preview" src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80" class="w-full h-full object-cover" alt="Cover Preview">
-                            <div class="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span class="text-white font-bold text-sm flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/30"><i class="fa-solid fa-camera"></i> Chọn hoặc Chụp ảnh</span>
+                    <!-- 0. Ảnh bìa chuyến đi (Kính lỏng Card) -->
+                    <div class="bg-white/60 backdrop-blur-xl p-4 md:p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 space-y-1.5">
+                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm">Ảnh bìa <span class="text-red-500">*</span></label>
+                        <div class="relative h-32 md:h-40 w-full rounded-[1.25rem] overflow-hidden bg-white/80 border border-white shadow-inner group">
+                            <img id="trip-modal-cover-preview" src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="Cover Preview">
+                            <div class="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px]">
+                                <span class="text-white font-bold text-sm flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-xl backdrop-blur-md border border-white/30 shadow-sm"><i class="fa-solid fa-camera"></i> Đổi ảnh</span>
                             </div>
-                            <input type="file" id="trip-modal-cover-upload" accept="image/*" onchange="handleModalImageUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <input type="file" id="trip-modal-cover-upload" accept="image/*" onchange="handleModalImageUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 touch-manipulation">
                             <input type="hidden" id="trip-cover-url" value="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80">
                         </div>
                     </div>
                     
-                    <!-- 1. Tên chuyến đi (Nhập tự do) -->
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tên chuyến đi <span class="text-red-500">*</span></label>
-                        <input type="text" id="trip-title" placeholder="VD: Khám phá Vũng Tàu, Du hí Thái Lan..." class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-800 text-sm transition-all">
+                    <!-- 1. Tên chuyến đi -->
+                    <div class="bg-white/60 backdrop-blur-xl p-4 md:p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 space-y-1.5">
+                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm">Tên chuyến đi <span class="text-red-500">*</span></label>
+                        <input type="text" id="trip-title" placeholder="VD: Khám phá Vũng Tàu..." class="w-full p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800 text-base md:text-sm transition-all">
                     </div>
 
-                    <!-- 2. Chọn điểm đến (Khu vực -> Nước) để link Tiền tệ -->
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Quốc gia đến (Để tính ngoại tệ)</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <select id="trip-region" onchange="renderCountryList()" class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-semibold text-slate-700 text-sm">
+                    <!-- 2. Chọn điểm đến -->
+                    <div class="bg-white/60 backdrop-blur-xl p-4 md:p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 space-y-1.5">
+                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm">Quốc gia đến (Để tính ngoại tệ)</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <select id="trip-region" onchange="renderCountryList()" class="p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-semibold text-slate-700 text-base md:text-sm focus:border-blue-400 transition-all">
                                 <!-- JS gen -->
                             </select>
-                            <select id="trip-country" onchange="autoSetCurrency()" class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-semibold text-slate-700 text-sm">
+                            <select id="trip-country" onchange="autoSetCurrency()" class="p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-semibold text-slate-700 text-base md:text-sm focus:border-blue-400 transition-all">
                                 <!-- JS gen -->
                             </select>
                         </div>
                     </div>
 
-                    <!-- 3. Lịch trình (Hiển thị 2 Card + Lịch tĩnh) -->
-                    <div class="space-y-3">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Khoảng thời gian <span class="text-red-500">*</span></label>
+                    <!-- 3. Lịch trình -->
+                    <div class="bg-white/60 backdrop-blur-xl p-4 md:p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 space-y-3">
+                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm">Khoảng thời gian <span class="text-red-500">*</span></label>
                         
-                        <!-- 2 Card hiển thị ngày (Chỉ để hiển thị, không còn click) -->
                         <div class="flex items-center justify-between gap-3">
-                            <div class="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col items-center justify-center">
-                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ngày đi</span>
-                                <span id="ui-date-start" class="text-sm font-bold text-slate-800"><i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày</span>
+                            <div class="flex-1 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl p-3 flex flex-col items-center justify-center">
+                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Ngày đi</span>
+                                <span id="ui-date-start" class="text-base md:text-sm font-bold text-slate-800"><i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày</span>
                             </div>
-                            <div class="text-slate-300"><i class="fa-solid fa-arrow-right-long"></i></div>
-                            <div class="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col items-center justify-center">
-                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ngày về</span>
-                                <span id="ui-date-end" class="text-sm font-bold text-slate-800"><i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày</span>
+                            <div class="text-slate-300 drop-shadow-sm"><i class="fa-solid fa-arrow-right-long"></i></div>
+                            <div class="flex-1 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl p-3 flex flex-col items-center justify-center">
+                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Ngày về</span>
+                                <span id="ui-date-end" class="text-base md:text-sm font-bold text-slate-800"><i class="fa-regular fa-calendar text-blue-500 mr-1.5"></i>Chọn ngày</span>
                             </div>
                         </div>
 
-                        <!-- Khung chứa Lịch Hiện đại (Schedule) -->
-                        <div class="bg-white border border-slate-200 rounded-2xl p-2 flex justify-center overflow-hidden shadow-sm relative">
+                        <!-- Khung chứa Lịch Hiện đại -->
+                        <div class="bg-white/60 backdrop-blur-md border border-white/80 rounded-[1.25rem] p-2 flex justify-center overflow-hidden shadow-[0_4px_15px_rgba(0,0,0,0.02)] relative">
                             <input type="text" id="trip-date-range" class="opacity-0 absolute -z-10 w-0 h-0">
                         </div>
 
-                        <p class="text-[11px] font-medium text-slate-500 mt-2.5 px-1" id="trip-days-preview">Chạm hoặc vuốt trên lịch để chọn ngày về.</p>
+                        <p class="text-[11px] font-medium text-slate-500 mt-2 px-1 text-center drop-shadow-sm" id="trip-days-preview">Chạm hoặc vuốt trên lịch để chọn ngày về.</p>
                     </div>
 
-                    <!-- 4. Quy đổi ngân sách (UI Clean Card) -->
-                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-4 shadow-inner">
+                    <!-- 4. Quy đổi ngân sách -->
+                    <div class="bg-white/60 backdrop-blur-xl rounded-2xl p-4 md:p-5 border border-white/80 space-y-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
                         <div class="flex justify-between items-center">
-                            <label class="text-xs font-black text-slate-600 uppercase tracking-wider"><i class="fa-solid fa-wallet text-slate-400 mr-1"></i> Ngân sách (Tùy chọn)</label>
+                            <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm"><i class="fa-solid fa-wallet text-slate-400 mr-1"></i> Ngân sách (Tùy chọn)</label>
                         </div>
                         
                         <div class="flex items-center gap-2">
-                            <div class="flex-1 bg-white rounded-xl border border-slate-200 flex items-center px-3 focus-within:ring-2 focus-within:ring-blue-500 transition-all shadow-sm">
-                                <span class="text-slate-400 font-black text-sm">₫</span>
-                                <input type="text" inputmode="numeric" id="trip-budget-amount" placeholder="Nhập số tiền..." oninput="calculateExchange()" class="currency-input w-full p-3 outline-none font-black text-slate-800 text-sm bg-transparent">
+                            <div class="flex-1 bg-white/80 backdrop-blur-sm rounded-xl border border-white shadow-inner flex items-center px-3 focus-within:ring-2 focus-within:ring-blue-400/20 focus-within:border-blue-400 transition-all">
+                                <span class="text-slate-400 font-black text-base md:text-sm">₫</span>
+                                <input type="text" inputmode="numeric" id="trip-budget-amount" placeholder="Nhập số tiền..." oninput="calculateExchange()" class="currency-input w-full p-3 md:p-3.5 outline-none font-black text-slate-800 text-base md:text-sm bg-transparent">
                             </div>
-                            <div class="px-4 py-3 bg-slate-200 text-slate-700 font-black rounded-xl text-sm border border-slate-300">VND</div>
+                            <div class="px-4 py-3 md:py-3.5 bg-white/50 backdrop-blur-sm text-slate-600 font-black rounded-xl text-base md:text-sm border border-white shadow-sm">VND</div>
                         </div>
                         
-                        <div class="flex justify-center -my-2 relative z-10">
-                            <div class="w-8 h-8 bg-white border border-slate-200 rounded-full flex items-center justify-center text-blue-500 shadow-sm"><i class="fa-solid fa-arrow-right-arrow-left rotate-90 text-xs"></i></div>
+                        <div class="flex justify-center -my-2.5 relative z-10">
+                            <div class="w-8 h-8 bg-white/80 backdrop-blur-md border border-white rounded-full flex items-center justify-center text-blue-500 shadow-sm"><i class="fa-solid fa-arrow-right-arrow-left rotate-90 text-xs"></i></div>
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <div class="flex-1 p-3 bg-blue-100 border border-blue-200 rounded-xl font-black text-blue-700 text-sm overflow-hidden truncate shadow-sm" id="trip-budget-converted">0</div>
-                            <select id="trip-currency-to" onchange="calculateExchange()" class="w-24 p-3 bg-white border border-slate-200 rounded-xl font-black text-slate-700 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500">
+                            <div class="flex-1 p-3 md:p-3.5 bg-blue-50/80 backdrop-blur-sm border border-blue-100 rounded-xl font-black text-blue-700 text-base md:text-sm overflow-hidden truncate shadow-sm" id="trip-budget-converted">0</div>
+                            <select id="trip-currency-to" onchange="calculateExchange()" class="w-24 p-3 md:p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl font-black text-slate-700 text-base md:text-sm outline-none focus:border-blue-400 transition-all">
                                 <!-- JS gen -->
                             </select>
                         </div>
@@ -619,8 +629,9 @@
 
                 </div>
 
-                <div class="p-4 border-t border-slate-100 bg-white sticky bottom-0 z-10 pb-6 md:pb-4">
-                    <button onclick="submitTripFormNew()" class="w-full py-3.5 font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2 text-sm">
+                <!-- Footer (Kính đen bóng sang trọng) -->
+                <div class="p-4 md:p-5 border-t border-white/60 bg-white/40 backdrop-blur-2xl sticky bottom-0 z-20 pb-6 md:pb-5">
+                    <button onclick="submitTripFormNew()" class="w-full py-3.5 md:py-3 font-bold text-white bg-slate-800/95 hover:bg-slate-900 backdrop-blur-xl rounded-xl shadow-[0_8px_20px_rgba(15,23,42,0.2)] border border-slate-700/50 transition-all active:scale-95 flex justify-center items-center gap-2 text-base md:text-sm touch-manipulation">
                         <i class="fa-solid fa-check"></i> <span id="trip-btn-text">Lưu chuyến đi</span>
                     </button>
                 </div>

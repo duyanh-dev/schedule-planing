@@ -219,7 +219,7 @@
             }
         };
 
-        const renderHeader = () => {
+       const renderHeader = () => {
             const trip = state.trips.find(t => t.id === state.activeTripId);
             document.getElementById('trip-cover-img').src = trip.coverUrl;
             
@@ -228,13 +228,26 @@
                 const amt = parseInt(trip.budget.replace(/[^0-9]/g, '')) || 0;
                 let foreignHtml = '';
                 
-                // Nếu có đổi ngoại tệ, hiển thị thêm ở Header
+                // Nếu có đổi ngoại tệ, hiển thị thêm ở Header (Căn chỉnh UI Mobile)
                 if(trip.destCur && trip.destCur !== 'VND' && typeof exchangeRates !== 'undefined' && exchangeRates[trip.destCur]) {
                     const foreignAmt = amt / exchangeRates[trip.destCur];
-                    foreignHtml = `<span class="text-white/40 mx-2"></span><span class="text-emerald-300 font-black">≈ ${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(foreignAmt)} ${trip.destCur}</span>`;
+                    foreignHtml = `
+                        <div class="w-px h-4 bg-white/40 mx-2.5 md:mx-3 rounded-full"></div>
+                        <span class="text-[11px] md:text-[13px] font-bold text-emerald-100 tracking-wide drop-shadow-sm">≈ ${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(foreignAmt)} ${trip.destCur}</span>
+                    `;
                 }
                 
-                titleHtml += `<br><div class="mt-2.5 inline-flex items-center bg-slate-900/70 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 shadow-sm"><i class="fa-solid fa-wallet text-emerald-400 mr-2"></i> <span class="text-sm md:text-base font-bold text-white">${trip.budget}</span> ${foreignHtml}</div>`;
+                // Liquid Glass Budget Pill
+                titleHtml += `
+                    <br>
+                    <div class="mt-3 md:mt-4 inline-flex items-center bg-white/20 backdrop-blur-2xl px-3.5 md:px-4 py-2 md:py-2.5 rounded-[1.25rem] border border-white/50 shadow-[0_10px_40px_rgba(0,0,0,0.3)]">
+                        <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-emerald-500/80 backdrop-blur-md flex items-center justify-center border border-emerald-300/50 shadow-inner mr-2.5 flex-shrink-0">
+                            <i class="fa-solid fa-wallet text-white text-xs md:text-sm drop-shadow-md"></i>
+                        </div> 
+                        <span class="text-[13px] md:text-[15px] font-black text-white tracking-wide drop-shadow-sm">${trip.budget}</span> 
+                        ${foreignHtml}
+                    </div>
+                `;
             }
             document.getElementById('trip-title-display').innerHTML = titleHtml;
         };
