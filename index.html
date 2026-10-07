@@ -87,23 +87,27 @@
         
     </div>
 
-    <!-- PHẦN ĐÓNG DẤU BẢN QUYỀN (Thu gọn tối đa, ép sát đáy) -->
-    <div class="mt-auto px-3 py-3 md:p-5 bg-white/40 backdrop-blur-2xl border-t border-white/60 shrink-0 flex flex-col">
+    <!-- PHẦN ĐÓNG DẤU BẢN QUYỀN (Transparent Background, Liquid Glass Pill, No Shadow) -->
+    <div class="mt-auto py-3 md:py-4 bg-transparent shrink-0 flex justify-center items-center z-10 pointer-events-none">
         
-        <!-- Nút Liên Hệ Gmail (Làm mỏng lại trên Mobile) -->
-        <a href="mailto:buiduyanh.17042001@gmail.com?subject=Góp ý cho ứng dụng TripPlanner" class="mb-2 md:mb-4 flex items-center justify-center gap-1.5 w-full py-1.5 md:py-2.5 bg-white/70 backdrop-blur-md border border-white hover:bg-white text-slate-600 hover:text-blue-600 rounded-lg md:rounded-xl font-bold text-[9px] md:text-[11px] uppercase tracking-wider transition-all shadow-[0_4px_10px_rgba(0,0,0,0.03)] active:scale-95 group">
-            <i class="fa-solid fa-envelope text-blue-500 group-hover:scale-110 transition-transform"></i> Hỗ trợ & Góp ý
-        </a>
+        <!-- Viên thuốc (Pill) lơ lửng, kính trong suốt, viền sáng (Không dùng shadow) -->
+        <div class="inline-flex items-center gap-2.5 md:gap-3 px-4 md:px-5 py-1.5 md:py-2 bg-white/40 backdrop-blur-xl border border-white/90 rounded-full transition-all pointer-events-auto">
+            
+            <!-- Phiên bản & Bản quyền (Đã bỏ dấu chấm tròn) -->
+            <div class="flex items-center gap-2 text-[9px] md:text-[10px] text-slate-500">
+                <span class="font-bold tracking-wider text-slate-600">v1.2.0</span>
+                <span class="font-medium">© <strong class="font-black text-slate-700">duyanh.dev</strong></span>
+            </div>
 
-        <!-- Version & Copyright (Mobile nằm ngang 1 dòng, PC nằm dọc) -->
-        <div class="flex flex-row md:flex-col items-center justify-center gap-2 md:gap-1 text-center">
-            <p class="text-[8px] md:text-[10px] font-bold text-slate-500">Phiên bản <span class="text-blue-500">1.2.0</span></p>
+            <!-- Vạch ngăn cách -->
+            <div class="w-px h-3.5 bg-slate-300/80 rounded-full"></div>
+
+            <!-- Nút liên hệ -->
+            <a href="mailto:buiduyanh.17042001@gmail.com?subject=Góp ý cho ứng dụng TripPlanner" class="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors active:scale-95 touch-manipulation group">
+                <i class="fa-solid fa-envelope group-hover:scale-110 transition-transform"></i> Hỗ trợ
+            </a>
             
-            <span class="text-slate-300 text-[8px] md:hidden">|</span> <!-- Dấu gạch chia cách trên Mobile -->
-            
-            <p class="text-[8px] md:text-[10px] font-medium text-slate-400">© 2026 <span class="font-bold text-slate-600">duyanh.dev</span></p>
         </div>
-        
     </div>
 </div>
 
@@ -153,13 +157,13 @@
                         </div>
                         
                         <!-- Nút Add New Day (Nút trong suốt viền đứt) -->
-                        <button onclick="addNewDay()" class="flex-shrink-0 h-16 px-4 md:px-6 rounded-2xl bg-white/40 backdrop-blur-md border border-dashed border-slate-300 hover:border-blue-400 hover:bg-white/60 text-slate-500 hover:text-blue-600 transition-all shadow-sm flex flex-col items-center justify-center font-bold text-xs gap-1 group active:scale-95">
-                            <i class="fa-solid fa-plus text-base group-hover:scale-110 transition-transform"></i>
+                        <button onclick="addNewDay()" class="flex-shrink-0 h-8 md:h-16 px-3.5 md:px-6 rounded-full md:rounded-[1.25rem] bg-white/40 backdrop-blur-md border border-dashed border-slate-300 hover:border-blue-400 hover:bg-white/60 text-slate-500 hover:text-blue-600 transition-all shadow-sm flex flex-col items-center justify-center font-bold text-xs gap-1 group active:scale-95">
+                            <i class="fa-solid fa-plus text-[10px] md:text-base group-hover:scale-110 transition-transform"></i>
                         </button>
                     </div>
 
                     <!-- CỤM NÚT TRÊN MÀN HÌNH CHÍNH (Apple Pastel Style & Responsive Smart Grid) -->
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 w-full pt-4 border-t border-slate-100/50" data-html2canvas-ignore>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 w-full pt-0 md:pt-4 border-t border-slate-100/50" data-html2canvas-ignore>
                             
                             <!-- Nút Checklist (Tone Cam nhạt) -->
                             <button onclick="openChecklistModal()" class="col-span-1 h-12 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-xl font-semibold text-[13px] transition-all flex justify-center items-center gap-2 border border-orange-200/50 shadow-sm active:scale-95">
@@ -511,14 +515,27 @@
                 
             </div>
         </div>
-        <!-- Global Timeline Modal -->
-        <div id="global-timeline-modal" class="modal-overlay fixed inset-0 bg-slate-900/80 backdrop-blur-sm p-4 items-center justify-center z-[9000]">
-            <div class="modal-content bg-white rounded-3xl w-full max-w-2xl h-[85vh] flex flex-col shadow-2xl">
-                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-3xl shadow-sm z-10">
-                    <h2 class="text-xl font-black text-slate-900"><i class="fa-solid fa-list-check text-blue-500 mr-2"></i> Lịch trình toàn cảnh</h2>
-                    <button onclick="closeGlobalTimeline()" class="w-9 h-9 rounded-full bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-600 transition"><i class="fa-solid fa-xmark"></i></button>
+
+        <!-- Global Timeline Modal (Liquid Glass Style & Fullscreen Mobile) -->
+        <div id="global-timeline-modal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-md p-0 md:p-4 flex items-center justify-center z-[9000]">
+            <!-- Tràn viền 100% trên Mobile, Bo tròn 2rem trên PC -->
+            <div class="modal-content bg-white/70 backdrop-blur-3xl rounded-none md:rounded-[2rem] border-0 md:border md:border-white/80 w-full max-w-2xl h-full md:h-[85vh] flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.15)] relative overflow-hidden">
+                
+                <!-- Header (Kính mờ xuyên thấu) -->
+                <div class="p-4 md:p-5 border-b border-white/60 flex justify-between items-center bg-white/40 backdrop-blur-xl z-20">
+                    <h2 class="text-lg md:text-xl font-black text-slate-800 flex items-center drop-shadow-sm">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center text-white shadow-sm border border-blue-400 mr-2.5">
+                            <i class="fa-solid fa-list-check text-sm"></i>
+                        </div>
+                        Lịch trình toàn cảnh
+                    </h2>
+                    <button onclick="closeGlobalTimeline()" class="w-8 h-8 rounded-full bg-white/60 hover:bg-white flex items-center justify-center text-slate-500 border border-white/80 shadow-sm transition-all active:scale-95 touch-manipulation">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
-                <div class="p-4 pt-0 md:p-6 overflow-y-auto hide-scrollbar flex-1 bg-slate-50" id="global-timeline-content">
+                
+                <!-- Content Body -->
+                <div class="px-3 pb-4 pt-0 md:px-6 md:pb-6 md:pt-0 overflow-y-auto hide-scrollbar flex-1 bg-slate-50/30 relative z-10" id="global-timeline-content">
                     <!-- Injected via JS -->
                 </div>
             </div>
@@ -638,37 +655,52 @@
             </div>
         </div>
 
-        <!-- Checklist Modal -->
-        <div id="checklist-modal" class="modal-overlay fixed inset-0 bg-slate-900/80 backdrop-blur-sm p-0 md:p-4 flex flex-col justify-end md:justify-center items-center z-[8000]">
-            <div class="modal-content bg-slate-50 rounded-t-3xl md:rounded-3xl w-full max-w-lg shadow-2xl flex flex-col h-[85vh] md:max-h-[80vh] mt-auto md:mt-0 overflow-hidden">
+        <!-- Checklist Modal (Liquid Glass Style & Anti-Zoom Mobile) -->
+        <div id="checklist-modal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-md p-0 md:p-4 flex flex-col justify-end md:justify-center items-center z-[8000]">
+            
+            <!-- Tràn viền 100% Mobile, Bo tròn trên PC -->
+            <div class="modal-content bg-white/70 backdrop-blur-3xl rounded-none md:rounded-[2rem] border-0 md:border md:border-white/80 w-full max-w-lg shadow-[0_20px_60px_rgba(0,0,0,0.15)] flex flex-col h-full md:max-h-[85vh] mt-auto md:mt-0 overflow-hidden relative">
                 
-                <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm z-10">
-                    <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
-                        <i class="fa-solid fa-clipboard-check text-amber-500 bg-amber-50 p-2 rounded-lg text-sm border border-amber-100"></i> Hành trang & Chuẩn bị
+                <!-- Header (Kính mờ xuyên thấu) -->
+                <div class="p-4 md:p-5 border-b border-white/60 flex justify-between items-center bg-white/40 backdrop-blur-xl sticky top-0 z-20">
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2 drop-shadow-sm">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-sm border border-amber-400">
+                            <i class="fa-solid fa-clipboard-check text-sm"></i>
+                        </div>
+                        Hành trang & Chuẩn bị
                     </h2>
-                    <button onclick="closeChecklistModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"><i class="fa-solid fa-xmark"></i></button>
+                    <button onclick="closeChecklistModal()" class="w-8 h-8 rounded-full bg-white/60 hover:bg-white flex items-center justify-center text-slate-500 border border-white/80 shadow-sm transition-all active:scale-95 touch-manipulation"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 
-                <!-- Progress & Add Item -->
-                <div class="p-5 bg-white border-b border-slate-100 z-10 shadow-sm">
+                <!-- Progress & Add Item (Kính lỏng) -->
+                <div class="p-4 md:p-5 bg-white/50 backdrop-blur-xl border-b border-white/60 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                     <div class="flex justify-between items-center mb-2.5">
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider" id="checklist-progress-text">Tiến độ: 0%</span>
-                        <span class="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100" id="checklist-count-text">0/0</span>
+                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm" id="checklist-progress-text">Tiến độ: 0%</span>
+                        <span class="text-xs font-black text-blue-700 bg-blue-100/80 backdrop-blur-sm px-2 py-0.5 rounded-lg border border-blue-200/60 shadow-sm" id="checklist-count-text">0/0</span>
                     </div>
+                    
                     <!-- Progress Bar -->
-                    <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mb-5 border border-slate-200/50">
-                        <div id="checklist-progress-bar" class="bg-gradient-to-r from-blue-400 to-blue-600 h-full transition-all duration-700 ease-out" style="width: 0%"></div>
+                    <div class="w-full bg-white/60 h-2.5 rounded-full overflow-hidden mb-5 border border-white shadow-inner">
+                        <div id="checklist-progress-bar" class="bg-gradient-to-r from-blue-400 to-blue-600 h-full transition-all duration-700 ease-out shadow-sm" style="width: 0%"></div>
                     </div>
                     
                     <form onsubmit="addChecklistItem(event)" class="flex gap-2">
-                        <input type="text" id="new-checklist-input" placeholder="Thêm vật dụng, giấy tờ..." class="flex-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-sm text-slate-800 focus:border-blue-400 focus:bg-white transition-colors" required>
-                        <button type="submit" class="px-5 py-3.5 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-md hover:bg-black transition-transform active:scale-95"><i class="fa-solid fa-plus"></i></button>
+                        <!-- Ép text-base trên mobile chống zoom -->
+                        <input type="text" id="new-checklist-input" placeholder="Thêm vật dụng, giấy tờ..." class="flex-1 p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-bold text-base md:text-sm text-slate-800 focus:border-blue-400 transition-all" required>
+                        <button type="submit" class="px-5 py-3.5 bg-slate-800/95 hover:bg-slate-900 text-white rounded-xl font-bold text-base md:text-sm shadow-[0_4px_15px_rgba(15,23,42,0.2)] border border-slate-700/50 transition-all active:scale-95 touch-manipulation"><i class="fa-solid fa-plus"></i></button>
                     </form>
                 </div>
 
-                <!-- List Items -->
-                <div class="flex-1 overflow-y-auto p-4 md:p-5 space-y-2.5 bg-slate-50/50" id="checklist-container">
+                <!-- List Items (Vùng cuộn) -->
+                <div class="flex-1 overflow-y-auto p-4 md:p-5 space-y-3 bg-slate-50/30 hide-scrollbar" id="checklist-container">
                     <!-- JS sẽ gen danh sách ra đây -->
+                </div>
+
+                <!-- NÚT XÁC NHẬN (Footer Kính Mờ) -->
+                <div class="p-4 md:p-5 border-t border-white/60 bg-white/40 backdrop-blur-2xl sticky bottom-0 z-20">
+                    <button type="button" onclick="closeChecklistModal()" class="w-full py-3.5 md:py-3 font-bold text-white bg-blue-600/90 hover:bg-blue-600 backdrop-blur-md rounded-xl shadow-[0_8px_20px_rgba(37,99,235,0.3)] border border-blue-400/50 transition-all active:scale-95 flex items-center justify-center gap-2 text-base md:text-sm touch-manipulation">
+                        <i class="fa-solid fa-check"></i> Hoàn tất
+                    </button>
                 </div>
             </div>
         </div>

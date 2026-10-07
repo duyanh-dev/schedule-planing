@@ -270,25 +270,83 @@
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const container = document.getElementById('days-tabs');
             
+            // Lấy ngày hôm nay (hỗ trợ cả hàm getRelativeDateStr của bạn hoặc Date mặc định)
+            const todayStr = typeof getRelativeDateStr === 'function' ? getRelativeDateStr(0) : new Date().toISOString().slice(0, 10);
+
+            // ==========================================
+            // LOGIC 1: ƯU TIÊN NGÀY HIỆN TẠI (CHỈ KHI MỞ APP / CHUYỂN TRIP / RELOAD)
+            // ==========================================
+            // Biến window._lastRenderedTripId giúp nhận biết đây là lần load đầu tiên của chuyến đi
+            if (window._lastRenderedTripId !== state.activeTripId) {
+                const hasToday = trip.days.find(d => d.date === todayStr);
+                let dayForceChanged = false;
+                
+                // Nếu chuyến đi có ngày hôm nay -> Ép chọn ngày hôm nay
+                if (hasToday && state.activeDayDate !== todayStr) {
+                    state.activeDayDate = todayStr;
+                    dayForceChanged = true;
+                } 
+                // Nếu không có hôm nay và ngày đang lưu không hợp lệ -> Chọn ngày đầu tiên
+                else if (trip.days.length > 0 && !trip.days.find(d => d.date === state.activeDayDate)) {
+                    state.activeDayDate = trip.days[0].date;
+                    dayForceChanged = true;
+                }
+                
+                window._lastRenderedTripId = state.activeTripId;
+                
+                // Đồng bộ lại Timeline bên dưới nếu hệ thống vừa tự động chuyển ngày
+                if (dayForceChanged && typeof renderTimeline === 'function') {
+                    setTimeout(() => renderTimeline(), 0);
+                }
+            }
+
+            // ==========================================
+            // LOGIC 2: RENDER GIAO DIỆN LIQUID GLASS & MOBILE COMPACT
+            // ==========================================
             container.innerHTML = trip.days.map((day, idx) => {
                 const isActive = state.activeDayDate === day.date;
-                const isRealToday = day.date === getRelativeDateStr(0);
+                const isRealToday = day.date === todayStr;
+                const isPast = day.date < todayStr; // Xác định những ngày đã lùi vào quá khứ
+
+                // Hiệu ứng mờ cho ngày đã qua (Nếu đang được chọn thì vẫn sáng)
+                const pastClass = (isPast && !isActive) ? 'opacity-40 grayscale-[40%]' : 'opacity-100';
+
+                // Giao diện Liquid Glass cho thẻ Active (Nổi khối 3D nhờ shadow-inner, KHÔNG CÓ shadow ngoài)
+                const activeClass = isActive 
+                    ? 'bg-gradient-to-br from-blue-400 to-blue-500 border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.1)]' 
+                    : 'bg-white/50 border border-white/60 hover:bg-white/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.8)]';
+                
+                const textColor = isActive ? 'text-white' : 'text-slate-600';
+                const subtitleColor = isActive ? 'text-blue-100' : 'text-slate-400 group-hover:text-slate-500';
 
                 return `
-                    <!-- Đã thêm các class responsive md: để tách biệt UI SP và PC -->
-                    <button id="tab-${day.date}" onclick="switchDay('${day.date}')" class="flex-shrink-0 h-10 md:h-16 px-4 md:px-6 rounded-full md:rounded-2xl transition-all border-2 text-center md:text-left relative group flex flex-col justify-center items-center md:items-start ${isActive ? 'border-blue-500 bg-blue-50/60 shadow-sm' : 'border-slate-100 bg-white hover:border-slate-300'}">
+                    <!-- Chỉnh h-8, px-3.5 cho Mobile (SP) để nhỏ gọn tối đa -->
+                    <button id="tab-${day.date}" onclick="switchDay('${day.date}')" class="flex-shrink-0 h-8 md:h-16 px-3.5 md:px-6 rounded-full md:rounded-[1.25rem] transition-all relative group flex flex-col justify-center items-center md:items-start ${activeClass} ${pastClass}">
                         
-                        <!-- Badge "NAY" (SP: hình tròn chườm ra ngoài | PC: góc vuông bám góc) -->
-                        ${isRealToday ? `<div class="absolute -top-1.5 -right-1 md:top-0 md:right-0 bg-red-500 text-white text-[8px] md:text-[9px] font-black px-1.5 py-0.5 rounded-full md:rounded-none md:rounded-bl-lg md:rounded-tr-xl shadow-sm z-10 border-2 border-white md:border-0">NAY</div>` : ''}
+                        <!-- Badge "NAY" (Apple Notification Pill Style) -->
+                        ${isRealToday ? `<div class="absolute -top-2 -right-1 md:-top-2 md:-right-1.5 bg-red-500/90 backdrop-blur-md text-white text-[7px] md:text-[8px] font-black px-2 py-0.5 rounded-full z-10  shadow-[0_2px_8px_rgba(239,68,68,0.4)] tracking-wider">NAY</div>` : ''}
                         
-                        <!-- Chữ "Ngày X" (SP: Ẩn đi | PC: Hiển thị bằng md:block) -->
-                        <div class="hidden md:block text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-500'} mb-1">Ngày ${idx + 1}</div>
+                        <!-- Chữ "Ngày X" (Chỉ hiện PC) -->
+                        <div class="hidden md:block text-[10px] font-black uppercase tracking-wider ${subtitleColor} mb-1 drop-shadow-sm">Ngày ${idx + 1}</div>
                         
-                        <!-- Ngày hiển thị (SP: font nhỏ hơn | PC: font text-sm) -->
-                        <div class="font-bold text-xs md:text-sm ${isActive ? 'text-slate-900' : 'text-slate-600'}">${formatDisplayDate(day.date)}</div>
+                        <!-- Ngày hiển thị (SP: font cực nhỏ text-[11px] | PC: text-sm) -->
+                        <div class="font-bold text-[11px] md:text-sm ${textColor} drop-shadow-sm">${formatDisplayDate(day.date)}</div>
                     </button>
                 `;
             }).join('');
+
+            // ==========================================
+            // LOGIC 3: TỰ ĐỘNG CUỘN (SCROLL) TỚI VỊ TRÍ 30% ĐẦU
+            // ==========================================
+            setTimeout(() => {
+                const activeTab = document.getElementById(`tab-${state.activeDayDate}`);
+                if (activeTab && container) {
+                    const containerWidth = container.offsetWidth;
+                    // Lấy vị trí của tab trừ đi 30% chiều rộng khung để căn nó nằm gần đầu
+                    const scrollLeftPos = activeTab.offsetLeft - (containerWidth * 0.3);
+                    container.scrollTo({ left: Math.max(0, scrollLeftPos), behavior: 'smooth' });
+                }
+            }, 50); // Chờ 50ms để DOM kịp vẽ HTML xong mới cuộn
         };
 
         const renderTimeline = () => {
@@ -338,9 +396,9 @@
                                 <div class="text-[13px] font-semibold text-slate-700 break-words leading-relaxed">${act.to}</div>
                             </div>
                         </div>
-                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-white/70 backdrop-blur-md border border-white hover:bg-white text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-[0_2px_10px_rgba(0,0,0,0.02)] active:scale-95 mt-1.5">
-                            <i class="fa-solid fa-map-location-dot mr-1"></i> Chỉ đường Google Maps
-                        </button>
+                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-blue-600/85 backdrop-blur-2xl border border-blue-400/70 hover:bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 mt-2 shadow-[inset_0_2px_5px_rgba(255,255,255,0.4),inset_0_-3px_5px_rgba(0,0,0,0.15)]">
+    <i class="fa-solid fa-map-location-dot mr-1.5 text-blue-200 drop-shadow-sm"></i> Chỉ đường Google Maps
+</button>
                     </div>`;
                 } else if (act.to || act.from) {
                     routeHtml = `<div class="bg-white/50 backdrop-blur-md border border-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-2.5 rounded-xl text-[13px] font-semibold text-slate-700 break-words leading-relaxed"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${act.to || act.from}</div>`;
@@ -861,37 +919,80 @@
         const renderGlobalTimeline = () => {
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const content = document.getElementById('global-timeline-content');
-            let html = '';
+            
+            // Đệm tàng hình để đẩy viên pill xuống một chút cho đẹp
+            let html = '<div class="h-2 md:h-3 w-full flex-shrink-0"></div>';
 
             trip.days.forEach((day, idx) => {
                 html += `
-                <div class="mb-8 relative">
-                    <!-- Đã sửa sticky: bg-white và z-20 -->
-                    <div class="sticky top-0 bg-slate-50/95 backdrop-blur-md py-3 z-20 border-b border-slate-200 mb-4 flex items-baseline gap-2">
-                        <span class="font-black text-slate-900 text-lg">Ngày ${idx + 1}</span>
-                        <span class="text-slate-500 font-bold text-sm">${formatDisplayDate(day.date)}</span>
+                <div class="mb-6 md:mb-8 relative group">
+                    
+                    <!-- Sticky Day Header (Apple Dynamic Island / Dark Glass Pill) -->
+                    <div class="sticky top-2 md:top-3 z-30 flex justify-center mb-5 md:mb-6 pointer-events-none">
+                        <div class="bg-slate-900/85 backdrop-blur-2xl px-5 md:px-6 py-2 md:py-2.5 rounded-full shadow-[0_12px_30px_rgba(15,23,42,0.25)] border border-slate-700/60 flex items-center gap-3 pointer-events-auto transition-transform hover:scale-105">
+                            <span class="font-black text-white text-[14px] md:text-[15px] drop-shadow-md tracking-wide">Ngày ${idx + 1}</span>
+                            <div class="w-1.5 h-1.5 rounded-full bg-slate-500/80 shadow-inner"></div>
+                            <span class="text-slate-300 font-semibold text-[12px] md:text-[13px] tracking-wide">${formatDisplayDate(day.date)}</span>
+                        </div>
                     </div>
-                    <div class="space-y-3 relative z-10">
+                    
+                    <div class="space-y-3 relative z-10 md:px-2">
                 `;
                 
                 if(day.activities.length === 0) {
-                    html += `<p class="text-sm text-slate-400 italic font-medium p-4 bg-white rounded-xl border border-slate-100">Chưa có hoạt động.</p>`;
+                    html += `<p class="text-[13px] text-slate-500 italic font-medium p-5 bg-white/50 backdrop-blur-md rounded-2xl border border-white/80 shadow-sm text-center">Chưa có hoạt động nào được lên lịch.</p>`;
                 } else {
                     day.activities.forEach(act => {
                         const status = getActivityStatus(act, day.date);
+                        
+                        // Lộ trình
                         let routeTxt = '';
                         if(act.from && act.to) routeTxt = `${act.from} ➔ ${act.to}`;
                         else if(act.to || act.from) routeTxt = act.to || act.from;
 
+                        // Ngân sách (Chi tiết)
+                        let budgetHtml = '';
+                        if(act.budgetAmt) {
+                            budgetHtml = `<div class="text-[11px] font-black text-emerald-700 bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 shadow-[0_2px_8px_rgba(16,185,129,0.1)] px-2.5 py-1 rounded-lg inline-flex items-center"><i class="fa-solid fa-sack-dollar mr-1.5"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)} ${act.budgetCur}</div>`;
+                        }
+
+                        // Tags (Loại và Phương tiện)
+                        let extraTagsHtml = '';
+                        if(act.type) {
+                            extraTagsHtml += `<span class="text-[10px] font-bold text-slate-500 bg-slate-100/80 backdrop-blur-sm px-2 py-1.5 rounded-lg border border-slate-200/50 shadow-sm">${act.type}</span>`;
+                        }
+                        if(act.transport) {
+                            extraTagsHtml += `<span class="text-[10px] font-bold text-slate-500 bg-slate-100/80 backdrop-blur-sm px-2 py-1.5 rounded-lg border border-slate-200/50 shadow-sm"><i class="fa-solid fa-car-side mr-1"></i>${act.transport}</span>`;
+                        }
+
                         html += `
-                        <div class="flex items-start gap-4 p-4 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-shadow">
-                            <div class="flex-shrink-0 text-center w-14 pt-1">
-                                <div class="text-[14px] font-black text-slate-800">${act.start}</div>
-                                <div class="text-[10px] font-bold text-slate-400 uppercase mt-1 ${status.color.split(' ')[0]} px-1 py-0.5 rounded">${status.type === 'done' ? 'Xong' : (status.type==='future'? 'Sắp' : 'Trễ')}</div>
+                        <!-- Thẻ Hoạt Động (Kính Lỏng Trắng Nổi) -->
+                        <div class="flex items-start gap-3 md:gap-4 p-3.5 md:p-4 rounded-[1.25rem] border border-white/80 bg-white/60 backdrop-blur-xl shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all">
+                            
+                            <!-- Cột giờ (Giữ nguyên gọn gàng cho Mobile) -->
+                            <div class="flex-shrink-0 text-center w-11 md:w-14 pt-0.5">
+                                <div class="text-[13px] md:text-[15px] font-black text-slate-800 drop-shadow-sm">${act.start}</div>
+                                <div class="text-[8px] md:text-[9px] font-black uppercase mt-1.5 ${status.color.split(' ')[0]} bg-white shadow-sm border border-slate-100 px-1 py-1 rounded-md tracking-wider">${status.type === 'done' ? 'XONG' : (status.type==='future'? 'SẮP' : 'TRỄ')}</div>
                             </div>
-                            <div class="flex-1 min-w-0 border-l-2 border-slate-100 pl-4">
-                                <div class="text-base font-bold text-slate-900 truncate ${act.isCompleted ? 'line-through text-slate-400' : ''}">${act.details}</div>
-                                ${routeTxt ? `<div class="text-xs font-semibold text-blue-500 mt-1.5 truncate"><i class="fa-solid fa-location-arrow mr-1"></i>${routeTxt}</div>` : ''}
+                            
+                            <div class="flex-1 min-w-0 border-l border-white/60 pl-3 md:pl-4 relative">
+                                <!-- Line dọc phân cách tinh tế -->
+                                <div class="absolute left-[-1px] top-1.5 bottom-1.5 w-[2px] bg-slate-200/50 rounded-full"></div>
+                                
+                                <!-- Tên Hoạt động (Break-words chống tràn) -->
+                                <div class="text-[14px] md:text-base font-bold text-slate-800 break-words drop-shadow-sm leading-snug pr-1 ${act.isCompleted ? 'line-through text-slate-400' : ''}">${act.details}</div>
+                                
+                                ${routeTxt ? `
+                                <div class="text-[11px] md:text-xs font-semibold text-blue-600 mt-2 break-words bg-blue-50/70 backdrop-blur-sm inline-block px-2.5 py-1.5 rounded-lg border border-blue-100/50 shadow-inner max-w-full">
+                                    <i class="fa-solid fa-location-arrow mr-1.5 opacity-80"></i>${routeTxt}
+                                </div>` : ''}
+
+                                <!-- Hàng chứa Tiền và Tags -->
+                                ${(budgetHtml || extraTagsHtml) ? `
+                                <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                                    ${budgetHtml}${extraTagsHtml}
+                                </div>` : ''}
+                                
                             </div>
                         </div>
                         `;
@@ -969,7 +1070,7 @@
             return trip.checklist;
         };
 
-        const renderChecklist = () => {
+       const renderChecklist = () => {
             const checklist = getTripChecklist();
             const container = document.getElementById('checklist-container');
             
@@ -983,20 +1084,24 @@
             document.getElementById('checklist-count-text').innerText = `${done}/${total}`;
 
             if (total === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm font-medium italic">Danh sách trống. Hãy thêm đồ cần chuẩn bị ở trên.</div>`;
+                container.innerHTML = `<div class="text-center py-10 text-slate-500 text-[13px] font-medium italic bg-white/50 backdrop-blur-md rounded-2xl border border-white/80 shadow-sm mt-2">Danh sách trống. Hãy thêm đồ cần chuẩn bị ở trên.</div>`;
                 return;
             }
 
-            // In danh sách ra UI
+            // In danh sách ra UI (Liquid Glass Card Style)
             container.innerHTML = checklist.map(item => `
-                <div class="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 transition-all group ${item.isDone ? 'opacity-50 bg-slate-50' : ''}">
-                    <div class="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer" onclick="toggleChecklist('${item.id}')">
-                        <div class="text-xl ${item.isDone ? 'text-emerald-500' : 'text-slate-200'} transition-colors">
+                <div class="flex items-center justify-between p-3.5 md:p-4 bg-white/60 backdrop-blur-xl rounded-[1.25rem] border border-white/80 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] hover:bg-white/80 transition-all group ${item.isDone ? 'opacity-60 bg-slate-50/50 grayscale-[20%]' : ''}">
+                    
+                    <div class="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer touch-manipulation" onclick="toggleChecklist('${item.id}')">
+                        <!-- Icon Checkbox (Làm to rõ ràng hơn ở Mobile) -->
+                        <div class="text-[22px] ${item.isDone ? 'text-emerald-500 drop-shadow-md' : 'text-slate-300 drop-shadow-sm'} transition-colors flex-shrink-0">
                             <i class="fa-solid ${item.isDone ? 'fa-circle-check' : 'fa-circle'}"></i>
                         </div>
-                        <span class="text-sm font-bold truncate ${item.isDone ? 'line-through text-slate-400' : 'text-slate-800'}">${item.text}</span>
+                        <span class="text-[15px] md:text-sm font-bold truncate ${item.isDone ? 'line-through text-slate-400' : 'text-slate-800 drop-shadow-sm'}">${item.text}</span>
                     </div>
-                    <button onclick="deleteChecklist('${item.id}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 flex-shrink-0">
+                    
+                    <!-- Nút Xóa (Bọc trong kính tròn) -->
+                    <button onclick="deleteChecklist('${item.id}')" class="w-8 h-8 rounded-full bg-white/60 hover:bg-red-50 flex items-center justify-center text-slate-400 border border-white hover:border-red-200 hover:text-red-500 transition-all opacity-100 md:opacity-0 group-hover:opacity-100 flex-shrink-0 shadow-sm touch-manipulation active:scale-95">
                         <i class="fa-solid fa-trash text-xs"></i>
                     </button>
                 </div>
