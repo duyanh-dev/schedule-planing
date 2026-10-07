@@ -47,58 +47,38 @@
         // --- HÀM PHỤ LÕI: GỌI API THEO VÙNG CHỈ ĐỊNH (Ép 100% Tiếng Anh cho Longdo) ---
         const executeSearchAPI = async (keyword, region) => {
             let url = "";
-            
             if (region === "vn") {
                 url = `https://rsapi.goong.io/Place/AutoComplete?api_key=${API_KEYS.goong}&input=${encodeURIComponent(keyword)}&limit=6`;
             } else if (region === "th") {
-                // Thêm tham số &lang=en để báo cho máy chủ Longdo biết ta cần dữ liệu tiếng Anh
-                url = `https://search.longdo.com/mapsearch/json/search?keyword=${encodeURIComponent(keyword)}&key=${API_KEYS.longdo}&limit=8&lang=en`;
+                // ĐỔI SANG SUGGEST API (Giống hệt cách SDK Longdo làm để lấy Tiếng Anh)
+                url = `https://search.longdo.com/mapsearch/json/suggest?keyword=${encodeURIComponent(keyword)}&key=${API_KEYS.longdo}`;
             } else {
                 const center = pickerMap.getCenter();
                 url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(keyword)}.json?access_token=${API_KEYS.mapbox}&language=vi&limit=6&proximity=${center.lng},${center.lat}`;
             }
 
-            const res = await fetch(url);
+            const res = await fetch(url, { headers: { "Accept-Language": "en-US,en;q=0.9" } });
             const data = await res.json();
             
             let formattedData = [];
-            
             if (region === "vn" && data.predictions) {
                 formattedData = data.predictions.map((p) => ({
                     source: "goong", id: p.place_id, 
                     title: p.structured_formatting.main_text, subtitle: p.structured_formatting.secondary_text || p.description
                 }));
-            } 
-            else if (region === "th" && data.data) {
-                // Tái tạo lại logic của Longdo SDK: Quét tìm tên tiếng Anh trước
-                formattedData = data.data.map((p) => {
-                    // Dữ liệu Longdo đôi khi giấu tiếng Anh trong name_en hoặc tag
-                    let englishTitle = p.name_en || p.name || "Thailand Location";
-                    let englishAddress = p.address_en || p.address || "";
-                    
-                    // Xử lý thêm: Nếu tên vẫn chứa ký tự Thái, thử lấy từ tag tiếng Anh
-                    const thaiRegex = /[\u0E00-\u0E7F]/;
-                    if (thaiRegex.test(englishTitle) && p.tags) {
-                        const enTag = p.tags.find(t => !thaiRegex.test(t));
-                        if (enTag) englishTitle = enTag;
-                    }
-
-                    return {
-                        source: "longdo", 
-                        lat: parseFloat(p.lat), 
-                        lng: parseFloat(p.lon), 
-                        title: englishTitle, 
-                        subtitle: englishAddress
-                    };
-                });
-            } 
-            else if (region === "intl" && data.features) {
+            } else if (region === "th" && data.data) {
+                // Parse kết quả của Suggest API (w = word, d = description)
+                formattedData = data.data.slice(0, 6).map((p) => ({
+                    source: "longdo_suggest", // Đánh dấu là data suggest (chưa có tọa độ)
+                    title: p.w || "Thailand Location", 
+                    subtitle: p.d || ""
+                }));
+            } else if (region === "intl" && data.features) {
                 formattedData = data.features.map((p) => ({
                     source: "mapbox", lat: p.center[1], lng: p.center[0], 
                     title: p.text, subtitle: p.place_name.replace(p.text + ", ", "")
                 }));
             }
-            
             return formattedData;
         };
 
@@ -247,14 +227,17 @@
         };
 
         // --- 5. CHỌN KẾT QUẢ TÌM KIẾM ---
+        // --- 5. CHỌN KẾT QUẢ TÌM KIẾM (Xử lý 2 bước cho Goong và Longdo) ---
         const selectSearchResult = async (index) => {
             const item = mapSearchResults[index];
             document.getElementById('search-results').classList.add('hidden');
             document.getElementById('map-search-input').value = item.title;
 
-            // Goong API cần 1 bước chuyển Place ID thành Tọa độ
+            const loading = document.getElementById('map-loading');
+            
+            // Trường hợp 1: Goong (Phải gọi API để đổi ID lấy GPS)
             if (item.source === "goong") {
-                const loading = document.getElementById('map-loading');
+                loading.querySelector('span').innerText = "Đang lấy tọa độ...";
                 loading.classList.remove('hidden'); loading.classList.add('flex');
                 try {
                     const res = await fetch(`https://rsapi.goong.io/Place/Detail?place_id=${item.id}&api_key=${API_KEYS.goong}`);
@@ -265,13 +248,29 @@
                         pickerMap.flyTo({ center: [lng, lat], zoom: 16, essential: true });
                         placeMarkerAndPopup(lat, lng, item.title);
                     }
-                } catch(e) {
-                    console.error(e);
-                } finally {
-                    loading.classList.add('hidden'); loading.classList.remove('flex');
-                }
-            } else {
-                // Longdo & Mapbox đã có sẵn tọa độ
+                } catch(e) { console.error(e); } 
+                finally { loading.classList.add('hidden'); loading.classList.remove('flex'); }
+            } 
+            // Trường hợp 2: Longdo Suggest (Phải gọi API Search để lấy GPS)
+            else if (item.source === "longdo_suggest") {
+                loading.querySelector('span').innerText = "Đang định vị...";
+                loading.classList.remove('hidden'); loading.classList.add('flex');
+                try {
+                    const res = await fetch(`https://search.longdo.com/mapsearch/json/search?keyword=${encodeURIComponent(item.title)}&key=${API_KEYS.longdo}&limit=1&lang=en`);
+                    const data = await res.json();
+                    if (data.data && data.data.length > 0) {
+                        const lat = parseFloat(data.data[0].lat);
+                        const lng = parseFloat(data.data[0].lon);
+                        pickerMap.flyTo({ center: [lng, lat], zoom: 16, essential: true });
+                        placeMarkerAndPopup(lat, lng, item.title);
+                    } else {
+                        alert("Không thể định vị chính xác địa điểm này trên bản đồ.");
+                    }
+                } catch(e) { console.error(e); } 
+                finally { loading.classList.add('hidden'); loading.classList.remove('flex'); }
+            } 
+            // Trường hợp 3: Mapbox (Đã có sẵn GPS trong data)
+            else {
                 pickerMap.flyTo({ center: [item.lng, item.lat], zoom: 16, essential: true });
                 placeMarkerAndPopup(item.lat, item.lng, item.title);
             }

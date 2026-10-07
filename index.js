@@ -285,10 +285,10 @@
             
             if (!day || day.activities.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-16 px-4 md:pl-20 relative z-10">
-                        <div class="w-20 h-20 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-300 mx-auto mb-4 text-4xl shadow-sm"><i class="fa-solid fa-mug-hot"></i></div>
+                    <div class="text-center py-16 px-4 md:ml-16 relative z-10 bg-white/50 backdrop-blur-2xl border border-white/80 shadow-[0_10px_40px_rgba(0,0,0,0.03)] rounded-[2rem] mb-10">
+                        <div class="w-20 h-20 rounded-full bg-white/80 backdrop-blur-md border border-white flex items-center justify-center text-slate-300 mx-auto mb-4 text-4xl shadow-[0_8px_20px_rgba(0,0,0,0.04)]"><i class="fa-solid fa-mug-hot"></i></div>
                         <h3 class="text-xl font-black text-slate-700">Chưa có lịch trình</h3>
-                        <p class="text-slate-500 text-sm mt-2 font-medium">Bấm Thêm HĐ để lên kế hoạch cho ngày này.</p>
+                        <p class="text-slate-500 text-sm mt-2 font-medium">Bấm <strong class="text-blue-600">Thêm HĐ</strong> để lên kế hoạch cho ngày này.</p>
                     </div>`;
                 return;
             }
@@ -306,29 +306,31 @@
                     dailyTotalVND += parseFloat(act.budgetAmt) * (rates[act.budgetCur] || 1);
                 }
 
-                // Sửa icon (fix lỗi dính chữ)
+                // Sửa icon
                 const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-location-crosshairs';
 
-                // Lộ trình hiển thị
+                // Lộ trình hiển thị (Glassmorphism inset)
                 let routeHtml = '';
                 if (act.from && act.to) {
                     routeHtml = `
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
+                    <div class="bg-white/50 backdrop-blur-xl border border-white/80 rounded-[1.25rem] p-3.5 flex flex-col gap-2.5 shadow-[0_4px_15px_rgba(0,0,0,0.02)]">
                         <div class="flex items-start justify-between gap-3">
                             <div class="flex-1 min-w-0">
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Từ</div>
-                                <div class="text-xs font-bold text-slate-700 break-words leading-relaxed">${act.from}</div>
+                                <div class="text-[13px] font-semibold text-slate-700 break-words leading-relaxed">${act.from}</div>
                             </div>
                             <div class="pt-3 text-slate-300 flex-shrink-0"><i class="fa-solid fa-arrow-right-long"></i></div>
                             <div class="flex-1 min-w-0 text-right">
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Đến</div>
-                                <div class="text-xs font-bold text-slate-700 break-words leading-relaxed">${act.to}</div>
+                                <div class="text-[13px] font-semibold text-slate-700 break-words leading-relaxed">${act.to}</div>
                             </div>
                         </div>
-                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full py-2 bg-white border border-slate-200 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-blue-50 transition-colors shadow-sm mt-1"><i class="fa-solid fa-map-location-dot mr-1"></i> Chỉ đường Google Maps</button>
+                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-white/70 backdrop-blur-md border border-white hover:bg-white text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-[0_2px_10px_rgba(0,0,0,0.02)] active:scale-95 mt-1.5">
+                            <i class="fa-solid fa-map-location-dot mr-1"></i> Chỉ đường Google Maps
+                        </button>
                     </div>`;
                 } else if (act.to || act.from) {
-                    routeHtml = `<div class="bg-slate-50 border border-slate-200 p-2.5 rounded-lg text-xs font-bold text-slate-700 break-words leading-relaxed"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${act.to || act.from}</div>`;
+                    routeHtml = `<div class="bg-white/50 backdrop-blur-md border border-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-2.5 rounded-xl text-[13px] font-semibold text-slate-700 break-words leading-relaxed"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${act.to || act.from}</div>`;
                 }
 
                 html += `
@@ -340,12 +342,12 @@
                             <div class="text-[13px] text-slate-400 font-bold">${act.end}</div>
                         </div>
 
-                        <!-- Timeline Line & Node -->
+                        <!-- Timeline Line & Node (Nổi khối 3D) -->
                         <div class="relative flex flex-col items-center z-10 pt-1 px-1 md:px-0">
-                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-sm ${isDone ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600'} z-10 relative ring-4 ring-white">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${isDone ? 'bg-white/60 backdrop-blur-md border border-white/80 text-slate-400' : 'bg-gradient-to-br from-blue-50 to-white border border-white text-blue-600'} z-10 relative ring-4 ring-slate-50/50">
                                 <i class="fa-solid ${iconClass} ${isDone ? '' : 'scale-110'}"></i>
                             </div>
-                            ${index < day.activities.length - 1 ? `<div class="absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200 -translate-x-1/2 z-0 rounded-full"></div>` : ''}
+                            ${index < day.activities.length - 1 ? `<div class="absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200/60 -translate-x-1/2 z-0 rounded-full"></div>` : ''}
                         </div>
 
                         <!-- TOÀN BỘ NỘI DUNG CỘT PHẢI -->
@@ -353,63 +355,63 @@
                             
                             <!-- Thời gian hiển thị nổi bên ngoài ở Mobile -->
                             <div class="md:hidden flex items-center gap-2 mb-2">
-                                <span class="text-sm font-black text-slate-800">${act.start} - ${act.end}</span>
+                                <span class="text-[15px] font-black text-slate-800 tracking-tight">${act.start} - ${act.end}</span>
                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${status.color}">${status.label}</span>
                             </div>
 
-                            <!-- MAIN CARD (Bao bọc TẤT CẢ mọi thứ bên trong) -->
-                            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:shadow-md transition-shadow">
+                            <!-- MAIN CARD (Hiệu ứng kính lỏng, đổ bóng mềm mại) -->
+                            <div class="bg-white/60 backdrop-blur-3xl rounded-[1.5rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 flex flex-col overflow-hidden hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] transition-all">
                                 
                                 <!-- VÙNG 1: HEADER -->
-                                <div class="p-4 border-b border-slate-100 flex justify-between items-start gap-3 bg-white">
+                                <div class="p-4 md:p-5 border-b border-white flex justify-between items-start gap-3 bg-white/40">
                                     <div class="flex-1 min-w-0">
                                         <div class="hidden md:flex items-center gap-2 mb-1.5">
                                             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${status.color}">${status.label}</span>
                                         </div>
-                                        <h3 class="text-base md:text-lg font-black leading-snug ${isDone ? 'line-through text-slate-400' : 'text-slate-800'} break-words">${act.details}</h3>
+                                        <h3 class="text-[17px] md:text-lg font-black leading-snug ${isDone ? 'line-through text-slate-400' : 'text-slate-800'} break-words">${act.details}</h3>
                                         
-                                        <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                                            <span class="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase">${act.type}</span>
-                                            ${act.transport ? `<span class="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase"><i class="fa-solid fa-car-side mr-1"></i>${act.transport}</span>` : ''}
+                                        <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                                            <span class="text-[9px] font-black text-slate-500 bg-slate-100/80 backdrop-blur-sm border border-slate-200/50 px-2 py-1 rounded uppercase shadow-sm">${act.type}</span>
+                                            ${act.transport ? `<span class="text-[9px] font-black text-slate-500 bg-slate-100/80 backdrop-blur-sm border border-slate-200/50 px-2 py-1 rounded uppercase shadow-sm"><i class="fa-solid fa-car-side mr-1"></i>${act.transport}</span>` : ''}
                                         </div>
                                     </div>
-                                    <button onclick="toggleComplete('${act.id}')" class="text-2xl mt-1 flex-shrink-0 transition-all ${isDone ? 'text-blue-500 hover:text-slate-400' : 'text-slate-200 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-square-check' : 'fa-square'}"></i></button>
+                                    <button onclick="toggleComplete('${act.id}')" class="text-3xl flex-shrink-0 transition-transform active:scale-90 ${isDone ? 'text-blue-500 drop-shadow-md hover:text-slate-400' : 'text-slate-300 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i></button>
                                 </div>
 
-                                <!-- VÙNG 2: CHI TIẾT & HƯỚNG DẪN -->
+                                <!-- VÙNG 2: CHI TIẾT & HƯỚNG DẪN (Nền kính mờ đục hơn) -->
                                 ${(act.desc || act.guide) ? `
-                                <div class="p-4 bg-slate-50/50 border-b border-slate-100 space-y-3">
+                                <div class="p-4 md:p-5 bg-slate-50/40 backdrop-blur-md border-b border-white space-y-3">
                                     ${act.desc ? `
                                     <div>
                                         <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5"><i class="fa-regular fa-comment-dots mr-1"></i>Chi tiết</div>
-                                        <p class="text-sm text-slate-700 font-medium leading-relaxed">${act.desc}</p>
+                                        <p class="text-[13px] text-slate-700 font-medium leading-relaxed">${act.desc}</p>
                                     </div>` : ''}
                                     
-                                    ${(act.desc && act.guide) ? `<div class="w-full h-px bg-slate-200 my-1"></div>` : ''}
+                                    ${(act.desc && act.guide) ? `<div class="w-full h-px bg-white/60 my-1"></div>` : ''}
 
                                     ${act.guide ? `
                                     <div>
                                         <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5"><i class="fa-solid fa-route mr-1"></i>Hướng dẫn</div>
-                                        <p class="text-sm text-blue-600 font-medium leading-relaxed">${act.guide}</p>
+                                        <p class="text-[13px] text-blue-600 font-semibold leading-relaxed">${act.guide}</p>
                                     </div>` : ''}
                                 </div>` : ''}
 
                                 <!-- VÙNG 3: GHI CHÚ -->
                                 ${act.note ? `
-                                <div class="p-4 bg-amber-50/70 border-b border-amber-100/50">
-                                    <div class="text-sm font-bold text-amber-900 leading-relaxed"><i class="fa-solid fa-star text-amber-500 mr-1.5"></i>${act.note}</div>
+                                <div class="p-4 md:p-5 bg-amber-50/40 backdrop-blur-md border-b border-white">
+                                    <div class="text-[13px] font-semibold text-amber-900 leading-relaxed"><i class="fa-solid fa-star text-amber-500 mr-1.5"></i>${act.note}</div>
                                 </div>` : ''}
 
                                 <!-- VÙNG 4: LỘ TRÌNH, NGÂN SÁCH & TOOLBAR -->
-                                <div class="p-4 bg-white flex flex-col gap-3">
+                                <div class="p-4 md:p-5 bg-white/30 flex flex-col gap-3">
                                     ${routeHtml}
                                     <div class="flex items-center justify-between mt-1">
                                         <div>
-                                            ${act.budgetAmt ? `<span class="text-[11px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-lg"><i class="fa-solid fa-sack-dollar mr-1"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)}${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
+                                            ${act.budgetAmt ? `<span class="text-[11px] font-black text-emerald-700 bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 shadow-[0_2px_8px_rgba(16,185,129,0.1)] px-2.5 py-1.5 rounded-lg"><i class="fa-solid fa-sack-dollar mr-1"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)}${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
                                         </div>
                                         <div class="flex gap-4">
-                                            <button onclick="editActivity('${act.id}')" class="text-[11px] font-black text-slate-400 hover:text-blue-600 uppercase transition-colors"><i class="fa-solid fa-pen text-sm"></i></button>
-                                            <button onclick="deleteActivity('${act.id}')" class="text-[11px] font-black text-slate-400 hover:text-red-500 uppercase transition-colors"><i class="fa-solid fa-trash text-sm"></i></button>
+                                            <button onclick="editActivity('${act.id}')" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-white text-slate-500 hover:text-blue-600 shadow-sm transition-all active:scale-95 flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
+                                            <button onclick="deleteActivity('${act.id}')" class="w-8 h-8 rounded-full bg-white/60 border border-white hover:bg-red-50 text-slate-500 hover:text-red-500 shadow-sm transition-all active:scale-95 flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button>
                                         </div>
                                     </div>
                                 </div>
@@ -420,15 +422,12 @@
             });
 
             // --- TẠO BẢNG TỔNG KẾT NGÀY (THỐNG KÊ CHI PHÍ) ---
-            // Parse tổng ngân sách chuyến đi để tính số dư
             let tripBudgetVND = 0;
             if(trip.budget) {
-                // Trip budget đang lưu dạng "5.000.000 VND"
                 const amountStr = trip.budget.replace(/[^0-9]/g, '');
                 tripBudgetVND = parseInt(amountStr) || 0;
             }
 
-            // Tính tổng chi phí TẤT CẢ các ngày trong chuyến đi để tính đúng số dư cuối cùng
             let totalTripSpentVND = 0;
             trip.days.forEach(d => {
                 d.activities.forEach(a => {
@@ -438,7 +437,6 @@
                 });
             });
 
-            // Tính số dư kép (VND và Ngoại Tệ)
             const remainingVND = tripBudgetVND - totalTripSpentVND;
             const destCur = trip.destCur || 'VND';
             const destRate = rates[destCur] || 1;
@@ -446,40 +444,39 @@
             const dailyTotalForeign = dailyTotalVND / destRate;
             const remainingForeign = remainingVND / destRate;
 
-            // Render Danh sách Item
             let expenseListHtml = '';
             day.activities.filter(a => a.budgetAmt).forEach(a => {
-                expenseListHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-700/50 last:border-0">
-                    <span class="text-sm font-medium text-slate-300 truncate pr-4">${a.details}</span>
-                    <span class="text-sm font-black text-white whitespace-nowrap">${new Intl.NumberFormat('vi-VN').format(a.budgetAmt)} ${a.budgetCur}</span>
+                expenseListHtml += `<div class="flex justify-between items-center py-2.5 border-b border-slate-700/50 last:border-0">
+                    <span class="text-[13px] font-medium text-slate-300 truncate pr-4">${a.details}</span>
+                    <span class="text-[13px] font-bold text-white whitespace-nowrap">${new Intl.NumberFormat('vi-VN').format(a.budgetAmt)} ${a.budgetCur}</span>
                 </div>`;
             });
-            if(expenseListHtml === '') expenseListHtml = '<div class="text-xs text-slate-500 italic py-2">Không có chi tiêu nào được ghi nhận.</div>';
+            if(expenseListHtml === '') expenseListHtml = '<div class="text-[13px] text-slate-500 italic py-2">Không có chi tiêu nào được ghi nhận.</div>';
 
             html += `
-                <!-- Bảng Tổng Kết Cuối Ngày (Hiển thị 2 loại tiền) -->
-                <div class="ml-0 md:ml-16 mt-8 mb-10 bg-slate-900 rounded-[24px] p-5 md:p-6 shadow-2xl relative overflow-hidden border border-slate-800">
+                <!-- Bảng Tổng Kết Cuối Ngày (Dark Glassmorphism chuẩn Apple) -->
+                <div class="ml-0 md:ml-16 mt-8 mb-10 bg-slate-900/85 backdrop-blur-3xl rounded-[2rem] p-5 md:p-7 shadow-[0_20px_50px_rgba(15,23,42,0.25)] relative overflow-hidden border border-slate-700/50">
                     <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><i class="fa-solid fa-wallet text-6xl text-white"></i></div>
-                    
-                    <h3 class="text-emerald-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center"><i class="fa-solid fa-receipt mr-2"></i> Tổng kết chi tiêu ngày</h3>
-                    
-                    <div class="space-y-1 mb-5">
+
+                    <h3 class="text-emerald-400 font-black text-[11px] uppercase tracking-widest mb-5 flex items-center drop-shadow-md"><i class="fa-solid fa-receipt mr-2"></i> Tổng kết chi tiêu ngày</h3>
+
+                    <div class="space-y-1 mb-6 relative z-10">
                         ${expenseListHtml}
                     </div>
-                    
-                    <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700 space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold text-slate-400">Đã tiêu hôm nay:</span>
-                            <div class="text-right">
-                                <div class="text-base font-black text-emerald-400">~ ${new Intl.NumberFormat('vi-VN').format(dailyTotalVND)} VND</div>
-                                ${destCur !== 'VND' ? `<div class="text-xs font-bold text-emerald-400/60 mt-0.5">${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(dailyTotalForeign)}${destCur}</div>` : ''}
+
+                    <div class="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 border border-slate-700/50 space-y-4 shadow-inner">
+                        <div class="flex justify-between items-start gap-3">
+                            <span class="text-[12px] md:text-[13px] font-semibold text-slate-400 whitespace-nowrap flex-shrink-0 pt-1">Đã tiêu hôm nay:</span>
+                            <div class="text-right min-w-0">
+                                <div class="text-base md:text-lg font-black text-emerald-400 drop-shadow-sm whitespace-nowrap">~ ${new Intl.NumberFormat('vi-VN').format(dailyTotalVND)} VND</div>
+                                ${destCur !== 'VND' ? `<div class="text-xs font-bold text-emerald-400/60 mt-0.5 whitespace-nowrap">${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(dailyTotalForeign)} ${destCur}</div>` : ''}
                             </div>
                         </div>
                         ${tripBudgetVND > 0 ? `
-                        <div class="flex justify-between items-center border-t border-slate-700/50 pt-3 mt-1">
-                            <span class="text-xs font-bold text-slate-400">Ngân sách còn lại:</span>
-                            <div class="text-right">
-                                <div class="text-base font-black ${remainingVND >= 0 ? 'text-white' : 'text-red-400'}">${new Intl.NumberFormat('vi-VN').format(remainingVND)} VND</div>${destCur !== 'VND' ? `<div class="text-[13px] font-black mt-0.5 ${remainingVND >= 0 ? 'text-emerald-300' : 'text-red-400/60'}">≈ ${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(remainingForeign)} ${destCur}</div>` : ''}
+                        <div class="flex justify-between items-start gap-3 border-t border-slate-700/50 pt-4 mt-2">
+                            <span class="text-[12px] md:text-[13px] font-semibold text-slate-400 whitespace-nowrap flex-shrink-0 pt-1">Ngân sách còn lại:</span>
+                            <div class="text-right min-w-0">
+                                <div class="text-base md:text-lg font-black drop-shadow-sm whitespace-nowrap ${remainingVND >= 0 ? 'text-white' : 'text-red-400'}">${new Intl.NumberFormat('vi-VN').format(remainingVND)} VND</div>${destCur !== 'VND' ? `<div class="text-xs font-bold mt-0.5 whitespace-nowrap ${remainingVND >= 0 ? 'text-emerald-300/80' : 'text-red-400/60'}">≈ ${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(remainingForeign)} ${destCur}</div>` : ''}
                             </div>
                         </div>
                         ` : ''}
@@ -488,20 +485,15 @@
             `;
 
             html += `
-                <div class="ml-0 md:ml-16 mt-4 mb-8 text-center pb-8">
+                <div class="ml-0 md:ml-16 mt-4 mb-8 text-center pb-8 opacity-70">
                     <div class="inline-flex items-center gap-2 text-slate-300">
-                        <span class="h-px w-8 bg-slate-200"></span>
+                        <span class="h-px w-8 bg-slate-300/50"></span>
                         <i class="fa-solid fa-feather text-[10px]"></i>
-                        <span class="h-px w-8 bg-slate-200"></span>
+                        <span class="h-px w-8 bg-slate-300/50"></span>
                     </div>
-                    <p class="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">TripPlanner v1.2.0</p>
-                    <p class="text-[10px] font-medium text-slate-400 mt-1.5 flex items-center justify-center gap-1.5">
-                        Made with <i class="fa-solid fa-heart text-red-400/70"></i> by duyanh.dev 
-                        <span class="text-slate-300 px-1">•</span> 
-                        <!-- Link Gmail siêu nhỏ -->
-                        <a href="mailto:buiduyanh.17042001@gmail.com" class="text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">
-                            <i class="fa-solid fa-envelope"></i> Liên hệ
-                        </a>
+                    <p class="text-[10px] font-bold text-slate-400 mt-2.5 uppercase tracking-widest">TripPlanner v1.2.0</p>
+                    <p class="text-[10px] font-medium text-slate-500 mt-1.5 flex items-center justify-center gap-1.5">
+                        Made with <i class="fa-solid fa-heart text-red-400/70"></i> by <strong class="text-slate-600">duyanh.dev</strong>
                     </p>
                 </div>
             `;
