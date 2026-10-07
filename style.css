@@ -118,3 +118,17 @@ body, button, input, div {
 .animate-jiggle {
     animation: jiggle 0.3s ease-in-out infinite;
 }
+
+/* Ép GPU xử lý chuyển động, chống rớt frame (Jank) */
+.gpu-accelerate {
+    will-change: transform, opacity, filter;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+/* Khử răng cưa, rung viền chữ khi Animation chạy */
+.text-smooth {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

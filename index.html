@@ -27,11 +27,38 @@
    <!-- Mapbox GL JS CSS & JS -->
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css' rel='stylesheet' />
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js'></script>
+
+    <!-- GSAP CDN  -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     
     <link rel="stylesheet" href="./style.css">
 </head>
 
 <body class="text-slate-800 min-h-screen flex bg-slate-50">
+
+  <!-- Thêm gpu-accelerate vào thẻ bao ngoài cùng -->
+    <div id="cinematic-preloader" class="gpu-accelerate fixed inset-0 z-[99999] bg-[#050505] flex flex-col items-center justify-center overflow-hidden" style="perspective: 1200px;">
+        
+        <div class="relative z-10 flex flex-col items-center transform-style-3d w-full">
+            
+            <!-- Thêm gpu-accelerate vào Máy bay -->
+            <div id="preloader-plane" class="gpu-accelerate text-white text-5xl md:text-6xl drop-shadow-[0_10px_20px_rgba(255,255,255,0.4)] absolute z-20 opacity-0">
+                <i class="fa-solid fa-plane"></i>
+            </div>
+            
+            <div class="flex flex-col items-center mt-12 z-10">
+                <!-- Thêm text-smooth vào Chữ -->
+                <h1 id="preloader-title" class="text-smooth text-3xl md:text-4xl font-semibold text-white tracking-tight drop-shadow-sm flex overflow-hidden pb-4 opacity-0"></h1>
+                
+                <!-- Thêm gpu-accelerate và text-smooth vào Subtitle -->
+                <p id="preloader-subtitle" class="gpu-accelerate text-smooth text-[8px] font-bold text-white/70 uppercase tracking-tight mt-1 opacity-0 whitespace-nowrap drop-shadow-sm">
+                    by duyanh.dev
+                </p>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Mobile Header -->
     <header class="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-md border-b border-slate-200 z-40 flex items-center justify-between px-4 shadow-sm">
         <h1 class="text-xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
@@ -767,6 +794,86 @@
 <script type="module" src="./maps-logic.js"></script> <!-- FILE LOGIC MỚI -->
 <script type="module" src="./data-sync.js"></script> <!-- FILE LOGIC MỚI -->
 <script type="module" src="././day-manager.js"></script> <!-- FILE LOGIC MỚI -->
+
+<script>
+   
+ document.addEventListener("DOMContentLoaded", () => {
+    if (typeof gsap === 'undefined') return;
+
+    gsap.config({ force3D: true });
+
+    const titleEl = document.getElementById("preloader-title");
+    const text = "TripPlanner";
+    titleEl.innerHTML = text.split("").map(char => `<span class="inline-block translate-y-20 opacity-0">${char}</span>`).join("");
+    
+    gsap.set("#preloader-title", { opacity: 1 });
+
+    const tl = gsap.timeline();
+
+    gsap.set("#preloader-plane", { 
+        x: -300, y: 150, z: -600, 
+        rotationX: -20, rotationY: 20, rotationZ: -30, 
+        scale: 0.4 
+    });
+    gsap.set("#preloader-subtitle", { scale: 3, filter: "blur(10px)", letterSpacing: "0em" });
+    gsap.set("#cinematic-preloader", { transformOrigin: "50% 100%" });
+    
+        tl.to("#preloader-plane", { 
+        x: 0, y: -45, z: 50, 
+        rotationX: 10, rotationY: -10, rotationZ: 0, 
+        opacity: 1, scale: 1, 
+        duration: 0.9, ease: "power3.out" 
+    }, 0)
+    
+    .to("#preloader-title span", {
+        y: 0, opacity: 1,
+        duration: 0.8,
+        stagger: 0.05, 
+        ease: "back.out(1.8)" 
+    }, 0.2)
+    
+    .to("#preloader-subtitle", {
+        opacity: 1,
+        scale: 1,
+        filter: "blur(0px)",
+        letterSpacing: window.innerWidth > 768 ? "0.6em" : "0.4em", 
+        duration: 1.0,
+        ease: "expo.out"
+    }, 0.4)
+    
+    .to("#preloader-plane", {
+        rotationZ: -45, 
+        rotationX: -15, 
+        duration: 0.3, ease: "power2.inOut"
+    }, 1.2)
+    
+    .to("#preloader-plane", { 
+        x: window.innerWidth > 768 ? 800 : 500, 
+        y: -600, z: 200, 
+        scale: 1.5, opacity: 0, 
+        duration: 0.5, ease: "power3.in" 
+    }, 1.5)
+    
+    .to(["#preloader-title", "#preloader-subtitle"], {
+        y: 20, opacity: 0,
+        duration: 0.4, ease: "power2.in"
+    }, 1.6)
+    
+    .to("#cinematic-preloader", { 
+        yPercent: -100, 
+        borderBottomLeftRadius: "100%", 
+        borderBottomRightRadius: "100%", 
+        opacity: 0.5, 
+        duration: 0.6, 
+        ease: "expo.inOut" 
+    }, 1.8)
+    
+    .add(() => {
+        const loader = document.getElementById('cinematic-preloader');
+        if (loader) loader.remove();
+    });
+});
+</script>
   
 </body>
 </html>
