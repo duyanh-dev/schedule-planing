@@ -327,7 +327,7 @@
                                 <i class="fa-solid fa-xmark text-[10px] md:text-xs"></i>
                             </div>
                         ` : (isRealToday ? `
-                            <div class="absolute -top-1.5 -right-1 md:-top-2 md:-right-1.5 bg-red-500/90 backdrop-blur-md text-white text-[7px] md:text-[8px] font-black px-2 py-0.5 rounded-full z-10 border border-white/90 shadow-[0_2px_8px_rgba(239,68,68,0.4)] tracking-wider">NAY</div>
+                            <div class="absolute -top-2 -right-1 md:-top-2 md:-right-1.5 bg-red-500/90 backdrop-blur-md text-white text-[7px] md:text-[8px] font-black px-2 py-0.5 rounded-full z-10 shadow-[0_2px_8px_rgba(239,68,68,0.4)] tracking-wider">NAY</div>
                         ` : '')}
                         
                         <div class="hidden md:block text-[10px] font-black uppercase tracking-wider ${subtitleColor} mb-1 drop-shadow-sm pointer-events-none">Ngày ${idx + 1}</div>
