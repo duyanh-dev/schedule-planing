@@ -914,6 +914,55 @@
 <script type="module" src="./emegency.js"></script> <!-- FILE LOGIC MỚI -->
 
 <script>
+
+    (() => {
+    var stamp = document.getElementById('tpStamp');
+    var glass = document.getElementById('tpStampGlass');
+    if (!stamp || !glass) return;
+ 
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ 
+    // 1) Đóng dấu: chạy đúng 1 lần khi cuộn tới cuối trang
+    if ('IntersectionObserver' in window && !reduce) {
+      var io = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) {
+          stamp.classList.add('is-in');
+          io.disconnect();
+        }
+      }, { threshold: 0.6 });
+      io.observe(stamp);
+    } else {
+      stamp.classList.add('is-in');
+      stamp.style.opacity = 1;
+    }
+ 
+    // 2) Nghiêng 3D theo chuột (chỉ desktop có chuột)
+    var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (canHover && !reduce) {
+      var raf = 0;
+      glass.addEventListener('pointermove', function (e) {
+        var r = glass.getBoundingClientRect();
+        var x = (e.clientX - r.left) / r.width - 0.5;   // -0.5 → 0.5
+        var y = (e.clientY - r.top) / r.height - 0.5;
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(function () {
+          glass.style.setProperty('--ry', (x * 10).toFixed(2) + 'deg');
+          glass.style.setProperty('--rx', (-y * 10).toFixed(2) + 'deg');
+        });
+      });
+      glass.addEventListener('pointerleave', function () {
+        glass.style.setProperty('--rx', '0deg');
+        glass.style.setProperty('--ry', '0deg');
+      });
+    }
+ 
+    // 3) Lún xuống khi nhấn (cả chuột lẫn cảm ứng) — như đóng con dấu thật
+    function down() { glass.classList.add('is-pressed'); }
+    function up()   { glass.classList.remove('is-pressed'); }
+    glass.addEventListener('pointerdown', down);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  })();
    
  (() => {
   const root = document.getElementById('fl');

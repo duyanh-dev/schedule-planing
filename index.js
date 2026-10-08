@@ -612,15 +612,18 @@
             `;
 
             html += `
-                <div class="ml-0 md:ml-16 mt-4 mb-8 text-center pb-8 opacity-70">
-                    <div class="inline-flex items-center gap-2 text-slate-300">
-                        <span class="h-px w-8 bg-slate-300/50"></span><i class="fa-solid fa-feather text-[10px]"></i><span class="h-px w-8 bg-slate-300/50"></span>
-                    </div>
-                    <p class="text-[10px] font-bold text-slate-400 mt-2.5 uppercase tracking-widest">TripPlanner v1.3.0</p>
-                    <p class="text-[10px] font-medium text-slate-500 mt-1.5 flex items-center justify-center gap-1.5">
-                        Made with <i class="fa-solid fa-heart text-red-400/70"></i> by <strong class="text-slate-600">duyanh.dev</strong>
-                    </p>
-                </div>
+                <div class="ml-0 md:ml-16 mt-4 mb-8 text-center pb-8">
+  <div class="tp-stamp" id="tpStamp">
+    <div class="tp-stamp__glass" id="tpStampGlass">
+      <span class="tp-stamp__bead" aria-hidden="true"><i class="fa-solid fa-feather"></i></span>
+      <p class="tp-stamp__ver">TripPlanner v1.3.0</p>
+      <span class="tp-stamp__sep" aria-hidden="true"></span>
+      <p class="tp-stamp__credit">
+        Made with <i class="fa-solid fa-heart"></i> by <strong>duyanh.dev</strong>
+      </p>
+    </div>
+  </div>
+</div>
             `;
             container.innerHTML = html;
         };

@@ -1,5 +1,5 @@
-/* ===== TripPlanner – Modal thông tin khẩn cấp (Liquid Glass V2) =====
-   - Cập nhật: Phân vùng khu vực, Dropdown Kính, Tách nút gọi, Thêm xác nhận
+/* ===== TripPlanner – Modal thông tin khẩn cấp (Liquid Glass V2.1) =====
+   - Cập nhật: Nút Gọi đồng nhất 1 màu (Slate-900), sang trọng, tối giản.
    - Độc lập hoàn toàn, không đụng logic cũ.
    - Mở bằng: [data-emergency-open] hoặc window.openEmergency('TH').       */
 (function () {
@@ -73,7 +73,7 @@
   
   /* Header */
   .em-head { display: flex; align-items: center; gap: .75rem; padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.6); background: rgba(255,255,255,.4); }
-  .em-sos { width: 2.75rem; height: 2.75rem; flex-shrink: 0; border-radius: .9rem; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; background: linear-gradient(145deg, #fb7185, #e11d48); border: 1px solid rgba(255,255,255,.6); box-shadow: 0 8px 18px rgba(225,29,72,.3), inset 0 2px 5px rgba(255,255,255,.6); }
+  .em-sos { width: 2.75rem; height: 2.75rem; flex-shrink: 0; border-radius: .9rem; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; background: linear-gradient(145deg, #fb7185, #e11d48); border: 1px solid rgba(255,255,255,.6);}
   .em-ttl { flex: 1; } .em-ttl h2 { margin: 0; font-size: 1.1rem; font-weight: 900; color: #0f172a; } .em-ttl p { margin: 0; font-size: .7rem; font-weight: 600; color: #64748b; }
   .em-x { width: 2.2rem; height: 2.2rem; border-radius: 50%; border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.7); color: #64748b; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .2s; }
   .em-x:active { transform: scale(.9); }
@@ -87,21 +87,22 @@
   .em-sel-box select { width: 100%; appearance: none; -webkit-appearance: none; border: 0; background: transparent; font: 800 .95rem Inter, sans-serif; color: #0f172a; outline: none; padding-right: 1.2rem; }
   .em-sel-box i { position: absolute; right: .8rem; bottom: .7rem; font-size: .8rem; color: #64748b; pointer-events: none; }
   
-  /* Grid & Card Container (Chỉ hiển thị, không click được cả khối) */
+  /* Grid & Card Container */
   .em-grid { display: flex; flex-direction: column; gap: .75rem; }
   .em-card { --c: #ef4444; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .85rem 1rem; border-radius: 1.25rem; border: 1px solid rgba(255,255,255,.9); background: linear-gradient(145deg, rgba(255,255,255,.8), rgba(255,255,255,.5)); box-shadow: 0 8px 22px rgba(15,23,42,.04), inset 0 2px 5px rgba(255,255,255,1); }
   .em-card::after { content: ""; position: absolute; width: 80px; height: 80px; left: -20px; top: -20px; border-radius: 50%; background: radial-gradient(circle, var(--c), transparent 70%); opacity: .15; pointer-events: none; }
   
   /* Thông tin bên trái */
   .em-info { display: flex; align-items: center; gap: .85rem; flex: 1; min-width: 0; }
-  .em-ic { width: 2.2rem; height: 2.2rem; border-radius: .75rem; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1rem; background: var(--c); border: 1.5px solid rgba(255,255,255,.6); box-shadow: inset 0 2px 4px rgba(255,255,255,.4); }
+  .em-ic { width: 2.2rem; height: 2.2rem; border-radius: .75rem; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1rem; background: var(--c); border: 1.5px solid rgba(255,255,255,.6); }
   .em-text { flex: 1; min-width: 0; }
   .em-lb { font-size: .7rem; font-weight: 700; color: #64748b; margin-bottom: .1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .em-no { font-size: 1.3rem; font-weight: 900; color: #0f172a; line-height: 1; }
   
-  /* Nút Gọi Liquid Glass tách rời */
-  .em-btn-call { flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: .35rem; padding: .6rem 1rem; border-radius: 99px; background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.4)); border: 1.5px solid rgba(255,255,255,1); box-shadow: 0 4px 15px rgba(0,0,0,.05), inset 0 2px 4px rgba(255,255,255,1); font-size: .75rem; font-weight: 800; color: var(--c); cursor: pointer; transition: transform .2s; }
+  /* Nút Gọi Liquid Glass đồng nhất 1 màu Slate-900 */
+  .em-btn-call { flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: .35rem; padding: .6rem 1.1rem; border-radius: 99px; background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.4)); border: 1.5px solid rgba(255,255,255,1); box-shadow: 0 4px 15px rgba(0,0,0,.05), inset 0 2px 4px rgba(255,255,255,1); font-size: .75rem; font-weight: 800; color: #0f172a; cursor: pointer; transition: all .2s; }
   .em-btn-call:active { transform: scale(.92); }
+  .em-btn-call:hover { background: rgba(255,255,255,1); box-shadow: 0 4px 15px rgba(0,0,0,.1), inset 0 2px 4px rgba(255,255,255,1); }
   
   /* Extra Info */
   .em-note, .em-consular { margin-top: .8rem; border-radius: 1.25rem; padding: .85rem 1rem; font-size: .75rem; font-weight: 600; line-height: 1.5; border: 1px solid rgba(255,255,255,.9); box-shadow: inset 0 2px 5px rgba(255,255,255,.6); }
@@ -115,16 +116,16 @@
   .em-cf-ov.is-show { opacity: 1; pointer-events: auto; }
   .em-cf-box { width: 85%; max-width: 300px; background: rgba(255,255,255,.85); border: 1px solid rgba(255,255,255,1); border-radius: 1.5rem; padding: 1.5rem; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,.1), inset 0 2px 5px rgba(255,255,255,1); transform: scale(.95); transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
   .em-cf-ov.is-show .em-cf-box { transform: scale(1); }
-  .em-cf-ic { width: 3rem; height: 3rem; margin: 0 auto 1rem; border-radius: 50%; background: #10b981; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 8px 16px rgba(16,185,129,.3), inset 0 2px 4px rgba(255,255,255,.5); border: 2px solid #fff; }
+  .em-cf-ic { width: 3rem; height: 3rem; margin: 0 auto 1rem; border-radius: 50%; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 8px 16px rgba(15,23,42,.2), inset 0 2px 4px rgba(255,255,255,.3); border: 2px solid #fff; }
   .em-cf-box h3 { margin: 0 0 .5rem; font-size: 1.1rem; font-weight: 900; color: #0f172a; }
   .em-cf-box p { margin: 0 0 1.25rem; font-size: .8rem; color: #64748b; font-weight: 600; line-height: 1.4; }
   .em-cf-box b { color: #0f172a; }
-  .em-cf-box .big-no { display: block; font-size: 1.5rem; font-weight: 900; color: #10b981; margin-top: .25rem; letter-spacing: -0.02em; }
+  .em-cf-box .big-no { display: block; font-size: 1.5rem; font-weight: 900; color: #0f172a; margin-top: .25rem; letter-spacing: -0.02em; }
   .em-cf-btns { display: flex; gap: .75rem; }
   .em-cf-btn { flex: 1; padding: .75rem; border-radius: 1rem; font-size: .85rem; font-weight: 800; cursor: pointer; border: 1.5px solid transparent; transition: transform .2s; }
   .em-cf-btn:active { transform: scale(.95); }
   .em-cf-cancel { background: rgba(226,232,240,.6); color: #475569; border-color: rgba(255,255,255,.8); }
-  .em-cf-call { background: #10b981; color: #fff; box-shadow: 0 6px 15px rgba(16,185,129,.3); }
+  .em-cf-call { background: #0f172a; color: #fff; box-shadow: 0 6px 15px rgba(15,23,42,.3); }
 
   @media(min-width: 768px){ .em-ov { align-items: center; padding: 1.5rem; } .em-panel { max-width: 28rem; max-height: 86vh; border-radius: 2rem; } .em-cf-ov { border-radius: 2rem; } }
   `;
