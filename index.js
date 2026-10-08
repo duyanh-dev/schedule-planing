@@ -616,7 +616,7 @@
                     <div class="inline-flex items-center gap-2 text-slate-300">
                         <span class="h-px w-8 bg-slate-300/50"></span><i class="fa-solid fa-feather text-[10px]"></i><span class="h-px w-8 bg-slate-300/50"></span>
                     </div>
-                    <p class="text-[10px] font-bold text-slate-400 mt-2.5 uppercase tracking-widest">TripPlanner v1.2.0</p>
+                    <p class="text-[10px] font-bold text-slate-400 mt-2.5 uppercase tracking-widest">TripPlanner v1.3.0</p>
                     <p class="text-[10px] font-medium text-slate-500 mt-1.5 flex items-center justify-center gap-1.5">
                         Made with <i class="fa-solid fa-heart text-red-400/70"></i> by <strong class="text-slate-600">duyanh.dev</strong>
                     </p>
