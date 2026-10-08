@@ -360,12 +360,15 @@
                     <div class="text-center py-12 md:py-16 px-4 md:ml-16 relative z-10 bg-white/50 backdrop-blur-2xl border border-white/80 shadow-[0_10px_40px_rgba(0,0,0,0.03)] rounded-[2rem] mb-10">
                         <div class="w-20 h-20 rounded-full bg-white/80 backdrop-blur-md border border-white flex items-center justify-center text-slate-300 mx-auto mb-4 text-4xl shadow-[0_8px_20px_rgba(0,0,0,0.04)]"><i class="fa-solid fa-mug-hot"></i></div>
                         <h3 class="text-xl font-black text-slate-700">Chưa có lịch trình</h3>
-                        <p class="text-slate-500 text-[13px] md:text-sm mt-2 font-medium">Bấm <strong class="text-blue-600">Thêm HĐ</strong> để lên kế hoạch cho ngày này.</p>
+                        <p class="text-slate-500 text-[13px] md:text-sm mt-2 font-medium">Bấm <strong class="text-blue-600">+ Thêm</strong> để lên kế hoạch cho ngày này.</p>
                         
                         <!-- Nút Xóa Ngày (Kính lỏng, xuất hiện khi ngày không có hoạt động) -->
-                        <div class="mt-6 flex justify-center">
-                            <button onclick="confirmDeleteDay('${day.date}')" class="px-5 py-2.5 bg-red-50/60 backdrop-blur-md border border-red-200/60 hover:bg-red-100 hover:border-red-300 text-red-500 rounded-xl text-[13px] font-bold transition-all shadow-[0_2px_10px_rgba(239,68,68,0.05)] active:scale-95 flex items-center gap-2 touch-manipulation">
-                                <i class="fa-solid fa-trash-can"></i> Xóa ngày này
+                       <div class="mt-6 flex justify-center" data-html2canvas-ignore>
+                            <button onclick="confirmDeleteDay('${day.date}')" class="h-[3.25rem] px-6 bg-red-100/80 backdrop-blur-xl hover:bg-red-200/80 text-red-900 rounded-[1.25rem] font-bold text-[13px] transition-all shadow-[0_4px_12px_rgba(244,63,94,0.06),inset_0_2px_4px_rgba(255,255,255,0.8)] active:scale-95 flex items-center justify-center gap-2.5 border border-rose-200/70 touch-manipulation group">
+                                <div class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-rose-200 shadow-[0_2px_5px_rgba(0,0,0,0.06)] group-hover:scale-110 transition-transform flex-shrink-0">
+                                    <i class="fa-solid fa-trash-can text-rose-600 text-[13px]"></i>
+                                </div>
+                                <span class="drop-shadow-sm pr-1">Xóa ngày này</span>
                             </button>
                         </div>
                     </div>`;
@@ -402,8 +405,11 @@
                                 <div class="text-[13px] font-semibold text-slate-700 break-words leading-relaxed">${act.to}</div>
                             </div>
                         </div>
-                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-blue-600/85 backdrop-blur-2xl border border-blue-400/70 hover:bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 mt-2 shadow-[inset_0_2px_5px_rgba(255,255,255,0.4),inset_0_-3px_5px_rgba(0,0,0,0.15)]">
-                            <i class="fa-solid fa-map-location-dot mr-1.5 text-blue-200 drop-shadow-sm"></i> Chỉ đường Google Maps
+                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full h-10 bg-blue-600/90 backdrop-blur-2xl border border-blue-400/60 hover:bg-blue-600 text-white rounded-[1rem] font-bold text-[11px] uppercase tracking-wider transition-all active:scale-95 mt-2 shadow-[0_4px_12px_rgba(37,99,235,0.2),inset_0_1px_3px_rgba(255,255,255,0.35)] flex items-center justify-center gap-2 px-3 touch-manipulation group">
+                            <div class="w-6 h-6 flex-shrink-0 rounded-full bg-white/20 flex items-center justify-center border border-white/30 shadow-inner group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-map-location-dot text-white text-[10px] drop-shadow-sm"></i>
+                            </div>
+                            <span class="drop-shadow-sm truncate">Chỉ đường Google Maps</span>
                         </button>
                     </div>`;
                 } else if (act.to || act.from) {
@@ -441,14 +447,24 @@
                                 <div class="p-4 md:p-5 border-b border-white flex justify-between items-start gap-3 bg-white/40">
                                     <div class="flex-1 min-w-0">
                                         <div class="hidden md:flex items-center gap-2 mb-1.5">
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${status.color}">${status.label}</span>
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_2px_rgba(255,255,255,0.8)] ${status.color}">
+                                                ${status.label}
+                                            </span>
                                         </div>
                                         <h3 class="text-[17px] md:text-lg font-black leading-snug ${isDone ? 'line-through text-slate-400' : 'text-slate-800'} break-words">${act.details}</h3>
                                         
-                                        <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
-                                            <span class="text-[9px] font-black text-slate-500 bg-slate-100/80 backdrop-blur-sm border border-slate-200/50 px-2 py-1 rounded uppercase shadow-sm">${act.type}</span>
-                                            ${act.transport ? `<span class="text-[9px] font-black text-slate-500 bg-slate-100/80 backdrop-blur-sm border border-slate-200/50 px-2 py-1 rounded uppercase shadow-sm"><i class="fa-solid fa-car-side mr-1"></i>${act.transport}</span>` : ''}
-                                        </div>
+                                        <div class="mt-2.5 flex flex-wrap items-center gap-2">
+    <!-- Nhãn Loại hoạt động -->
+    <span class="text-[10px] font-extrabold text-slate-700 bg-white/80 backdrop-blur-md border border-white/90 px-3 py-1 rounded-full uppercase tracking-wider shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_2px_rgba(255,255,255,0.9)] drop-shadow-sm">
+        ${act.type}
+    </span>
+
+    <!-- Nhãn Phương tiện di chuyển (nếu có) -->
+    ${act.transport ? `
+    <span class="text-[10px] font-extrabold text-blue-700 bg-blue-50/80 backdrop-blur-md border border-blue-100/90 px-3 py-1 rounded-full uppercase tracking-wider shadow-[0_2px_8px_rgba(37,99,235,0.06),inset_0_1px_2px_rgba(255,255,255,0.9)] drop-shadow-sm flex items-center gap-1">
+        <i class="fa-solid fa-car-side text-blue-500 text-[9px]"></i>${act.transport}
+    </span>` : ''}
+</div>
                                     </div>
                                     <button onclick="toggleComplete('${act.id}')" class="text-3xl flex-shrink-0 transition-transform active:scale-90 ${isDone ? 'text-blue-500 drop-shadow-md hover:text-slate-400' : 'text-slate-300 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i></button>
                                 </div>
@@ -478,8 +494,8 @@
                                     ${routeHtml}
                                     <div class="flex items-center justify-between mt-1">
                                         <div>
-                                            ${act.budgetAmt ? `<span class="text-[11px] font-black text-emerald-700 bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 shadow-[0_2px_8px_rgba(16,185,129,0.1)] px-2.5 py-1.5 rounded-lg"><i class="fa-solid fa-sack-dollar mr-1"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)}${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
-                                        </div>
+    ${act.budgetAmt ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-emerald-900 bg-emerald-100/80 backdrop-blur-md border border-emerald-200/80 px-3 py-1 rounded-full shadow-[0_3px_10px_rgba(16,185,129,0.08),inset_0_1px_2px_rgba(255,255,255,0.8)] drop-shadow-sm"><i class="fa-solid fa-sack-dollar text-emerald-600 text-[10px]"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)} ${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
+</div>
                                         
                                         <!-- CỤM NÚT NHÂN BẢN / SỬA / XÓA (Liquid Glass Pill) -->
                                         <div class="flex gap-1.5 md:gap-2">
@@ -525,36 +541,74 @@
 
             let expenseListHtml = '';
             day.activities.filter(a => a.budgetAmt).forEach(a => {
-                expenseListHtml += `<div class="flex justify-between items-center py-2.5 border-b border-slate-700/50 last:border-0">
-                    <span class="text-[13px] font-medium text-slate-300 truncate pr-4">${a.details}</span>
-                    <span class="text-[13px] font-bold text-white whitespace-nowrap">${new Intl.NumberFormat('vi-VN').format(a.budgetAmt)} ${a.budgetCur}</span>
-                </div>`;
+                expenseListHtml += `<div class="flex justify-between items-center py-2.5 md:py-3 border-b border-slate-200/70 last:border-0 group">
+    <!-- Tên hoạt động (Màu xám trung tính, tự động thu gọn nếu quá dài) -->
+    <span class="text-[12px] md:text-[13px] font-semibold text-slate-500 truncate pr-4 transition-colors group-hover:text-slate-700">
+        ${a.details}
+    </span>
+    
+    <!-- Số tiền (Màu Đen xám đậm nhất, font-bold để nhấn mạnh, tuyệt đối không rớt dòng) -->
+    <span class="text-[13px] md:text-[14px] font-black text-slate-800 whitespace-nowrap flex-shrink-0">
+        ${new Intl.NumberFormat('vi-VN').format(a.budgetAmt)} ${a.budgetCur}
+    </span>
+</div>`;
             });
             if(expenseListHtml === '') expenseListHtml = '<div class="text-[13px] text-slate-500 italic py-2">Không có chi tiêu nào được ghi nhận.</div>';
 
             html += `
-                <div class="ml-0 md:ml-16 mt-8 mb-10 bg-slate-900/85 backdrop-blur-3xl rounded-[2rem] p-5 md:p-7 shadow-[0_20px_50px_rgba(15,23,42,0.25)] relative overflow-hidden border border-slate-700/50">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><i class="fa-solid fa-wallet text-6xl text-white"></i></div>
-                    <h3 class="text-emerald-400 font-black text-[11px] uppercase tracking-widest mb-5 flex items-center drop-shadow-md"><i class="fa-solid fa-receipt mr-2"></i> Tổng kết chi tiêu ngày</h3>
-                    <div class="space-y-1 mb-6 relative z-10">${expenseListHtml}</div>
-                    <div class="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 border border-slate-700/50 space-y-4 shadow-inner">
-                        <div class="flex justify-between items-start gap-3">
-                            <span class="text-[12px] md:text-[13px] font-semibold text-slate-400 whitespace-nowrap flex-shrink-0 pt-1">Đã tiêu hôm nay:</span>
-                            <div class="text-right min-w-0">
-                                <div class="text-base md:text-lg font-black text-emerald-400 drop-shadow-sm whitespace-nowrap">~ ${new Intl.NumberFormat('vi-VN').format(dailyTotalVND)} VND</div>
-                                ${destCur !== 'VND' ? `<div class="text-xs font-bold text-emerald-400/60 mt-0.5 whitespace-nowrap">${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(dailyTotalForeign)}${destCur}</div>` : ''}
-                            </div>
-                        </div>
-                        ${tripBudgetVND > 0 ? `
-                        <div class="flex justify-between items-start gap-3 border-t border-slate-700/50 pt-4 mt-2">
-                            <span class="text-[12px] md:text-[13px] font-semibold text-slate-400 whitespace-nowrap flex-shrink-0 pt-1">Ngân sách còn lại:</span>
-                            <div class="text-right min-w-0">
-                                <div class="text-base md:text-lg font-black drop-shadow-sm whitespace-nowrap ${remainingVND >= 0 ? 'text-white' : 'text-red-400'}">${new Intl.NumberFormat('vi-VN').format(remainingVND)} VND</div>${destCur !== 'VND' ? `<div class="text-xs font-bold mt-0.5 whitespace-nowrap ${remainingVND >= 0 ? 'text-emerald-300/80' : 'text-red-400/60'}">≈ ${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(remainingForeign)} ${destCur}</div>` : ''}
-                            </div>
-                        </div>
-                        ` : ''}
-                    </div>
+                <div class="ml-0 md:ml-16 mt-6 mb-8 bg-slate-200/85 backdrop-blur-3xl rounded-[2rem] p-4 md:p-6 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_10px_30px_rgba(0,0,0,0.06)] border border-slate-300/80 relative overflow-hidden">
+    
+    <!-- Icon trang trí (Màu xám chìm) -->
+    <div class="absolute top-0 right-0 p-4 opacity-[0.05] pointer-events-none">
+        <i class="fa-solid fa-wallet text-6xl text-slate-700"></i>
+    </div>
+    
+    <!-- Tiêu đề -->
+    <h3 class="text-slate-800 font-extrabold text-[12px] md:text-[13px] uppercase tracking-wider mb-4 flex items-center drop-shadow-sm relative z-10">
+        <div class="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center mr-2.5 shadow-sm flex-shrink-0 border border-slate-200">
+            <i class="fa-solid fa-receipt text-slate-600 text-[11px]"></i>
+        </div>
+        Tổng kết chi tiêu ngày
+    </h3>
+    
+    <!-- Danh sách chi tiêu (Nếu có) -->
+    <div class="space-y-2 mb-5 relative z-10">${expenseListHtml}</div>
+    
+    <!-- Khung thông tin tổng tiền (Lớp kính Trắng nổi bật, bo tròn sâu) -->
+    <div class="bg-white/95 backdrop-blur-2xl rounded-[1.25rem] p-4 border border-white shadow-[0_4px_15px_rgba(0,0,0,0.04)] space-y-3 relative z-10">
+        
+        <!-- Đã tiêu hôm nay -->
+        <div class="flex justify-between items-center gap-2">
+            <span class="text-[12px] md:text-[13px] font-bold text-slate-500 flex-shrink-0">
+                Đã tiêu hôm nay:
+            </span>
+            <div class="text-right min-w-0">
+                <!-- Chuyển về màu Xám Đen (Slate-800) cực kỳ điềm đạm, sang trọng -->
+                <div class="text-[14px] md:text-base font-black text-slate-800 truncate drop-shadow-sm">
+                    ${new Intl.NumberFormat('vi-VN').format(dailyTotalVND)} VND
                 </div>
+                ${destCur !== 'VND' ? `<div class="text-[11px] font-bold text-slate-500/80 truncate mt-0.5">${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(dailyTotalForeign)} ${destCur}</div>` : ''}
+            </div>
+        </div>
+        
+        <!-- Ngân sách còn lại -->
+        ${tripBudgetVND > 0 ? `
+        <div class="flex justify-between items-center gap-2 border-t border-slate-100 pt-3 mt-1">
+            <span class="text-[12px] md:text-[13px] font-bold text-slate-500 flex-shrink-0">
+                Còn lại:
+            </span>
+            <div class="text-right min-w-0">
+                <!-- Màu tín hiệu: Xanh ngọc dịu (Emerald-600) hoặc Đỏ san hô (Rose-500) -->
+                <div class="text-[14px] md:text-base font-black truncate drop-shadow-sm ${remainingVND >= 0 ? 'text-emerald-600/90' : 'text-rose-500'}">
+                    ${new Intl.NumberFormat('vi-VN').format(remainingVND)} VND
+                </div>
+                ${destCur !== 'VND' ? `<div class="text-[11px] font-bold truncate mt-0.5 ${remainingVND >= 0 ? 'text-emerald-600/60' : 'text-rose-400/80'}">≈ ${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(remainingForeign)}${destCur}</div>` : ''}
+            </div>
+        </div>
+        ` : ''}
+        
+    </div>
+</div>
             `;
 
             html += `

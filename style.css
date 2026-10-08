@@ -132,3 +132,45 @@ body, button, input, div {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
+
+/* Trạng thái mặc định (Ở đỉnh trang): Kính Trắng */
+        #dynamic-island-header {
+            background-color: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                        background-color 0.4s ease, 
+                        border-color 0.4s ease,
+                        box-shadow 0.4s ease;
+        }
+        #island-logo {
+            transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-origin: left center;
+        }
+        #island-hamburger {
+            transition: background-color 0.4s ease, box-shadow 0.4s ease, transform 0.2s ease;
+        }
+
+        /* 1. Khi cuộn khỏi đỉnh -> Đổi sang Xám nhạt (Slate-100) để nổi trên nền trắng */
+        #dynamic-island-header.island-scrolled {
+            background-color: rgba(241, 245, 249, 0.85); 
+            border-color: rgba(226, 232, 240, 0.9); 
+            box-shadow: 0 6px 20px rgba(0,0,0,0.06), inset 0 2px 4px rgba(255,255,255,0.7);
+        }
+        /* Làm nút Hamburger Trắng sáng lên khi nền xám */
+        #dynamic-island-header.island-scrolled #island-hamburger {
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* 2. Khi thu nhỏ thành viên bi (Vẫn giữ màu Xám) */
+        #dynamic-island-header.island-collapsed {
+            width: 3.5rem; 
+            background-color: rgba(241, 245, 249, 0.95); 
+            border-color: rgba(203, 213, 225, 0.7); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08), inset 0 1px 2px rgba(255,255,255,1);
+        }
+        #dynamic-island-header.island-collapsed #island-logo {
+            opacity: 0;
+            transform: translateX(-20px) scale(0.9);
+            pointer-events: none;
+        }
