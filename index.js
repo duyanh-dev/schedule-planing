@@ -439,7 +439,7 @@
                             <!-- Thời gian hiển thị nổi bên ngoài ở Mobile -->
                             <div class="md:hidden flex items-center gap-2 mb-2">
                                 <span class="text-[15px] font-black text-slate-800 tracking-tight">${act.start} - ${act.end}</span>
-                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${status.color}">${status.label}</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${status.color}">${status.label}</span>
                             </div>
 
                             <div class="bg-white/60 backdrop-blur-3xl rounded-[1.5rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 flex flex-col overflow-hidden hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] transition-all">
