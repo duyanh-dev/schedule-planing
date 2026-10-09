@@ -1,0 +1,212 @@
+html.fl-lock,
+html.fl-lock body {
+  overflow: hidden;
+}
+
+.fl {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  overflow: hidden;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    system-ui,
+    sans-serif;
+  color: #1d1d1f;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  animation: fl-failsafe 0.01s linear 10s forwards; /* lỡ JS lỗi thì tự ẩn sau 10s */
+}
+.fl.is-leaving {
+  pointer-events: none;
+}
+@keyframes fl-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* ================= Tấm nền (kéo lên khi kết thúc) ================= */
+.fl-panel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #f5f5f7;
+  will-change: transform;
+}
+/* mép cong phía dưới của tấm màn */
+.fl-panel::after {
+  content: "";
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  top: calc(100% - 1px);
+  height: 16vh;
+  background: #f5f5f7;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+}
+
+/* ================= Chữ ================= */
+.fl-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(12px, 2.2vmin, 20px);
+  transform: translateY(-3vh);
+}
+
+.fl-word {
+  display: flex;
+  font-size: clamp(3rem, 12.5vw, 8rem);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.fl-ch {
+  display: inline-block;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+/* by duyanh.dev */
+.fl-by {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: clamp(11px, 1.65vmin, 13px);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: #86868b;
+}
+.fl-by-txt {
+  display: flex;
+}
+.fl-bc {
+  display: inline-block;
+  opacity: 0;
+}
+.fl-bc.is-dev {
+  color: #1d1d1f;
+  font-weight: 600;
+}
+.fl-by-line {
+  width: clamp(22px, 5vmin, 40px);
+  height: 1px;
+  background: rgba(29, 29, 31, 0.22);
+  transform: scaleX(0);
+}
+.fl-by-line--l {
+  transform-origin: 100% 50%;
+}
+.fl-by-line--r {
+  transform-origin: 0 50%;
+}
+
+/* ================= Bảng chuyến bay ================= */
+.fl-board-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(7vh, 34px);
+  display: flex;
+  justify-content: center;
+}
+.fl-board {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 10px 30px rgba(0, 0, 0, 0.05);
+  font-size: clamp(14px, 2.1vmin, 18px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #1d1d1f;
+  opacity: 0;
+}
+.fl-code {
+  display: flex;
+}
+.fl-cell {
+  display: block;
+  width: 0.86em;
+  height: 1em;
+  line-height: 1;
+  overflow: hidden;
+  text-align: center;
+}
+.fl-strip {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+.fl-strip i {
+  display: block;
+  flex: none;
+  height: 1em;
+  font-style: normal;
+}
+.fl-board-plane {
+  flex: none;
+  width: 1.5em;
+  height: 1em;
+  fill: #86868b;
+}
+
+/* ================= Máy bay + vệt khói ================= */
+.fl-sky {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.fl-trail {
+  fill: none;
+  stroke: #0071e3;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+.fl-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 140px;
+  height: 140px;
+  margin: -70px 0 0 -70px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 113, 227, 0.4);
+  opacity: 0;
+  pointer-events: none;
+}
+.fl-plane {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: clamp(72px, 9.5vmin, 108px);
+  aspect-ratio: 36 / 24;
+  opacity: 0;
+  pointer-events: none;
+}
+.fl-plane svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: #1d1d1f;
+}
+.fl-plane--shadow svg {
+  fill: rgba(29, 29, 31, 0.13);
+}
