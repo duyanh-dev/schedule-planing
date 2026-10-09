@@ -1215,6 +1215,75 @@
     });
 };
 
+// ==========================================
+// CONFIRM MODAL (thay cho confirm() mặc định)
+// ==========================================
+const clConfirm = (() => {
+    const root = document.getElementById('cl-confirm');
+    const card = root.querySelector('.clc-card');
+    const titleEl = document.getElementById('clc-title');
+    const msgEl = document.getElementById('clc-msg');
+    const chipEl = document.getElementById('clc-chip');
+    const okBtn = document.getElementById('clc-ok');
+    const cancelBtn = document.getElementById('clc-cancel');
+    const iconEl = root.querySelector('.clc-icon i');
+
+    let resolver = null, lastFocus = null;
+
+    const close = (result) => {
+        if (!resolver) return;
+        const r = resolver; resolver = null;
+        root.classList.remove('active');
+        if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+        r(result);
+    };
+
+    okBtn.addEventListener('click', () => close(true));
+    cancelBtn.addEventListener('click', () => close(false));
+    root.querySelector('.clc-backdrop').addEventListener('click', () => close(false));
+
+    // Chạy ở capture để Esc chỉ đóng confirm, không đóng luôn modal checklist bên dưới
+    window.addEventListener('keydown', e => {
+        if (!resolver) return;
+        if (e.key === 'Escape') {
+            e.preventDefault(); e.stopImmediatePropagation();
+            close(false);
+        } else if (e.key === 'Tab') {
+            // Giữ focus quanh 2 nút
+            const order = [cancelBtn, okBtn];
+            const i = order.indexOf(document.activeElement);
+            e.preventDefault();
+            order[(i + (e.shiftKey ? -1 : 1) + order.length) % order.length].focus();
+        }
+    }, true);
+
+    return ({
+        title = 'Xóa mục này?',
+        message = 'Mục sẽ bị xóa khỏi hành trang của bạn.',
+        detail = '',
+        confirmText = 'Xóa',
+        cancelText = 'Hủy',
+        icon = 'fa-trash-can'
+    } = {}) => new Promise(resolve => {
+        if (resolver) close(false);             // đang mở cái khác thì hủy cái cũ
+        resolver = resolve;
+        lastFocus = document.activeElement;
+
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        chipEl.textContent = detail;            // textContent: an toàn với ký tự đặc biệt
+        okBtn.textContent = confirmText;
+        cancelBtn.textContent = cancelText;
+        iconEl.className = `fa-solid ${icon}`;
+
+        // reflow để animation chạy lại từ đầu mỗi lần mở
+        root.classList.remove('active');
+        void card.offsetWidth;
+        root.classList.add('active');
+        cancelBtn.focus({ preventScroll: true });
+    });
+})();
+
         const openChecklistModal = () => {
             renderChecklist();
             document.getElementById('checklist-modal').classList.add('active');
@@ -1252,14 +1321,30 @@
             }
         };
 
-        const deleteChecklist = (id) => {
-            if (confirm("Xóa mục này khỏi danh sách?")) {
-                const trip = state.trips.find(t => t.id === state.activeTripId);
-                trip.checklist = trip.checklist.filter(c => c.id !== id);
-                saveData();
-                renderChecklist();
-            }
-        };
+        const deleteChecklist = async (id) => {
+    const trip = state.trips.find(t => t.id === state.activeTripId);
+    if (!trip) return;
+
+    const item = (trip.checklist || []).find(c => String(c.id) === String(id));
+    if (!item) return;
+
+    const ok = await clConfirm({
+        title: 'Xóa mục này?',
+        message: 'Mục sẽ bị xóa khỏi danh sách của bạn.',
+        detail: item.text,
+        confirmText: 'Xóa',
+        cancelText: 'Hủy'
+    });
+    if (!ok) return;
+
+    // Lấy lại trip sau khi await, phòng trường hợp state đổi trong lúc hộp thoại đang mở
+    const t = state.trips.find(t => t.id === state.activeTripId);
+    if (!t) return;
+
+    t.checklist = t.checklist.filter(c => String(c.id) !== String(id));
+    saveData();
+    renderChecklist();
+};
 
         // --- CHỨC NĂNG KÉO THẢ ĐỂ CUỘN TABS TRÊN PC ---
         const initDragToScroll = () => {

@@ -814,6 +814,22 @@
 
         <!-- Checklist Modal (Apple Liquid Glass Sheet) -->
 <div id="checklist-modal" role="dialog" aria-modal="true" aria-labelledby="cl-title">
+    <!-- Confirm Modal (Apple Liquid Glass Alert) -->
+    <div id="cl-confirm" role="alertdialog" aria-modal="true" aria-labelledby="clc-title" aria-describedby="clc-msg">
+        <div class="clc-backdrop" aria-hidden="true"></div>
+
+        <div class="clc-card">
+            <div class="clc-icon" style="--n:0"><i class="fa-solid fa-trash-can"></i></div>
+            <h3 id="clc-title" class="clc-title" style="--n:1">Xóa mục này?</h3>
+            <p id="clc-msg" class="clc-msg" style="--n:2">Mục sẽ bị xóa khỏi hành trang của bạn.</p>
+            <div class="clc-chip" id="clc-chip" style="--n:3"></div>
+
+            <div class="clc-actions" style="--n:4">
+                <button type="button" class="clc-btn clc-cancel" id="clc-cancel">Hủy</button>
+                <button type="button" class="clc-btn clc-ok" id="clc-ok">Xóa</button>
+            </div>
+        </div>
+    </div>
     <div class="cl-backdrop" onclick="closeChecklistModal()" aria-hidden="true"></div>
 
     <div class="cl-sheet" id="cl-sheet">
