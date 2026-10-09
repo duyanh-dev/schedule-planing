@@ -287,3 +287,282 @@ html[data-animation-on="true"] #sidebar:not(.sb-run),
 html[data-animation-on="true"] #sidebar:not(.sb-run) * {
   animation: none !important;
 }
+
+
+/* ===== CHECKLIST MODAL - APPLE LIQUID GLASS (compact, no shadow) ===== */
+
+#checklist-modal {
+  --cl-blue: #007aff; --cl-green: #34c759; --cl-red: #ff3b30;
+  --cl-ink: #1d1d1f; --cl-mute: #8e8e93;
+  --cl-line: rgba(60, 60, 67, .12); --cl-fill: rgba(120, 120, 128, .12);
+  --spring: cubic-bezier(.32, .72, 0, 1);
+  --pop: cubic-bezier(.34, 1.56, .64, 1);
+
+  position: fixed; inset: 0; z-index: 8000;
+  display: flex; align-items: flex-end; justify-content: center;
+  visibility: hidden; pointer-events: none;
+  transition: visibility 0s linear .5s;
+}
+#checklist-modal.active { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+@media (min-width: 768px) { #checklist-modal { align-items: center; padding: 24px; } }
+body:has(#checklist-modal.active) { overflow: hidden; }
+
+.cl-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(15, 23, 42, .32);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  opacity: 0;
+  transition: opacity .4s var(--spring);
+}
+#checklist-modal.active .cl-backdrop { opacity: 1; }
+
+/* ---------- Sheet ---------- */
+.cl-sheet {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 30rem;
+  height: min(80dvh, 100%);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  border-radius: 26px 26px 0 0;
+  background: rgba(242, 242, 247, .72);
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-bottom: 0;
+  opacity: 0;
+  transition: opacity .25s ease;
+  touch-action: pan-y;
+}
+#checklist-modal.active .cl-sheet { opacity: 1; }
+
+@media (min-width: 768px) {
+  .cl-sheet {
+    max-width: 26rem;
+    height: min(560px, 82vh);
+    border-radius: 28px;
+    border-bottom: 1px solid rgba(255, 255, 255, .7);
+  }
+}
+
+/* ---------- Header ---------- */
+.cl-head { flex: none; padding: 8px 16px 10px; }
+.cl-grabber { width: 36px; height: 5px; border-radius: 3px; background: rgba(60, 60, 67, .28); margin: 0 auto 10px; }
+@media (min-width: 768px) { .cl-grabber { display: none; } .cl-head { padding-top: 16px; } }
+
+.cl-head-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cl-title { display: flex; align-items: center; gap: 9px; font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--cl-ink); }
+.cl-title-icon {
+  width: 28px; height: 28px; border-radius: 9px; flex: none;
+  display: grid; place-items: center;
+  background: #ff9f0a; color: #fff; font-size: 12px;
+}
+.cl-close {
+  width: 28px; height: 28px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  background: rgba(120, 120, 128, .16); color: #6e6e73; font-size: 12px;
+  transition: scale .3s var(--spring), background .2s;
+  touch-action: manipulation;
+}
+.cl-close:active { scale: .86; background: rgba(120, 120, 128, .3); }
+
+/* ---------- Tiến độ + form ---------- */
+.cl-progress { flex: none; padding: 2px 16px 12px; }
+.cl-progress-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.cl-progress-text { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--cl-mute); }
+.cl-count {
+  font-size: 11.5px; font-weight: 800; color: var(--cl-blue);
+  background: rgba(0, 122, 255, .12); padding: 2px 8px; border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  transition: color .4s, background .4s;
+}
+.cl-track { height: 6px; border-radius: 999px; overflow: hidden; background: rgba(120, 120, 128, .16); margin-bottom: 12px; }
+.cl-bar { height: 100%; border-radius: 999px; background: var(--cl-blue); transition: width .7s var(--spring), background .4s; }
+.cl-bar.is-full { background: var(--cl-green); }
+.cl-count.is-full { color: #248a3d; background: rgba(52, 199, 89, .16); }
+
+/* Thanh nhập gọn kiểu ô tìm kiếm iOS: input + nút thêm nằm chung 1 viên */
+.cl-form {
+  display: flex; align-items: center; gap: 6px;
+  height: 40px; padding: 0 5px 0 14px;
+  border-radius: 12px;
+  background: var(--cl-fill);
+  border: 1.5px solid transparent;
+  transition: background .25s, border-color .25s;
+}
+.cl-form:focus-within { background: rgba(255, 255, 255, .92); border-color: var(--cl-blue); }
+.cl-input {
+  flex: 1; min-width: 0; height: 100%;
+  background: transparent; border: 0; outline: 0;
+  font-size: 16px; font-weight: 600; color: var(--cl-ink);
+}
+.cl-input::placeholder { color: #a1a1a6; font-weight: 500; }
+.cl-add {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  background: rgba(120, 120, 128, .3); color: #fff; font-size: 12px;
+  scale: .92;
+  transition: background .25s, scale .4s var(--pop);
+  touch-action: manipulation;
+}
+.cl-add i { transition: rotate .4s var(--spring); }
+.cl-form:focus-within .cl-add i { rotate: 90deg; }
+.cl-input:not(:placeholder-shown) ~ .cl-add { background: var(--cl-blue); scale: 1; }
+.cl-add:active { scale: .84 !important; }
+
+/* ---------- Danh sách ---------- */
+.cl-list {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 4px 16px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.cl-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 8px 9px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .72);
+  border: 1px solid rgba(60, 60, 67, .07);
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  transition: scale .4s var(--spring), background .3s;
+}
+.cl-item:active { scale: .97; transition-duration: .12s; }
+.cl-item:focus-visible { border-color: var(--cl-blue); }
+
+.cl-check {
+  width: 22px; height: 22px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  border: 1.5px solid rgba(60, 60, 67, .3);
+  transition: background .3s, border-color .3s;
+}
+.cl-check svg { width: 12px; height: 12px; }
+.cl-check path {
+  fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 20; stroke-dashoffset: 20;
+  transition: stroke-dashoffset .35s var(--spring) .05s;
+}
+.cl-item.is-done .cl-check { background: var(--cl-green); border-color: var(--cl-green); }
+.cl-item.is-done .cl-check path { stroke-dashoffset: 0; }
+
+.cl-text { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; color: var(--cl-ink); line-height: 1.3; word-break: break-word; transition: color .3s; }
+.cl-item.is-done .cl-text { color: #a1a1a6; text-decoration: line-through; text-decoration-color: rgba(60, 60, 67, .3); }
+
+.cl-del {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  color: var(--cl-red); font-size: 12px; opacity: .7;
+  transition: scale .3s var(--spring), background .2s, opacity .2s;
+  touch-action: manipulation;
+}
+.cl-del:active { scale: .84; background: rgba(255, 59, 48, .12); opacity: 1; }
+@media (hover: hover) {
+  .cl-del { opacity: 0; }
+  .cl-item:hover .cl-del, .cl-del:focus-visible { opacity: .8; }
+  .cl-item:hover { background: rgba(255, 255, 255, .9); }
+}
+
+.cl-empty { margin: auto; text-align: center; color: #a1a1a6; font-size: 13.5px; font-weight: 600; line-height: 1.5; padding: 24px 0; }
+.cl-empty i {
+  display: grid; place-items: center; margin: 0 auto 10px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--cl-fill); font-size: 20px; color: #8e8e93;
+}
+
+/* ---------- Footer ---------- */
+.cl-foot { flex: none; padding: 10px 16px max(14px, env(safe-area-inset-bottom)); border-top: 1px solid var(--cl-line); }
+.cl-done {
+  width: 100%; height: 44px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  background: var(--cl-blue); color: #fff; font-size: 15px; font-weight: 700;
+  transition: scale .35s var(--spring), background .2s;
+  touch-action: manipulation;
+}
+.cl-done:active { scale: .97; background: #0066d6; }
+
+
+/* ==========================================================
+   ANIMATION WOW (chỉ khi data-animation-on="true")
+   ========================================================== */
+
+/* --- Mobile: sheet trượt từ đáy --- */
+html[data-animation-on="true"] .cl-sheet {
+  translate: 0 100%; opacity: 1;
+  transition: translate .4s var(--spring);
+  will-change: translate;
+}
+html[data-animation-on="true"] #checklist-modal.active .cl-sheet {
+  translate: 0 0;
+  transition: translate .65s var(--spring);
+}
+
+/* --- PC: nổi lên + phóng, nảy nhẹ --- */
+@media (min-width: 768px) {
+  html[data-animation-on="true"] .cl-sheet {
+    translate: 0 24px; scale: .92; opacity: 0;
+    transition: translate .3s var(--spring), scale .3s var(--spring), opacity .2s ease;
+  }
+  html[data-animation-on="true"] #checklist-modal.active .cl-sheet {
+    translate: 0 0; scale: 1; opacity: 1;
+    transition: translate .7s var(--spring), scale .6s var(--pop), opacity .3s ease;
+  }
+}
+
+/* --- Các khối hiện lần lượt, có blur --- */
+html[data-animation-on="true"] .cl-sheet > .cl-head,
+html[data-animation-on="true"] .cl-sheet > .cl-progress,
+html[data-animation-on="true"] .cl-sheet > .cl-foot {
+  opacity: 0; translate: 0 14px; filter: blur(6px);
+  transition: opacity .15s ease, translate .15s ease, filter .15s ease;
+}
+html[data-animation-on="true"] #checklist-modal.active .cl-sheet > .cl-head,
+html[data-animation-on="true"] #checklist-modal.active .cl-sheet > .cl-progress,
+html[data-animation-on="true"] #checklist-modal.active .cl-sheet > .cl-foot {
+  opacity: 1; translate: 0 0; filter: blur(0);
+  transition: opacity .5s ease, translate .7s var(--spring), filter .6s ease;
+}
+html[data-animation-on="true"] #checklist-modal.active .cl-sheet > .cl-head     { transition-delay: .1s; }
+html[data-animation-on="true"] #checklist-modal.active .cl-sheet > .cl-progress { transition-delay: .17s; }
+html[data-animation-on="true"] #checklist-modal.active .cl-sheet > .cl-foot     { transition-delay: .32s; }
+
+/* --- Icon tiêu đề nảy + xoay, thanh tiến độ chạy từ 0 --- */
+@keyframes clIcon { from { scale: .3; rotate: -50deg; opacity: 0; } }
+@keyframes clBar  { from { clip-path: inset(0 100% 0 0 round 999px); } }
+html[data-animation-on="true"] #checklist-modal.active .cl-title-icon { animation: clIcon .8s .22s var(--pop) backwards; }
+html[data-animation-on="true"] #checklist-modal.active .cl-bar { animation: clBar 1s .4s var(--spring) backwards; }
+
+/* --- Từng hàng vào lần lượt (chỉ trong cửa sổ .cl-intro), stagger theo --i --- */
+@keyframes clRow { from { opacity: 0; translate: 0 20px; scale: .96; filter: blur(6px); } }
+html[data-animation-on="true"] #checklist-modal.cl-intro #checklist-container > * {
+  animation: clRow .6s var(--spring) backwards;
+  animation-delay: calc(.28s + min(var(--i, 0), 7) * 45ms);
+}
+
+/* --- Mục mới thêm: bật vào --- */
+html[data-animation-on="true"] .cl-item.is-new { animation: clRow .55s var(--spring) backwards; }
+
+/* --- Mục bị xóa: trượt đi rồi co lại, các hàng dưới trồi lên --- */
+@keyframes clOut {
+  from { max-height: 140px; }
+  to   { opacity: 0; translate: -28px 0; scale: .92; max-height: 0;
+         padding-top: 0; padding-bottom: 0; margin-bottom: -6px; border-width: 0; }
+}
+html[data-animation-on="true"] #checklist-modal #checklist-container > .cl-item.is-leaving {
+  animation: clOut .35s var(--spring) forwards !important;
+  pointer-events: none; overflow: hidden;
+}
+
+/* --- Tick xanh nảy khi hoàn thành, badge nảy khi đạt 100% --- */
+@keyframes clPop  { 0% { scale: 1; } 35% { scale: .78; } 70% { scale: 1.18; } 100% { scale: 1; } }
+@keyframes clBump { 0% { scale: 1; } 40% { scale: 1.25; } 100% { scale: 1; } }
+html[data-animation-on="true"] .cl-item.is-done .cl-check { animation: clPop .5s var(--spring); }
+html[data-animation-on="true"] .cl-count.is-full { animation: clBump .55s var(--pop); }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-animation-on="true"] .cl-sheet,
+  html[data-animation-on="true"] .cl-sheet > * { transition-duration: .01ms !important; transition-delay: 0s !important; }
+  html[data-animation-on="true"] #checklist-modal *,
+  html[data-animation-on="true"] #checklist-modal #checklist-container > * { animation: none !important; }
+}

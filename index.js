@@ -1128,42 +1128,92 @@
         };
 
        const renderChecklist = () => {
-            const checklist = getTripChecklist();
-            const container = document.getElementById('checklist-container');
-            
-            // Tính toán Progress Bar
-            const total = checklist.length;
-            const done = checklist.filter(c => c.isDone).length;
-            const percent = total === 0 ? 0 : Math.round((done / total) * 100);
-            
-            document.getElementById('checklist-progress-bar').style.width = `${percent}%`;
-            document.getElementById('checklist-progress-text').innerText = `HOÀN THÀNH: ${percent}%`;
-            document.getElementById('checklist-count-text').innerText = `${done}/${total}`;
+    const checklist = getTripChecklist();
+    const container = document.getElementById('checklist-container');
+    const barEl = document.getElementById('checklist-progress-bar');
+    const countEl = document.getElementById('checklist-count-text');
 
-            if (total === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-slate-500 text-[13px] font-medium italic bg-white/50 backdrop-blur-md rounded-2xl border border-white/80 shadow-sm mt-2">Danh sách trống. Hãy thêm đồ cần chuẩn bị ở trên.</div>`;
-                return;
-            }
+    // Tính toán Progress Bar
+    const total = checklist.length;
+    const done = checklist.filter(c => c.isDone).length;
+    const percent = total === 0 ? 0 : Math.round((done / total) * 100);
 
-            // In danh sách ra UI (Liquid Glass Card Style)
-            container.innerHTML = checklist.map(item => `
-                <div class="flex items-center justify-between p-3.5 md:p-4 bg-white/60 backdrop-blur-xl rounded-[1.25rem] border border-white/80 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] hover:bg-white/80 transition-all group ${item.isDone ? 'opacity-60 bg-slate-50/50 grayscale-[20%]' : ''}">
-                    
-                    <div class="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer touch-manipulation" onclick="toggleChecklist('${item.id}')">
-                        <!-- Icon Checkbox (Làm to rõ ràng hơn ở Mobile) -->
-                        <div class="text-[22px] ${item.isDone ? 'text-emerald-500 drop-shadow-md' : 'text-slate-300 drop-shadow-sm'} transition-colors flex-shrink-0">
-                            <i class="fa-solid ${item.isDone ? 'fa-circle-check' : 'fa-circle'}"></i>
-                        </div>
-                        <span class="text-[15px] md:text-sm font-bold truncate ${item.isDone ? 'line-through text-slate-400' : 'text-slate-800 drop-shadow-sm'}">${item.text}</span>
-                    </div>
-                    
-                    <!-- Nút Xóa (Bọc trong kính tròn) -->
-                    <button onclick="deleteChecklist('${item.id}')" class="w-8 h-8 rounded-full bg-white/60 hover:bg-red-50 flex items-center justify-center text-slate-400 border border-white hover:border-red-200 hover:text-red-500 transition-all opacity-100 md:opacity-0 group-hover:opacity-100 flex-shrink-0 shadow-sm touch-manipulation active:scale-95">
-                        <i class="fa-solid fa-trash text-xs"></i>
-                    </button>
-                </div>
-            `).join('');
-        };
+    barEl.style.width = `${percent}%`;
+    document.getElementById('checklist-progress-text').innerText = `HOÀN THÀNH: ${percent}%`;
+    countEl.innerText = `${done}/${total}`;
+    const full = total > 0 && percent === 100;
+    barEl.classList.toggle('is-full', full);
+    countEl.classList.toggle('is-full', full);
+
+    // Trạng thái rỗng
+    if (total === 0) {
+        container.innerHTML = `
+            <div class="cl-empty">
+                <i class="fa-solid fa-suitcase-rolling"></i>
+                Danh sách trống.<br>Hãy thêm đồ cần chuẩn bị ở trên.
+            </div>`;
+        return;
+    }
+    container.querySelector('.cl-empty')?.remove();
+
+    const animOn = document.documentElement.dataset.animationOn === 'true';
+
+    const createNode = (item) => {
+        const id = String(item.id);
+        const node = document.createElement('div');
+        node.className = 'cl-item' + (animOn ? ' is-new' : '');
+        node.dataset.id = id;
+        node.tabIndex = 0;
+        node.setAttribute('role', 'checkbox');
+        node.innerHTML = `
+            <span class="cl-check"><svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg></span>
+            <span class="cl-text"></span>
+            <button type="button" class="cl-del" aria-label="Xóa"><i class="fa-solid fa-trash-can"></i></button>`;
+        node.addEventListener('click', () => toggleChecklist(id));
+        node.addEventListener('keydown', e => {
+            if (e.target !== node) return;
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleChecklist(id); }
+        });
+        node.querySelector('.cl-del').addEventListener('click', e => {
+            e.stopPropagation();
+            deleteChecklist(id);
+        });
+        node.addEventListener('animationend', e => {
+            if (e.target === node) node.classList.remove('is-new');
+        });
+        return node;
+    };
+
+    // Cập nhật tại chỗ (diff theo id) để transition/animation chạy được
+    const existing = new Map(
+        [...container.querySelectorAll(':scope > .cl-item:not(.is-leaving)')].map(n => [n.dataset.id, n])
+    );
+    const keep = new Set();
+    let cursor = container.firstElementChild;
+
+    checklist.forEach((item, i) => {
+        const id = String(item.id);
+        keep.add(id);
+        const node = existing.get(id) || createNode(item);
+
+        node.classList.toggle('is-done', !!item.isDone);
+        node.setAttribute('aria-checked', item.isDone ? 'true' : 'false');
+        node.querySelector('.cl-text').textContent = item.text;   // textContent: an toàn, không cần escape
+        node.style.setProperty('--i', i);
+
+        while (cursor && cursor.classList.contains('is-leaving')) cursor = cursor.nextElementSibling;
+        if (node === cursor) cursor = cursor.nextElementSibling;
+        else container.insertBefore(node, cursor);
+    });
+
+    // Mục đã bị xóa
+    existing.forEach((node, id) => {
+        if (keep.has(id)) return;
+        if (!animOn) { node.remove(); return; }
+        node.classList.add('is-leaving');
+        setTimeout(() => node.remove(), 400);
+    });
+};
 
         const openChecklistModal = () => {
             renderChecklist();

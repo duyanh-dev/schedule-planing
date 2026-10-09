@@ -812,55 +812,53 @@
             </div>
         </div>
 
-        <!-- Checklist Modal (Liquid Glass Style & Anti-Zoom Mobile) -->
-        <div id="checklist-modal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-md p-0 md:p-4 flex flex-col justify-end md:justify-center items-center z-[8000]">
-            
-            <!-- Tràn viền 100% Mobile, Bo tròn trên PC -->
-            <div class="modal-content bg-white/70 backdrop-blur-3xl rounded-none md:rounded-[2rem] border-0 md:border md:border-white/80 w-full max-w-lg shadow-[0_20px_60px_rgba(0,0,0,0.15)] flex flex-col h-full md:max-h-[85vh] mt-auto md:mt-0 overflow-hidden relative">
-                
-                <!-- Header (Kính mờ xuyên thấu) -->
-                <div class="p-4 md:p-5 border-b border-white/60 flex justify-between items-center bg-white/40 backdrop-blur-xl sticky top-0 z-20">
-                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2 drop-shadow-sm">
-                        <div class="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-sm border border-amber-400">
-                            <i class="fa-solid fa-clipboard-check text-sm"></i>
-                        </div>
-                        Hành trang & Chuẩn bị
-                    </h2>
-                    <button onclick="closeChecklistModal()" class="w-8 h-8 rounded-full bg-white/60 hover:bg-white flex items-center justify-center text-slate-500 border border-white/80 shadow-sm transition-all active:scale-95 touch-manipulation"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                
-                <!-- Progress & Add Item (Kính lỏng) -->
-                <div class="p-4 md:p-5 bg-white/50 backdrop-blur-xl border-b border-white/60 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-                    <div class="flex justify-between items-center mb-2.5">
-                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm" id="checklist-progress-text">Tiến độ: 0%</span>
-                        <span class="text-xs font-black text-blue-700 bg-blue-100/80 backdrop-blur-sm px-2 py-0.5 rounded-lg border border-blue-200/60 shadow-sm" id="checklist-count-text">0/0</span>
-                    </div>
-                    
-                    <!-- Progress Bar -->
-                    <div class="w-full bg-white/60 h-2.5 rounded-full overflow-hidden mb-5 border border-white shadow-inner">
-                        <div id="checklist-progress-bar" class="bg-gradient-to-r from-blue-400 to-blue-600 h-full transition-all duration-700 ease-out shadow-sm" style="width: 0%"></div>
-                    </div>
-                    
-                    <form onsubmit="addChecklistItem(event)" class="flex gap-2">
-                        <!-- Ép text-base trên mobile chống zoom -->
-                        <input type="text" id="new-checklist-input" placeholder="Thêm vật dụng, giấy tờ..." class="flex-1 p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-bold text-base md:text-sm text-slate-800 focus:border-blue-400 transition-all" required>
-                        <button type="submit" class="px-5 py-3.5 bg-slate-800/95 hover:bg-slate-900 text-white rounded-xl font-bold text-base md:text-sm shadow-[0_4px_15px_rgba(15,23,42,0.2)] border border-slate-700/50 transition-all active:scale-95 touch-manipulation"><i class="fa-solid fa-plus"></i></button>
-                    </form>
-                </div>
+        <!-- Checklist Modal (Apple Liquid Glass Sheet) -->
+<div id="checklist-modal" role="dialog" aria-modal="true" aria-labelledby="cl-title">
+    <div class="cl-backdrop" onclick="closeChecklistModal()" aria-hidden="true"></div>
 
-                <!-- List Items (Vùng cuộn) -->
-                <div class="flex-1 overflow-y-auto p-4 md:p-5 space-y-3 bg-slate-50/30 hide-scrollbar" id="checklist-container">
-                    <!-- JS sẽ gen danh sách ra đây -->
-                </div>
+    <div class="cl-sheet" id="cl-sheet">
 
-                <!-- NÚT XÁC NHẬN (Footer Kính Mờ) -->
-                <div class="p-4 md:p-5 border-t border-white/60 bg-white/40 backdrop-blur-2xl sticky bottom-0 z-20">
-                    <button type="button" onclick="closeChecklistModal()" class="w-full py-3.5 md:py-3 font-bold text-white bg-blue-600/90 hover:bg-blue-600 backdrop-blur-md rounded-xl shadow-[0_8px_20px_rgba(37,99,235,0.3)] border border-blue-400/50 transition-all active:scale-95 flex items-center justify-center gap-2 text-base md:text-sm touch-manipulation">
-                        <i class="fa-solid fa-check"></i> Hoàn tất
-                    </button>
-                </div>
+        <div class="cl-head">
+            <div class="cl-grabber"></div>
+            <div class="cl-head-row">
+                <h2 id="cl-title" class="cl-title">
+                    <span class="cl-title-icon"><i class="fa-solid fa-clipboard-check"></i></span>
+                    Hành trang &amp; Chuẩn bị
+                </h2>
+                <button type="button" onclick="closeChecklistModal()" class="cl-close" aria-label="Đóng">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
         </div>
+
+        <div class="cl-progress">
+            <div class="cl-progress-top">
+                <span id="checklist-progress-text" class="cl-progress-text">Hoàn thành: 0%</span>
+                <span id="checklist-count-text" class="cl-count">0/0</span>
+            </div>
+            <div class="cl-track">
+                <div id="checklist-progress-bar" class="cl-bar" style="width: 0%"></div>
+            </div>
+
+            <form onsubmit="addChecklistItem(event)" class="cl-form">
+                <input type="text" id="new-checklist-input" class="cl-input"
+                       placeholder="Thêm vật dụng, giấy tờ..." enterkeyhint="done"
+                       autocomplete="off" required>
+                <button type="submit" class="cl-add" aria-label="Thêm">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </form>
+        </div>
+
+        <div id="checklist-container" class="cl-list hide-scrollbar"></div>
+
+        <div class="cl-foot">
+            <button type="button" onclick="closeChecklistModal()" class="cl-done">
+                <i class="fa-solid fa-check"></i> Hoàn tất
+            </button>
+        </div>
+    </div>
+</div>
 
         <!-- Bulk Add Modal (Apple Liquid Glass Style & Anti-Zoom) -->
         <div id="bulk-add-modal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-md p-0 md:p-4 flex flex-col justify-end md:justify-center items-center z-[6000]">
