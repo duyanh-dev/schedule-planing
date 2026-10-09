@@ -1,196 +1,268 @@
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #f8fafc; 
-            -webkit-tap-highlight-color: transparent; 
-        }
+@import url("./animation.css");
 
-        /* Tắt tính năng double-tap to zoom trên toàn bộ UI nhưng vẫn cho phép vuốt/cuộn */
-body, button, input, div {
-    touch-action: manipulation;
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #f8fafc;
+  -webkit-tap-highlight-color: transparent;
 }
-        
-        /* Hide scrollbars for clean UI but allow scrolling */
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Smooth Modals */
-        .modal-overlay { 
-            transition: opacity 0.3s ease, visibility 0.3s; 
-            opacity: 0; visibility: hidden; z-index: 9999; 
-        }
-        .modal-overlay.active { opacity: 1; visibility: visible; }
-        .modal-content { 
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            transform: scale(0.95) translateY(20px); 
-        }
-        .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
 
-        /* Timeline vertical line behind elements */
-        /* .timeline-line::before {
+/* Tắt tính năng double-tap to zoom trên toàn bộ UI nhưng vẫn cho phép vuốt/cuộn */
+body,
+button,
+input,
+div {
+  touch-action: manipulation;
+}
+
+/* Hide scrollbars for clean UI but allow scrolling */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth Modals */
+.modal-overlay {
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s;
+  opacity: 0;
+  visibility: hidden;
+  z-index: 9999;
+}
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+.modal-content {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: scale(0.95) translateY(20px);
+}
+.modal-overlay.active .modal-content {
+  transform: scale(1) translateY(0);
+}
+
+/* Timeline vertical line behind elements */
+/* .timeline-line::before {
             content: ''; position: absolute; top: 2rem; bottom: 0; left: 1.5rem; width: 2px;
             background-color: #e2e8f0; z-index: 0;
         }
         @media (min-width: 768px) { .timeline-line::before { left: 4.5rem; width: 3px; } } */
 
-        /* Leaflet Map specific fixes */
-        /* #picker-map { height: 100%; width: 100%; z-index: 10; } */
-        
-        /* UI Gradients */
-        .cover-gradient { background: linear-gradient(to top, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.3) 60%, transparent 100%); }
-        
-        /* Custom range slider */
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 20px; height: 20px; border-radius: 50%; 
-            background: #3b82f6; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
+/* Leaflet Map specific fixes */
+/* #picker-map { height: 100%; width: 100%; z-index: 10; } */
 
-        /* Fix Safari iOS Wheel Picker */
-        #wheel-hours li, #wheel-mins li {
-            height: 40px !important;
-            line-height: 40px !important;
-            flex-shrink: 0;
-        }
-        #wheel-hours, #wheel-mins {
-            scroll-snap-type: y mandatory;
-            -webkit-overflow-scrolling: touch;
-        }
+/* UI Gradients */
+.cover-gradient {
+  background: linear-gradient(
+    to top,
+    rgba(15, 23, 42, 0.95) 0%,
+    rgba(15, 23, 42, 0.3) 60%,
+    transparent 100%
+  );
+}
 
-       /* Làm phẳng Lịch Inline & Fix lỗi hiển thị iOS */
-        .flatpickr-calendar.inline { 
-            box-shadow: none !important; 
-            border: none !important; 
-            background: transparent !important; 
-            margin: 0 auto; 
-            width: 100% !important; 
-            max-width: 320px; /* Khóa kích thước tối đa tránh phình to */
-            display: block !important;
-        }
-        .flatpickr-months .flatpickr-month { height: 40px; }
+/* Custom range slider */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
 
-        /* Làm phẳng Lịch Inline & Fix lỗi hiển thị iOS */
-        .flatpickr-calendar.inline { 
-            box-shadow: none !important; border: none !important; background: transparent !important; margin: 0 auto; width: 100% !important; max-width: 320px; display: block !important;
-        }
-        .flatpickr-months .flatpickr-month { height: 40px; }
-        
-        /* ĐẶC TRỊ LỖI TRÀN Ô NHẬP GIỜ TRÊN iPHONE */
-        input[type="time"] {
-            min-width: 0 !important;
-            max-width: 100%;
-            -webkit-appearance: none;
-        }
-        input[type="time"]::-webkit-date-and-time-value {
-            text-align: center;
-        }
+/* Fix Safari iOS Wheel Picker */
+#wheel-hours li,
+#wheel-mins li {
+  height: 40px !important;
+  line-height: 40px !important;
+  flex-shrink: 0;
+}
+#wheel-hours,
+#wheel-mins {
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
 
+/* Làm phẳng Lịch Inline & Fix lỗi hiển thị iOS */
+.flatpickr-calendar.inline {
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
+  margin: 0 auto;
+  width: 100% !important;
+  max-width: 320px; /* Khóa kích thước tối đa tránh phình to */
+  display: block !important;
+}
+.flatpickr-months .flatpickr-month {
+  height: 40px;
+}
 
-        /* ĐẶC TRỊ LỖI KÍNH VÔ HÌNH CHẶN CLICK CỦA MODAL */
-        .modal-overlay:not(.active) {
-            opacity: 0 !important;
-            visibility: hidden !important;
-            pointer-events: none !important; /* Xuyên qua mọi click khi form tàng hình */
-            transition: all 0.3s ease-in-out;
-        }
-        .modal-overlay.active {
-            opacity: 1 !important;
-            visibility: visible !important;
-            pointer-events: auto !important; /* Bắt lại click khi form hiện lên */
-            transition: all 0.3s ease-in-out;
-        
-        
-        }
+/* Làm phẳng Lịch Inline & Fix lỗi hiển thị iOS */
+.flatpickr-calendar.inline {
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
+  margin: 0 auto;
+  width: 100% !important;
+  max-width: 320px;
+  display: block !important;
+}
+.flatpickr-months .flatpickr-month {
+  height: 40px;
+}
+
+/* ĐẶC TRỊ LỖI TRÀN Ô NHẬP GIỜ TRÊN iPHONE */
+input[type="time"] {
+  min-width: 0 !important;
+  max-width: 100%;
+  -webkit-appearance: none;
+}
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: center;
+}
+
+/* ĐẶC TRỊ LỖI KÍNH VÔ HÌNH CHẶN CLICK CỦA MODAL */
+.modal-overlay:not(.active) {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important; /* Xuyên qua mọi click khi form tàng hình */
+  transition: all 0.3s ease-in-out;
+}
+.modal-overlay.active {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important; /* Bắt lại click khi form hiện lên */
+  transition: all 0.3s ease-in-out;
+}
 
 .leaflet-container img.leaflet-tile {
-    max-width: none !important;
-    max-height: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
-        
 
 /* Hiệu ứng rung lắc Jiggle chuẩn iOS */
 @keyframes jiggle {
-    0% { transform: rotate(-2deg); }
-    50% { transform: rotate(2deg); }
-    100% { transform: rotate(-2deg); }
+  0% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+  100% {
+    transform: rotate(-2deg);
+  }
 }
 .animate-jiggle {
-    animation: jiggle 0.3s ease-in-out infinite;
+  animation: jiggle 0.3s ease-in-out infinite;
 }
 
 /* Ép GPU xử lý chuyển động, chống rớt frame (Jank) */
 .gpu-accelerate {
-    will-change: transform, opacity, filter;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    transform: translateZ(0);
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 /* Khử răng cưa, rung viền chữ khi Animation chạy */
 .text-smooth {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Trạng thái mặc định (Ở đỉnh trang): Kính Trắng */
-        #dynamic-island-header {
-            background-color: rgba(255, 255, 255, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.9);
-            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), 
-                        background-color 0.4s ease, 
-                        border-color 0.4s ease,
-                        box-shadow 0.4s ease;
-        }
-        #island-logo {
-            transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            transform-origin: left center;
-        }
-        #island-hamburger {
-            transition: background-color 0.4s ease, box-shadow 0.4s ease, transform 0.2s ease;
-        }
+#dynamic-island-header {
+  background-color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  transition:
+    width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
+}
+#island-logo {
+  transition:
+    opacity 0.3s ease,
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: left center;
+}
+#island-hamburger {
+  transition:
+    background-color 0.4s ease,
+    box-shadow 0.4s ease,
+    transform 0.2s ease;
+}
 
-        /* 1. Khi cuộn khỏi đỉnh -> Đổi sang Xám nhạt (Slate-100) để nổi trên nền trắng */
-        #dynamic-island-header.island-scrolled {
-            background-color: rgba(241, 245, 249, 0.85); 
-            border-color: rgba(226, 232, 240, 0.9); 
-            box-shadow: 0 6px 20px rgba(0,0,0,0.06), inset 0 2px 4px rgba(255,255,255,0.7);
-        }
-        /* Làm nút Hamburger Trắng sáng lên khi nền xám */
-        #dynamic-island-header.island-scrolled #island-hamburger {
-            background-color: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
+/* 1. Khi cuộn khỏi đỉnh -> Đổi sang Xám nhạt (Slate-100) để nổi trên nền trắng */
+#dynamic-island-header.island-scrolled {
+  background-color: rgba(241, 245, 249, 0.85);
+  border-color: rgba(226, 232, 240, 0.9);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.06),
+    inset 0 2px 4px rgba(255, 255, 255, 0.7);
+}
+/* Làm nút Hamburger Trắng sáng lên khi nền xám */
+#dynamic-island-header.island-scrolled #island-hamburger {
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
 
-        /* 2. Khi thu nhỏ thành viên bi (Vẫn giữ màu Xám) */
-        #dynamic-island-header.island-collapsed {
-            width: 3.5rem; 
-            background-color: rgba(241, 245, 249, 0.95); 
-            border-color: rgba(203, 213, 225, 0.7); 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08), inset 0 1px 2px rgba(255,255,255,1);
-        }
-        #dynamic-island-header.island-collapsed #island-logo {
-            opacity: 0;
-            transform: translateX(-20px) scale(0.9);
-            pointer-events: none;
-        }
+/* 2. Khi thu nhỏ thành viên bi (Vẫn giữ màu Xám) */
+#dynamic-island-header.island-collapsed {
+  width: 3.5rem;
+  background-color: rgba(241, 245, 249, 0.95);
+  border-color: rgba(203, 213, 225, 0.7);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.08),
+    inset 0 1px 2px rgba(255, 255, 255, 1);
+}
+#dynamic-island-header.island-collapsed #island-logo {
+  opacity: 0;
+  transform: translateX(-20px) scale(0.9);
+  pointer-events: none;
+}
 
-
-        html.fl-lock, html.fl-lock body { overflow: hidden; }
+html.fl-lock,
+html.fl-lock body {
+  overflow: hidden;
+}
 
 .fl {
   position: fixed;
   inset: 0;
   z-index: 99999;
   overflow: hidden;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    system-ui,
+    sans-serif;
   color: #1d1d1f;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  animation: fl-failsafe .01s linear 10s forwards;   /* lỡ JS lỗi thì tự ẩn sau 10s */
+  animation: fl-failsafe 0.01s linear 10s forwards; /* lỡ JS lỗi thì tự ẩn sau 10s */
 }
-.fl.is-leaving { pointer-events: none; }
-@keyframes fl-failsafe { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+.fl.is-leaving {
+  pointer-events: none;
+}
+@keyframes fl-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
 
 /* ================= Tấm nền (kéo lên khi kết thúc) ================= */
 .fl-panel {
@@ -226,7 +298,7 @@ body, button, input, div {
   display: flex;
   font-size: clamp(3rem, 12.5vw, 8rem);
   font-weight: 700;
-  letter-spacing: -.055em;
+  letter-spacing: -0.055em;
   line-height: 1;
   white-space: nowrap;
 }
@@ -244,20 +316,32 @@ body, button, input, div {
   gap: 14px;
   font-size: clamp(11px, 1.65vmin, 13px);
   font-weight: 500;
-  letter-spacing: .22em;
+  letter-spacing: 0.22em;
   color: #86868b;
 }
-.fl-by-txt { display: flex; }
-.fl-bc { display: inline-block; opacity: 0; }
-.fl-bc.is-dev { color: #1d1d1f; font-weight: 600; }
+.fl-by-txt {
+  display: flex;
+}
+.fl-bc {
+  display: inline-block;
+  opacity: 0;
+}
+.fl-bc.is-dev {
+  color: #1d1d1f;
+  font-weight: 600;
+}
 .fl-by-line {
   width: clamp(22px, 5vmin, 40px);
   height: 1px;
-  background: rgba(29, 29, 31, .22);
+  background: rgba(29, 29, 31, 0.22);
   transform: scaleX(0);
 }
-.fl-by-line--l { transform-origin: 100% 50%; }
-.fl-by-line--r { transform-origin: 0 50%; }
+.fl-by-line--l {
+  transform-origin: 100% 50%;
+}
+.fl-by-line--r {
+  transform-origin: 0 50%;
+}
 
 /* ================= Bảng chuyến bay ================= */
 .fl-board-wrap {
@@ -275,26 +359,44 @@ body, button, input, div {
   padding: 11px 20px;
   border-radius: 999px;
   background: #fff;
-  border: 1px solid rgba(0, 0, 0, .06);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 10px 30px rgba(0, 0, 0, .05);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 10px 30px rgba(0, 0, 0, 0.05);
   font-size: clamp(14px, 2.1vmin, 18px);
   font-weight: 600;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   color: #1d1d1f;
   opacity: 0;
 }
-.fl-code { display: flex; }
+.fl-code {
+  display: flex;
+}
 .fl-cell {
   display: block;
-  width: .86em;
+  width: 0.86em;
   height: 1em;
   line-height: 1;
   overflow: hidden;
   text-align: center;
 }
-.fl-strip { display: flex; flex-direction: column; will-change: transform; }
-.fl-strip i { display: block; flex: none; height: 1em; font-style: normal; }
-.fl-board-plane { flex: none; width: 1.5em; height: 1em; fill: #86868b; }
+.fl-strip {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+.fl-strip i {
+  display: block;
+  flex: none;
+  height: 1em;
+  font-style: normal;
+}
+.fl-board-plane {
+  flex: none;
+  width: 1.5em;
+  height: 1em;
+  fill: #86868b;
+}
 
 /* ================= Máy bay + vệt khói ================= */
 .fl-sky {
@@ -319,7 +421,7 @@ body, button, input, div {
   height: 140px;
   margin: -70px 0 0 -70px;
   border-radius: 50%;
-  border: 1.5px solid rgba(0, 113, 227, .4);
+  border: 1.5px solid rgba(0, 113, 227, 0.4);
   opacity: 0;
   pointer-events: none;
 }
@@ -332,151 +434,216 @@ body, button, input, div {
   opacity: 0;
   pointer-events: none;
 }
-.fl-plane svg { display: block; width: 100%; height: 100%; fill: #1d1d1f; }
-.fl-plane--shadow svg { fill: rgba(29, 29, 31, .13); }
+.fl-plane svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: #1d1d1f;
+}
+.fl-plane--shadow svg {
+  fill: rgba(29, 29, 31, 0.13);
+}
 
 /* ---- Lớp ngoài: chỉ lo hiệu ứng "đóng dấu" khi cuộn tới (chạy 1 lần) ---- */
-  .tp-stamp {
-    display: inline-block;
+.tp-stamp {
+  display: inline-block;
+  opacity: 1;
+  /* chừa vùng an toàn cho iPhone có tai thỏ / thanh home */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.tp-stamp.is-in {
+  animation: tp-stamp-down 0.55s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@keyframes tp-stamp-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) scale(1.14);
+    filter: blur(6px);
+  }
+  62% {
     opacity: 1;
-    /* chừa vùng an toàn cho iPhone có tai thỏ / thanh home */
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    transform: translateY(0) scale(0.985);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* ---- Lớp kính: nghiêng theo con trỏ + lún khi nhấn ---- */
+.tp-stamp__glass {
+  --rx: 0deg;
+  --ry: 0deg;
+  --press: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: min(260px, calc(100vw - 48px));
+  padding: 30px 30px 16px;
+  margin-top: 16px; /* chừa chỗ cho giọt kính lồi lên trên */
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.34);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    /* viền sáng mép trên */ inset 0 -1.5px 0 rgba(255, 255, 255, 0.35),
+    /* mép dưới khúc xạ nhẹ */ inset 0 0 0 0.5px rgba(148, 163, 184, 0.25),
+    /* đường viền mảnh */ inset 0 10px 18px -12px rgba(255, 255, 255, 0.9),
+    0 14px 28px -14px rgba(15, 23, 42, 0.28),
+    0 2px 6px rgba(15, 23, 42, 0.06);
+  transform: perspective(700px) rotateX(var(--rx)) rotateY(var(--ry))
+    scale(var(--press));
+  transition:
+    transform 0.35s cubic-bezier(0.2, 0.9, 0.25, 1),
+    box-shadow 0.35s ease;
+  will-change: transform;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+/* mảng sáng phẳng nửa trên — cảm giác mặt kính cong, không dùng gradient */
+.tp-stamp__glass::before {
+  content: "";
+  position: absolute;
+  inset: 3px 3px 52% 3px;
+  border-radius: 25px 25px 60% 60% / 25px 25px 14px 14px;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+.tp-stamp__glass.is-pressed {
+  --press: 0.965;
+  transition-duration: 0.12s;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1.5px 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 0 0.5px rgba(148, 163, 184, 0.25),
+    0 6px 14px -10px rgba(15, 23, 42, 0.3),
+    0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+/* ---- Giọt kính lồi chứa lông vũ, nhô lên mép trên ---- */
+.tp-stamp__bead {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  backdrop-filter: blur(10px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 1),
+    inset 0 -3px 5px rgba(148, 163, 184, 0.28),
+    0 6px 12px -4px rgba(15, 23, 42, 0.25);
+  color: #94a3b8;
+  font-size: 12px;
+}
+/* điểm chói nhỏ trên giọt */
+.tp-stamp__bead::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  width: 8px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  transform: rotate(-24deg);
+}
+
+/* ---- Chữ khắc chìm (letterpress) ---- */
+.tp-stamp__ver {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95),
+    0 -1px 0 rgba(100, 116, 139, 0.18);
+}
+.tp-stamp__sep {
+  width: 36px;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.4);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9); /* đường rãnh khắc */
+}
+.tp-stamp__credit {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.tp-stamp__credit strong {
+  color: #475569;
+  font-weight: 700;
+}
+.tp-stamp__credit .fa-heart {
+  color: rgba(248, 113, 113, 0.75);
+}
+
+/* tim đập nhẹ, rất tiết chế (không đổi màu) */
+@media (prefers-reduced-motion: no-preference) {
+  .tp-stamp.is-in .fa-heart {
+    animation: tp-beat 2.8s ease-in-out 1s infinite;
+  }
+}
+@keyframes tp-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  8% {
+    transform: scale(1.22);
+  }
+  16% {
+    transform: scale(1);
+  }
+  24% {
+    transform: scale(1.12);
+  }
+  32% {
+    transform: scale(1);
+  }
+}
+
+/* trình duyệt không hỗ trợ backdrop-filter → nền đặc hơn cho dễ đọc */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .tp-stamp__glass {
+    background: rgba(255, 255, 255, 0.85);
+  }
+  .tp-stamp__bead {
+    background: rgba(255, 255, 255, 0.95);
+  }
+}
+/* người dùng tắt chuyển động → hiện thẳng, không nghiêng */
+@media (prefers-reduced-motion: reduce) {
+  .tp-stamp {
+    opacity: 1;
   }
   .tp-stamp.is-in {
-    animation: tp-stamp-down .55s cubic-bezier(.2, .9, .25, 1) both;
+    animation: none;
   }
-  @keyframes tp-stamp-down {
-    0%   { opacity: 0; transform: translateY(-16px) scale(1.14); filter: blur(6px); }
-    62%  { opacity: 1; transform: translateY(0) scale(.985);     filter: blur(0); }
-    100% { opacity: 1; transform: translateY(0) scale(1);        filter: blur(0); }
-  }
- 
-  /* ---- Lớp kính: nghiêng theo con trỏ + lún khi nhấn ---- */
   .tp-stamp__glass {
-    --rx: 0deg; --ry: 0deg; --press: 1;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    min-width: min(260px, calc(100vw - 48px));
-    padding: 30px 30px 16px;
-    margin-top: 16px;                       /* chừa chỗ cho giọt kính lồi lên trên */
-    border-radius: 28px;
-    background: rgba(255, 255, 255, .34);
-    -webkit-backdrop-filter: blur(18px) saturate(180%);
-            backdrop-filter: blur(18px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, .7);
-    box-shadow:
-      inset 0 1.5px 0 rgba(255, 255, 255, .95),   /* viền sáng mép trên */
-      inset 0 -1.5px 0 rgba(255, 255, 255, .35),  /* mép dưới khúc xạ nhẹ */
-      inset 0 0 0 .5px rgba(148, 163, 184, .25),  /* đường viền mảnh */
-      inset 0 10px 18px -12px rgba(255, 255, 255, .9),
-      0 14px 28px -14px rgba(15, 23, 42, .28),
-      0 2px 6px rgba(15, 23, 42, .06);
-    transform: perspective(700px) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--press));
-    transition: transform .35s cubic-bezier(.2, .9, .25, 1), box-shadow .35s ease;
-    will-change: transform;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
+    transition: none;
   }
-  /* mảng sáng phẳng nửa trên — cảm giác mặt kính cong, không dùng gradient */
-  .tp-stamp__glass::before {
-    content: "";
-    position: absolute;
-    inset: 3px 3px 52% 3px;
-    border-radius: 25px 25px 60% 60% / 25px 25px 14px 14px;
-    background: rgba(255, 255, 255, .22);
-    pointer-events: none;
-  }
-  .tp-stamp__glass.is-pressed {
-    --press: .965;
-    transition-duration: .12s;
-    box-shadow:
-      inset 0 1.5px 0 rgba(255, 255, 255, .95),
-      inset 0 -1.5px 0 rgba(255, 255, 255, .35),
-      inset 0 0 0 .5px rgba(148, 163, 184, .25),
-      0 6px 14px -10px rgba(15, 23, 42, .3),
-      0 1px 3px rgba(15, 23, 42, .08);
-  }
- 
-  /* ---- Giọt kính lồi chứa lông vũ, nhô lên mép trên ---- */
-  .tp-stamp__bead {
-    position: absolute;
-    top: -16px; left: 50%;
-    width: 34px; height: 34px;
-    margin-left: -17px;
-    display: grid; place-items: center;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .5);
-    -webkit-backdrop-filter: blur(10px) saturate(180%);
-            backdrop-filter: blur(10px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, .85);
-    box-shadow:
-      inset 0 2px 2px rgba(255, 255, 255, 1),
-      inset 0 -3px 5px rgba(148, 163, 184, .28),
-      0 6px 12px -4px rgba(15, 23, 42, .25);
-    color: #94a3b8;
-    font-size: 12px;
-  }
-  /* điểm chói nhỏ trên giọt */
-  .tp-stamp__bead::after {
-    content: "";
-    position: absolute;
-    top: 5px; left: 8px;
-    width: 8px; height: 4px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .9);
-    transform: rotate(-24deg);
-  }
- 
-  /* ---- Chữ khắc chìm (letterpress) ---- */
-  .tp-stamp__ver {
-    margin: 0;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-    color: #94a3b8;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, .95), 0 -1px 0 rgba(100, 116, 139, .18);
-  }
-  .tp-stamp__sep {
-    width: 36px; height: 1px;
-    background: rgba(148, 163, 184, .4);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, .9);   /* đường rãnh khắc */
-  }
-  .tp-stamp__credit {
-    margin: 0;
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    font-size: 10px; font-weight: 500;
-    color: #64748b;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, .9);
-  }
-  .tp-stamp__credit strong { color: #475569; font-weight: 700; }
-  .tp-stamp__credit .fa-heart { color: rgba(248, 113, 113, .75); }
- 
-  /* tim đập nhẹ, rất tiết chế (không đổi màu) */
-  @media (prefers-reduced-motion: no-preference) {
-    .tp-stamp.is-in .fa-heart { animation: tp-beat 2.8s ease-in-out 1s infinite; }
-  }
-  @keyframes tp-beat {
-    0%, 100% { transform: scale(1); }
-    8%       { transform: scale(1.22); }
-    16%      { transform: scale(1); }
-    24%      { transform: scale(1.12); }
-    32%      { transform: scale(1); }
-  }
- 
-  /* trình duyệt không hỗ trợ backdrop-filter → nền đặc hơn cho dễ đọc */
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .tp-stamp__glass { background: rgba(255, 255, 255, .85); }
-    .tp-stamp__bead  { background: rgba(255, 255, 255, .95); }
-  }
-  /* người dùng tắt chuyển động → hiện thẳng, không nghiêng */
-  @media (prefers-reduced-motion: reduce) {
-    .tp-stamp { opacity: 1; }
-    .tp-stamp.is-in { animation: none; }
-    .tp-stamp__glass { transition: none; }
-  }
-
+}

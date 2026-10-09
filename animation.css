@@ -1,0 +1,116 @@
+  /* ===== FAB MENU ===== */
+
+/* ---------- Animation GỐC (khi animation-on = false) ---------- */
+#fab-menu {
+  opacity: 0;
+  translate: 0 40px;
+  pointer-events: none;
+  transform-origin: bottom;
+  transition: opacity .3s ease, translate .3s ease;
+}
+#fab-menu.open {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+#fab-main-btn.is-open #fab-icon { transform: rotate(180deg); }
+
+/* Overlay ở chế độ gốc: trong suốt, chỉ dùng để bấm ra ngoài là đóng */
+#fab-overlay {
+  position: fixed; inset: 0; z-index: 55;
+  background: transparent;
+  opacity: 0; pointer-events: none;
+}
+#fab-overlay.show { opacity: 1; pointer-events: auto; }
+
+
+/* ---------- Animation WOW (khi animation-on = true) ---------- */
+
+/* Khối menu luôn hiện, từng item tự lo animation */
+html[data-animation-on="true"] #fab-menu {
+  opacity: 1;
+  translate: 0 0;
+  transition: none;
+}
+
+/* Trạng thái đóng */
+html[data-animation-on="true"] #fab-menu .fab-item {
+  opacity: 0;
+  translate: 24px 50px;
+  scale: .3;
+  rotate: -12deg;
+  filter: blur(10px);
+  transform-origin: right bottom;
+  transition:
+    translate .3s cubic-bezier(.4, 0, .2, 1),
+    scale .3s cubic-bezier(.4, 0, .2, 1),
+    rotate .3s ease,
+    opacity .2s ease,
+    filter .25s ease;
+  transition-delay: calc((3 - var(--i)) * 30ms);
+}
+
+/* Trạng thái mở: item gần FAB bung ra trước */
+html[data-animation-on="true"] #fab-menu.open .fab-item {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  rotate: 0deg;
+  filter: blur(0);
+  transition:
+    translate .35s cubic-bezier(.34, 1.56, .64, 1),
+    scale .35s cubic-bezier(.34, 1.56, .64, 1),
+    rotate .35s cubic-bezier(.34, 1.56, .64, 1),
+    opacity .18s ease,
+    filter .25s ease;
+  transition-delay: calc(var(--i) * 35ms);
+}
+
+/* Icon xoay pop */
+html[data-animation-on="true"] #fab-menu .fab-item > div {
+  scale: 0;
+  rotate: -180deg;
+  transition: all .25s ease;
+}
+html[data-animation-on="true"] #fab-menu.open .fab-item > div {
+  scale: 1;
+  rotate: 0deg;
+  transition:
+    scale .45s cubic-bezier(.34, 1.56, .64, 1),
+    rotate .5s cubic-bezier(.34, 1.56, .64, 1);
+  transition-delay: calc(var(--i) * 50ms + 100ms);
+}
+
+/* Nút chính: phóng nhẹ + vòng sóng */
+html[data-animation-on="true"] #fab-main-btn.is-open { scale: 1.05; }
+html[data-animation-on="true"] #fab-main-btn.is-open #fab-icon { transform: rotate(180deg) scale(1.1); }
+/* html[data-animation-on="true"] #fab-main-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgba(96, 165, 250, .7);
+  opacity: 0;
+  pointer-events: none;
+} */
+html[data-animation-on="true"] #fab-main-btn.is-open::before { animation: fabRipple 1.6s ease-out infinite; }
+@keyframes fabRipple {
+  0%   { transform: scale(1);   opacity: .8; }
+  100% { transform: scale(2.1); opacity: 0;  }
+}
+
+/* Nền mờ phía sau */
+html[data-animation-on="true"] #fab-overlay {
+  background: radial-gradient(circle at 90% 95%, rgba(37,99,235,.25), rgba(15,23,42,.35));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity .3s ease;
+}
+
+/* Người dùng bật "giảm chuyển động" trong hệ điều hành */
+@media (prefers-reduced-motion: reduce) {
+  html[data-animation-on="true"] #fab-menu .fab-item,
+  html[data-animation-on="true"] #fab-menu .fab-item > div { transition-duration: .01ms !important; transition-delay: 0s !important; }
+  html[data-animation-on="true"] #fab-main-btn::before { animation: none !important; }
+}
+

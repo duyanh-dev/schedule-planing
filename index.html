@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" class="bg-slate-50">
+<html lang="vi" class="bg-slate-50" data-animation-on="true">
     <head>
     <meta charset="UTF-8">
     <!-- Ép web tràn viền (viewport-fit=cover) và khóa zoom để giống App thật -->
@@ -332,50 +332,63 @@
      <!-- ============================================== -->
     <!-- MENU NỔI KÍNH MỜ CHO MOBILE (SP) - LIQUID GLASS -->
     <!-- ============================================== -->
-    <div class="md:hidden fixed right-5 bottom-6 z-[60]" data-html2canvas-ignore>
-        
-        <!-- Danh sách các nút mở rộng -->
-        <div id="fab-menu" class="absolute bottom-16 right-0 flex flex-col items-end gap-3 transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none origin-bottom">
-            
-            <!-- Nút Khẩn cấp (Tone Orange cảnh báo, tiệp phong cách Liquid Glass) -->
-            <button onclick="window.openEmergency(); toggleFab()" class="flex items-center gap-3 bg-orange-100/90 backdrop-blur-2xl px-3.5 py-2 rounded-full shadow-[0_6px_20px_rgba(249,115,22,0.15),inset_0_2px_4px_rgba(255,255,255,0.8)] border border-orange-200/80 active:scale-95 transition-all whitespace-nowrap group">
-                <div class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-orange-200 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
-                    <i class="fa-solid fa-phone-volume text-orange-600 text-[12px]"></i>
-                </div>
-                <span class="text-orange-900 font-bold text-[13px] pr-1 drop-shadow-sm">Khẩn cấp</span>
-            </button>
 
-            <!-- Nút Xuất PDF (Tone Rose đậm đà) -->
-            <button onclick="exportFullPDF(); toggleFab()" id="btn-pdf-mobile" class="flex items-center gap-3 bg-rose-100/90 backdrop-blur-2xl px-3.5 py-2 rounded-full shadow-[0_6px_20px_rgba(244,63,94,0.15),inset_0_2px_4px_rgba(255,255,255,0.8)] border border-rose-200/80 active:scale-95 transition-all whitespace-nowrap group">
-                <div class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-rose-200 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
-                    <i class="fa-solid fa-file-pdf text-rose-600 text-[12px]"></i>
-                </div>
-                <span class="text-rose-900 font-bold text-[13px] pr-1 drop-shadow-sm">Xuất file PDF</span>
-            </button>
+    <div id="fab-overlay" class="md:hidden" onclick="toggleFab()"></div>
 
-            <!-- Nút Tải File JSON (Tone Emerald đậm đà) -->
-            <button onclick="exportSingleTrip(); toggleFab()" class="flex items-center gap-3 bg-emerald-100/90 backdrop-blur-2xl px-3.5 py-2 rounded-full shadow-[0_6px_20px_rgba(16,185,129,0.15),inset_0_2px_4px_rgba(255,255,255,0.8)] border border-emerald-200/80 active:scale-95 transition-all whitespace-nowrap group">
-                <div class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-emerald-200 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
-                    <i class="fa-solid fa-cloud-arrow-down text-emerald-600 text-[12px]"></i>
-                </div>
-                <span class="text-emerald-900 font-bold text-[13px] pr-1 drop-shadow-sm">Tải lịch trình</span>
+        <div class="md:hidden fixed right-5 bottom-6 z-[60]" data-html2canvas-ignore>
+    
+            <!-- Danh sách các nút mở rộng -->
+            <div id="fab-menu" class="absolute bottom-16 right-0 flex flex-col items-end gap-3">
+    
+                <!-- Nút Khẩn cấp (Tone Orange cảnh báo, tiệp phong cách Liquid Glass) -->
+                <button style="--i:3" onclick="window.openEmergency(); toggleFab()"
+                    class="flex items-center gap-3 bg-orange-100/90 backdrop-blur-2xl px-3.5 py-2 rounded-full shadow-[0_6px_20px_rgba(249,115,22,0.15),inset_0_2px_4px_rgba(255,255,255,0.8)] border border-orange-200/80 active:scale-95 fab-item whitespace-nowrap group">
+                    <div
+                        class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-orange-200 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                        <i class="fa-solid fa-phone-volume text-orange-600 text-[12px]"></i>
+                    </div>
+                    <span class="text-orange-900 font-bold text-[13px] pr-1 drop-shadow-sm">Khẩn cấp</span>
+                </button>
+    
+                <!-- Nút Xuất PDF (Tone Rose đậm đà) -->
+                <button style="--i:2" onclick="exportFullPDF(); toggleFab()" id="btn-pdf-mobile"
+                    class="flex items-center gap-3 bg-rose-100/90 backdrop-blur-2xl px-3.5 py-2 rounded-full shadow-[0_6px_20px_rgba(244,63,94,0.15),inset_0_2px_4px_rgba(255,255,255,0.8)] border border-rose-200/80 active:scale-95 fab-item whitespace-nowrap group">
+                    <div
+                        class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-rose-200 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                        <i class="fa-solid fa-file-pdf text-rose-600 text-[12px]"></i>
+                    </div>
+                    <span class="text-rose-900 font-bold text-[13px] pr-1 drop-shadow-sm">Xuất file PDF</span>
+                </button>
+    
+                <!-- Nút Tải File JSON (Tone Emerald đậm đà) -->
+                <button style="--i:1" onclick="exportSingleTrip(); toggleFab()"
+                    class="flex items-center gap-3 bg-emerald-100/90 backdrop-blur-2xl px-3.5 py-2 rounded-full shadow-[0_6px_20px_rgba(16,185,129,0.15),inset_0_2px_4px_rgba(255,255,255,0.8)] border border-emerald-200/80 active:scale-95 fab-item whitespace-nowrap group">
+                    <div
+                        class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-emerald-200 shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                        <i class="fa-solid fa-cloud-arrow-down text-emerald-600 text-[12px]"></i>
+                    </div>
+                    <span class="text-emerald-900 font-bold text-[13px] pr-1 drop-shadow-sm">Tải lịch trình</span>
+                </button>
+    
+                <!-- Nút Thêm hoạt động (Solid Blue nổi bật) -->
+                <button style="--i:0" onclick="openActivityModal(); toggleFab()"
+                    class="flex items-center gap-3 bg-blue-600 backdrop-blur-2xl px-3.5 py-2 rounded-full shadow-[0_8px_25px_rgba(37,99,235,0.4),inset_0_2px_4px_rgba(255,255,255,0.3)] border border-blue-500 active:scale-95 fab-item whitespace-nowrap group">
+                    <div
+                        class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center border border-white/30 shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
+                        <i class="fa-solid fa-plus text-white text-[12px] drop-shadow-sm"></i>
+                    </div>
+                    <span class="text-white font-bold text-[13px] pr-1 drop-shadow-sm">Thêm</span>
+                </button>
+    
+            </div>
+    
+            <!-- Nút FAB Chính (Blue 3D Water Drop Liquid Glass) -->
+            <button onclick="toggleFab()" id="fab-main-btn"
+                class="w-14 h-14 bg-gradient-to-br from-blue-400/80 to-blue-600/70 backdrop-blur-3xl rounded-full border border-white/50 shadow-[0_10px_25px_rgba(37,99,235,0.3),inset_0_6px_10px_rgba(255,255,255,0.8),inset_0_-6px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all active:scale-90 relative z-10 touch-manipulation">
+                <i class="fa-solid fa-chevron-up transition-transform duration-300 text-white text-[22px] drop-shadow-md"
+                    id="fab-icon"></i>
             </button>
-            
-            <!-- Nút Thêm hoạt động (Solid Blue nổi bật) -->
-            <button onclick="openActivityModal(); toggleFab()" class="flex items-center gap-3 bg-blue-600 backdrop-blur-2xl px-3.5 py-2 rounded-full shadow-[0_8px_25px_rgba(37,99,235,0.4),inset_0_2px_4px_rgba(255,255,255,0.3)] border border-blue-500 active:scale-95 transition-all whitespace-nowrap group">
-                <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center border border-white/30 shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
-                    <i class="fa-solid fa-plus text-white text-[12px] drop-shadow-sm"></i>
-                </div>
-                <span class="text-white font-bold text-[13px] pr-1 drop-shadow-sm">Thêm</span>
-            </button>
-
-        </div>
-
-        <!-- Nút FAB Chính (Blue 3D Water Drop Liquid Glass) -->
-        <button onclick="toggleFab()" id="fab-main-btn" class="w-14 h-14 bg-gradient-to-br from-blue-400/80 to-blue-600/70 backdrop-blur-3xl rounded-full border border-white/50 shadow-[0_10px_25px_rgba(37,99,235,0.3),inset_0_6px_10px_rgba(255,255,255,0.8),inset_0_-6px_12px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all active:scale-90 relative z-10 touch-manipulation">
-            <i class="fa-solid fa-chevron-up transition-transform duration-300 text-white text-[22px] drop-shadow-md" id="fab-icon"></i>
-        </button>
-    </div>
+        </div>   
 </div>
 
        <!-- Activity Modal (Liquid Glass Style & Fullscreen Mobile) -->
@@ -1209,6 +1222,9 @@ function handleIslandClick() {
                 lastScrollY = currentScrollY;
             }, { passive: true });
         });
+
+        
+        
 </script>
   
 </body>

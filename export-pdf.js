@@ -1,27 +1,43 @@
 // ==========================================
-        // LOGIC MENU NỔI (FAB) CHO MOBILE
-        // ==========================================
-        let isFabOpen = false;
-        function toggleFab() {
-            isFabOpen = !isFabOpen;
-            const menu = document.getElementById('fab-menu');
-            const icon = document.getElementById('fab-icon');
-            const mainBtn = document.getElementById('fab-main-btn');
+// LOGIC MENU NỔI (FAB) CHO MOBILE - WOW
+// ==========================================
+let isFabOpen = false;
 
-            if (isFabOpen) {
-                // Mở Menu
-                menu.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
-                icon.classList.add('rotate-180'); // Xoay mũi tên chúc xuống
-                mainBtn.classList.replace('bg-blue-600', 'bg-slate-800'); // Đổi màu nút thành đen
-                mainBtn.classList.replace('shadow-blue-500/50', 'shadow-slate-900/50');
-            } else {
-                // Đóng Menu
-                menu.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
-                icon.classList.remove('rotate-180'); // Xoay mũi tên lên
-                mainBtn.classList.replace('bg-slate-800', 'bg-blue-600');
-                mainBtn.classList.replace('shadow-slate-900/50', 'shadow-blue-500/50');
-            }
-        }
+function toggleFab(force) {
+    const menu = document.getElementById('fab-menu');
+    const mainBtn = document.getElementById('fab-main-btn');
+    const overlay = document.getElementById('fab-overlay');
+
+    isFabOpen = typeof force === 'boolean' ? force : !isFabOpen;
+
+    menu.classList.toggle('open', isFabOpen);
+    mainBtn.classList.toggle('is-open', isFabOpen);
+    overlay.classList.toggle('show', isFabOpen);
+
+    // Rung nhẹ trên điện thoại hỗ trợ
+    if (isFabOpen && navigator.vibrate) navigator.vibrate(12);
+}
+window.toggleFab = toggleFab;
+
+// Bấm phím Esc hoặc cuộn trang thì tự đóng menu (tùy chọn)
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && isFabOpen) toggleFab(false); });
+
+
+// Bật/tắt animation wow (lưu lại lựa chọn)
+function setFabAnimation(on) {
+    document.documentElement.dataset.animationOn = String(on);
+    try { localStorage.setItem('animationOn', String(on)); } catch (e) {}
+}
+window.setFabAnimation = setFabAnimation;
+
+// Khôi phục lựa chọn đã lưu khi tải trang
+(function () {
+    let saved = null;
+    try { saved = localStorage.getItem('animationOn'); } catch (e) {}
+    if (saved !== null) document.documentElement.dataset.animationOn = saved;
+})();
+
+
 // ==========================================
         // LOGIC XUẤT FULL UI RA PDF (CHUẨN NATIVE & CHỐNG LỆCH LAYOUT)
         // ==========================================
