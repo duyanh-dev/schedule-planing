@@ -1,6 +1,7 @@
+// ==========================================
+// LOGIC MENU NỔI (FAB) CHO MOBILE - WOW
+// ==========================================
 let isFabOpen = false;
-let fabResetTimer = null;
-let fabScrollY = 0;
 
 function toggleFab(force) {
     const menu = document.getElementById('fab-menu');
@@ -9,42 +10,11 @@ function toggleFab(force) {
 
     isFabOpen = typeof force === 'boolean' ? force : !isFabOpen;
 
-    if (isFabOpen) {
-        clearTimeout(fabResetTimer);
-        fabScrollY = window.scrollY;
-
-        // Overlay tràn 300px mỗi phía so với vùng nhìn thấy để phủ cả 2 vùng thanh kính
-        const EXTRA = 300;
-        overlay.style.top = '0px';
-        const r = overlay.getBoundingClientRect();
-        overlay.style.top = (-r.top - EXTRA) + 'px';
-        overlay.style.height = (window.innerHeight + EXTRA * 2) + 'px';
-
-        // Khóa cuộn bằng body fixed, KHÔNG dùng overflow:hidden trên html (nó cắt vùng vẽ)
-        document.body.style.position = 'fixed';
-        document.body.style.top = (-fabScrollY) + 'px';
-        document.body.style.left = '0';
-        document.body.style.right = '0';
-    } else {
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.right = '';
-        window.scrollTo(0, fabScrollY);
-
-        clearTimeout(fabResetTimer);
-        fabResetTimer = setTimeout(() => {
-            if (!isFabOpen) {
-                overlay.style.top = '0px';
-                overlay.style.height = '0px';
-            }
-        }, 350);
-    }
-
     menu.classList.toggle('open', isFabOpen);
     mainBtn.classList.toggle('is-open', isFabOpen);
     overlay.classList.toggle('show', isFabOpen);
 
+    // Rung nhẹ trên điện thoại hỗ trợ
     if (isFabOpen && navigator.vibrate) navigator.vibrate(12);
 }
 window.toggleFab = toggleFab;
