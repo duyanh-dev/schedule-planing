@@ -1,4 +1,4 @@
-  /* ===== FAB MENU ===== */
+ /* ===== FAB MENU ===== */
 
 /* ---------- Animation GỐC (khi animation-on = false) ---------- */
 #fab-menu {
@@ -15,14 +15,27 @@
 }
 #fab-main-btn.is-open #fab-icon { transform: rotate(180deg); }
 
-/* Overlay ở chế độ gốc: trong suốt, chỉ dùng để bấm ra ngoài là đóng */
+/* Overlay: position ABSOLUTE (không phải fixed) nên Safari iOS 26 không lấy mẫu để nhuộm thanh hệ thống.
+   top/height được JS đặt theo vùng nhìn thấy mỗi lần mở. */
 #fab-overlay {
-  position: fixed; inset: 0; z-index: 55;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  z-index: 55;
   background: transparent;
-  opacity: 0; pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .3s ease, visibility 0s linear .3s; /* đợi mờ xong mới ẩn */
 }
-#fab-overlay.show { opacity: 1; pointer-events: auto; }
-
+#fab-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity .3s ease, visibility 0s;
+}
 
 /* ---------- Animation WOW (khi animation-on = true) ---------- */
 
@@ -99,12 +112,20 @@ html[data-animation-on="true"] #fab-main-btn.is-open::before { animation: fabRip
   100% { transform: scale(2.1); opacity: 0;  }
 }
 
-/* Nền mờ phía sau */
+/* Nền mờ phía sau (overlay giờ đúng bằng một màn hình nên tâm gradient về lại 90% 95%) */
 html[data-animation-on="true"] #fab-overlay {
   background: radial-gradient(circle at 90% 95%, rgba(37,99,235,.25), rgba(15,23,42,.35));
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  transition: opacity .3s ease;
+  transition: opacity .3s ease, visibility 0s linear .3s; /* giữ delay visibility để kịp mờ dần khi đóng */
+}
+
+/* Chế độ WOW: nền + blur khi .show */
+html[data-animation-on="true"] #fab-overlay.show {
+  background: radial-gradient(circle at 90% 95%, rgba(37,99,235,.25), rgba(15,23,42,.35));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: opacity .3s ease, visibility 0s;
 }
 
 /* Người dùng bật "giảm chuyển động" trong hệ điều hành */
@@ -113,8 +134,6 @@ html[data-animation-on="true"] #fab-overlay {
   html[data-animation-on="true"] #fab-menu .fab-item > div { transition-duration: .01ms !important; transition-delay: 0s !important; }
   html[data-animation-on="true"] #fab-main-btn::before { animation: none !important; }
 }
-
-
 
 
 /* ===== SIDEBAR - APPLE STYLE ===== */
