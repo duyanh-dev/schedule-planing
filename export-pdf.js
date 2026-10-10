@@ -1,8 +1,6 @@
-// ==========================================
-// LOGIC MENU NỔI (FAB) CHO MOBILE - WOW
-// ==========================================
 let isFabOpen = false;
 let fabResetTimer = null;
+let fabScrollY = 0;
 
 function toggleFab(force) {
     const menu = document.getElementById('fab-menu');
@@ -13,19 +11,27 @@ function toggleFab(force) {
 
     if (isFabOpen) {
         clearTimeout(fabResetTimer);
+        fabScrollY = window.scrollY;
 
-        // Đặt overlay (absolute) đúng vào vùng đang nhìn thấy, bất kể trang đang cuộn tới đâu
+        // Overlay tràn 300px mỗi phía so với vùng nhìn thấy để phủ cả 2 vùng thanh kính
+        const EXTRA = 300;
         overlay.style.top = '0px';
         const r = overlay.getBoundingClientRect();
-        overlay.style.top = (-r.top) + 'px';
-        overlay.style.height = window.innerHeight + 'px';
+        overlay.style.top = (-r.top - EXTRA) + 'px';
+        overlay.style.height = (window.innerHeight + EXTRA * 2) + 'px';
 
-        // Khóa cuộn trang khi menu mở
-        document.documentElement.style.overflow = 'hidden';
+        // Khóa cuộn bằng body fixed, KHÔNG dùng overflow:hidden trên html (nó cắt vùng vẽ)
+        document.body.style.position = 'fixed';
+        document.body.style.top = (-fabScrollY) + 'px';
+        document.body.style.left = '0';
+        document.body.style.right = '0';
     } else {
-        document.documentElement.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        window.scrollTo(0, fabScrollY);
 
-        // Đợi overlay mờ xong (0.3s) rồi thu về cao 0 để không làm dài trang
         clearTimeout(fabResetTimer);
         fabResetTimer = setTimeout(() => {
             if (!isFabOpen) {
@@ -39,17 +45,11 @@ function toggleFab(force) {
     mainBtn.classList.toggle('is-open', isFabOpen);
     overlay.classList.toggle('show', isFabOpen);
 
-    // Rung nhẹ trên điện thoại hỗ trợ
     if (isFabOpen && navigator.vibrate) navigator.vibrate(12);
 }
 window.toggleFab = toggleFab;
 
-// Chặn vuốt cuộn trang trên overlay (iOS đôi khi bỏ qua overflow:hidden)
-document.getElementById('fab-overlay').addEventListener('touchmove', e => {
-    if (isFabOpen) e.preventDefault();
-}, { passive: false });
-
-// Bấm phím Esc thì tự đóng menu
+// Bấm phím Esc hoặc cuộn trang thì tự đóng menu (tùy chọn)
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isFabOpen) toggleFab(false); });
 
 

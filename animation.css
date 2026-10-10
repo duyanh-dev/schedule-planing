@@ -28,7 +28,7 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity .3s ease, visibility 0s linear .3s; /* đợi mờ xong mới ẩn */
+  transition: opacity .3s ease, visibility 0s linear .3s;
 }
 #fab-overlay.show {
   opacity: 1;
@@ -128,12 +128,19 @@ html[data-animation-on="true"] #fab-overlay.show {
   transition: opacity .3s ease, visibility 0s;
 }
 
+html[data-animation-on="true"] #fab-overlay,
+html[data-animation-on="true"] #fab-overlay.show {
+  background: radial-gradient(circle at 90% 75%, rgba(37,99,235,.25), rgba(15,23,42,.35));
+}
+
 /* Người dùng bật "giảm chuyển động" trong hệ điều hành */
 @media (prefers-reduced-motion: reduce) {
   html[data-animation-on="true"] #fab-menu .fab-item,
   html[data-animation-on="true"] #fab-menu .fab-item > div { transition-duration: .01ms !important; transition-delay: 0s !important; }
   html[data-animation-on="true"] #fab-main-btn::before { animation: none !important; }
 }
+
+
 
 
 /* ===== SIDEBAR - APPLE STYLE ===== */
