@@ -132,7 +132,7 @@ html[data-animation-on="true"] #fab-overlay {
     will-change: transform;
   }
   html[data-animation-on="true"] #sidebar:not(.\-translate-x-full) {
-    box-shadow: 0 30px 80px rgba(15, 23, 42, .28), 0 8px 24px rgba(15, 23, 42, .12);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, .35), 0 8px 24px rgba(15, 23, 42, .18);
   }
 
   /* Parallax: 3 khối con trượt chậm hơn khung kính */
@@ -151,8 +151,10 @@ html[data-animation-on="true"] #fab-overlay {
   html[data-animation-on="true"] #sidebar:not(.\-translate-x-full) > *:nth-child(3) { transition-delay: .14s, .18s; }
 
   /* Nền sau: tối dần và nhòe dần */
+   /* Nền sau: trắng blur (cùng tông #f8fafc), nằm trên header + FAB, ngay dưới sidebar */
   html[data-animation-on="true"] #sidebar-overlay {
-    background: rgba(15, 23, 42, .35);
+    z-index: 6999;
+    background: rgba(248, 250, 252, .55);
     backdrop-filter: blur(10px) saturate(1.15);
     -webkit-backdrop-filter: blur(10px) saturate(1.15);
     transition-property: opacity;
