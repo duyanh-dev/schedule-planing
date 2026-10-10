@@ -101,7 +101,7 @@ html[data-animation-on="true"] #fab-main-btn.is-open::before { animation: fabRip
 
 /* Nền mờ phía sau */
 html[data-animation-on="true"] #fab-overlay {
-  background: radial-gradient(circle at 90% 95%, rgba(37,99,235,.25), rgba(15,23,42,.35));
+  background: radial-gradient(circle at 90% 95%, rgba(255,255,255,.55), rgba(248,250,252,.45));
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   transition: opacity .3s ease;
