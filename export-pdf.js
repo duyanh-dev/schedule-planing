@@ -49,6 +49,12 @@ function toggleFab(force) {
 }
 window.toggleFab = toggleFab;
 
+// Chặn vuốt cuộn trang trên overlay (iOS đôi khi bỏ qua overflow:hidden)
+document.getElementById('fab-overlay').addEventListener('touchmove', e => {
+    if (isFabOpen) e.preventDefault();
+}, { passive: false });
+
+
 // Bấm phím Esc hoặc cuộn trang thì tự đóng menu (tùy chọn)
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && isFabOpen) toggleFab(false); });
 
