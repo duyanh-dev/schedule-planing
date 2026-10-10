@@ -188,6 +188,26 @@ const openTripModal = (isEdit = false) => {
             document.getElementById('trip-budget-amount').value = '';
         }
 
+        // THÊM: Khôi phục Vùng, Quốc gia, Tiền tệ đích (thứ tự rất quan trọng)
+        let savedRegion = trip.region;
+        let savedCountry = trip.country;
+        if (!savedRegion || !regionData[savedRegion]) {
+            // Chuyến đi cũ chưa có region/country: suy ra từ destCur (khớp quốc gia đầu tiên dùng tiền tệ đó)
+            savedRegion = null;
+            savedCountry = null;
+            for (const [rName, countries] of Object.entries(regionData)) {
+                const found = countries.find(c => c.cur === trip.destCur);
+                if (found) { savedRegion = rName; savedCountry = found.name; break; }
+            }
+        }
+        if (savedRegion) {
+            document.getElementById('trip-region').value = savedRegion;
+            renderCountryList(); // dựng lại danh sách quốc gia theo vùng
+            if (savedCountry) document.getElementById('trip-country').value = savedCountry;
+        }
+        // Gán sau cùng để không bị autoSetCurrency() ghi đè
+        if (trip.destCur) document.getElementById('trip-currency-to').value = trip.destCur;
+
         if(trip.days.length > 0) {
             const startStr = trip.days[0].date;
             const endStr = trip.days[trip.days.length-1].date;
@@ -251,6 +271,8 @@ const submitTripFormNew = () => {
         : null;
 
     const destCur = document.getElementById('trip-currency-to').value; 
+    const region = document.getElementById('trip-region').value;      // THÊM
+    const country = document.getElementById('trip-country').value;    // THÊM
 
     if (editingTripId) {
         // CẬP NHẬT
@@ -258,6 +280,8 @@ const submitTripFormNew = () => {
         trip.title = title;
         trip.budget = budgetStr;
         trip.destCur = destCur;
+        trip.region = region;       // THÊM
+        trip.country = country;     // THÊM
         trip.coverUrl = coverUrl;
 
         const oldDays = [...trip.days];
@@ -291,6 +315,8 @@ const submitTripFormNew = () => {
             coverUrl: coverUrl,
             budget: budgetStr,
             destCur: destCur, 
+            region: region,         // THÊM
+            country: country,       // THÊM
             days: newDays,
             checklist: [
                 { id: 'c1', text: 'Hộ chiếu / CCCD / Giấy tờ tùy thân', isDone: false },
