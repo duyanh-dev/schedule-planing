@@ -19,10 +19,17 @@
 #fab-overlay {
   position: fixed; inset: 0; z-index: 55;
   background: transparent;
-  opacity: 0; pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .3s ease, visibility 0s linear .3s; /* đợi mờ xong mới ẩn */
 }
-#fab-overlay.show { opacity: 1; pointer-events: auto; }
-
+#fab-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity .3s ease, visibility 0s;
+}
 
 /* ---------- Animation WOW (khi animation-on = true) ---------- */
 
@@ -105,6 +112,13 @@ html[data-animation-on="true"] #fab-overlay {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   transition: opacity .3s ease;
+}
+
+/* Chế độ WOW: nền + blur chỉ áp khi .show */
+html[data-animation-on="true"] #fab-overlay.show {
+  background: radial-gradient(circle at 90% 95%, rgba(37,99,235,.25), rgba(15,23,42,.35));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 /* Người dùng bật "giảm chuyển động" trong hệ điều hành */
