@@ -679,3 +679,5 @@ html[data-animation-on="true"] #cl-confirm.active .clc-icon i { animation: clcSh
   html[data-animation-on="true"] #cl-confirm *,
   html[data-animation-on="true"] #cl-confirm *::after { animation: none !important; }
 }
+
+

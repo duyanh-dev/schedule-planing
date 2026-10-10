@@ -3,9 +3,11 @@
 
 body {
   font-family: "Inter", sans-serif;
-  background-color: #f8fafc;
+  /* background-color: #f8fafc; */
   -webkit-tap-highlight-color: transparent;
 }
+
+html, body { background: transparent; }
 
 /* Tắt tính năng double-tap to zoom trên toàn bộ UI nhưng vẫn cho phép vuốt/cuộn */
 body,

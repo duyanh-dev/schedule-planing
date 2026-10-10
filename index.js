@@ -349,7 +349,359 @@
             }, 50);
         };
 
-        const renderTimeline = () => {
+        /* ==========================================================
+   YÊU CẦU: thêm GSAP vào <head> (trước script chính)
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+   ========================================================== */
+
+/* ==========================================================
+   TL_FX — Animation cho Timeline (GSAP, phẳng: không shadow, không gradient)
+   - Entrance: chờ preloader (html.fl-lock) gỡ xong mới chạy, chỉ chạy khi đổi trip/ngày
+   - Khói xám trắng, chỉ tỏa nhẹ ra rìa card (tối đa ~26px, nhạt dần) thay vì bị cắt phẳng ở mép
+   - Check: máy bay bay vút từ nút sang góc xa, kéo làn khói mỏng tỏa rộng phía sau rồi tan (~1.6s)
+   - Bỏ check: máy bay bay chiều ngược lại từ góc xa về nút, cũng kéo khói phía sau
+   - Khói luôn bám theo thẻ khi scroll
+   - html[data-animation-on="false"] (hoặc prefers-reduced-motion) => tắt hết animation, trả về giao diện mặc định
+   ========================================================== */
+const TL_FX = (function () {
+    const html = document.documentElement;
+    let lastKey = null;
+    let entered = false;
+    let waitMO = null;
+
+    const activeFx = new Set();       // các hiệu ứng khói đang chạy (để tắt ngay khi công tắc = false)
+    let enterTl = null;               // timeline entrance đang chạy
+
+    // html[data-animation-on="false"] (hoặc "0" / "off") => KHÔNG animation, timeline hiển thị mặc định
+    const animOn = () => {
+        const v = String(html.dataset.animationOn).toLowerCase();
+        return !(v === 'false' || v === '0' || v === 'off');
+    };
+    const enabled = () =>
+        !!window.gsap && animOn() &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const ENTRANCE_SEL = '.tl-node, .tl-body, .tl-time, .tl-extra, .tl-line';
+    function resetEntrance(container) {                        // gỡ mọi style inline do GSAP gắn vào
+        if (!container || !window.gsap) return;
+        gsap.set(container.querySelectorAll(ENTRANCE_SEL), { clearProps: 'opacity,visibility,transform,clipPath' });
+    }
+    function stopAll() {                                        // dừng & dọn sạch ngay lập tức
+        if (waitMO) { waitMO.disconnect(); waitMO = null; }
+        if (enterTl) { enterTl.kill(); enterTl = null; }
+        Array.from(activeFx).forEach(k => k());
+        resetEntrance(document.getElementById('timeline-container'));
+    }
+    // Đổi data-animation-on sang false lúc đang chạy => tắt luôn
+    new MutationObserver(() => { if (!animOn()) stopAll(); })
+        .observe(html, { attributes: true, attributeFilter: ['data-animation-on'] });
+
+    // Chờ preloader xong (giống cách sidebar đang làm)
+    function afterPreloader(cb) {
+        if (waitMO) { waitMO.disconnect(); waitMO = null; }
+        if (!html.classList.contains('fl-lock')) { cb(); return; }
+        waitMO = new MutationObserver(() => {
+            if (!html.classList.contains('fl-lock')) {
+                waitMO.disconnect(); waitMO = null; cb();
+            }
+        });
+        waitMO.observe(html, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // ---------- ENTRANCE ----------
+    function enter(container, key) {
+        if (!enabled()) return;
+        if (key === lastKey && entered) return;   // render lại cùng ngày (check/sửa/xóa) -> không phát lại
+        lastKey = key;
+        entered = false;
+
+        const q = (sel) => container.querySelectorAll(sel);
+        // Ẩn ngay để không nháy trước khi preloader xong
+        gsap.set(q('.tl-node, .tl-body, .tl-time, .tl-extra'), { autoAlpha: 0 });
+        gsap.set(q('.tl-line'), { clipPath: 'inset(0 0 100% 0)' });
+
+        afterPreloader(() => {
+            if (!enabled()) { entered = true; resetEntrance(container); return; }   // công tắc bị tắt trong lúc chờ preloader
+            const nodes = container.querySelectorAll('.tl-node');
+            if (!nodes.length && !container.querySelector('.tl-extra')) return;
+            entered = true;
+
+            const tl = enterTl = gsap.timeline({
+                defaults: { ease: 'power3.out' },
+                onComplete: () => {
+                    enterTl = null;
+                    gsap.set(container.querySelectorAll('.tl-node, .tl-body, .tl-time, .tl-extra, .tl-line'),
+                        { clearProps: 'opacity,visibility,transform,clipPath' });
+                }
+            });
+            const step = Math.min(0.09, 0.9 / Math.max(nodes.length, 1));
+
+            container.querySelectorAll('.tl-item').forEach((item, i) => {
+                const at = i * step;
+                const node = item.querySelector('.tl-node');
+                const body = item.querySelector('.tl-body');
+                const time = item.querySelector('.tl-time');
+                const line = item.querySelector('.tl-line');
+                if (node) tl.fromTo(node, { autoAlpha: 0, scale: 0.4 },
+                    { autoAlpha: 1, scale: 1, duration: 0.7, ease: 'back.out(1.8)' }, at);
+                if (time) tl.fromTo(time, { autoAlpha: 0, x: -8 },
+                    { autoAlpha: 1, x: 0, duration: 0.5 }, at + 0.05);
+                if (line) tl.to(line, { clipPath: 'inset(0 0 0% 0)', duration: 0.6, ease: 'power2.inOut' }, at + 0.1);
+                if (body) tl.fromTo(body, { autoAlpha: 0, y: 28 },
+                    { autoAlpha: 1, y: 0, duration: 0.7 }, at + 0.08);
+            });
+
+            const extras = container.querySelectorAll('.tl-extra');
+            if (extras.length) {
+                tl.fromTo(extras, { autoAlpha: 0, y: 20 },
+                    { autoAlpha: 1, y: 0, duration: 0.6, stagger: 0.12 }, '>-0.25');
+            }
+        });
+    }
+
+    // ---------- SMOKE (làn khói xám, bao phủ chậm) ----------
+    const clamp01 = (x) => Math.min(1, Math.max(0, x));
+    const smooth = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
+    let sprites = null;
+
+    // Sprite khói: nhiều đốm mờ chồng lệch tâm => viền xốp, không giống "quả bóng tròn"
+    function getSprites() {
+        if (sprites) return sprites;
+        sprites = [0, 1, 2].map(() => {
+            const S = 192, c = document.createElement('canvas');
+            c.width = c.height = S;
+            const g = c.getContext('2d');
+            for (let i = 0; i < 11; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const d = Math.random() * S * 0.24;
+                const x = S / 2 + Math.cos(a) * d, y = S / 2 + Math.sin(a) * d;
+                const r = S * (0.16 + Math.random() * 0.2);
+                const gr = g.createRadialGradient(x, y, 0, x, y, r);
+                gr.addColorStop(0, 'rgba(214,216,222,0.36)');
+                gr.addColorStop(0.5, 'rgba(214,216,222,0.15)');
+                gr.addColorStop(1, 'rgba(214,216,222,0)');
+                g.fillStyle = gr;
+                g.fillRect(0, 0, S, S);
+            }
+            return c;
+        });
+        return sprites;
+    }
+
+    // Máy bay bay vút qua thẻ, kéo theo làn khói mỏng tỏa rộng phía sau rồi tan nhanh.
+    //  - CHECK   : máy bay xuất phát từ nút, bay sang góc xa rồi vút ra khỏi thẻ.
+    //  - BỎ CHECK: bay chiều ngược lại, từ góc xa quay về nút rồi vút ra khỏi thẻ.
+    // Host dùng position:fixed nhưng được ĐỒNG BỘ vị trí với thẻ thật mỗi frame
+    // => scroll lúc đang chạy thì hiệu ứng vẫn dính vào item.
+    let planePath = null;
+    function getPlane() {                                     // thân máy bay phẳng, hướng về +x, không shadow/gradient
+        if (planePath) return planePath;
+        const top = [[1, 0], [0.3, -0.12], [-0.1, -0.95], [-0.3, -0.95], [-0.22, -0.14],
+                     [-0.75, -0.1], [-0.95, -0.36], [-1.05, -0.36], [-1, 0]];
+        const pts = top.concat(top.slice(1, -1).reverse().map(([x, y]) => [x, -y]));
+        planePath = new Path2D();
+        pts.forEach(([x, y], i) => i ? planePath.lineTo(x, y) : planePath.moveTo(x, y));
+        planePath.closePath();
+        return planePath;
+    }
+
+    function ripple(btn) {
+        if (!enabled()) return;
+        const id = btn.dataset.tlCheck;
+        const card0 = btn.closest('.tl-card');
+        if (!card0) return;
+        const rev = btn.dataset.done === '1';                // đang bỏ tick
+        const rnd = (x, y) => x + Math.random() * (y - x);
+
+        const rect = card0.getBoundingClientRect();
+        const bb = btn.getBoundingClientRect();
+        const W = rect.width, H = rect.height;
+        const sx = bb.left + bb.width / 2 - rect.left;
+        const sy = bb.top + bb.height / 2 - rect.top;
+        const fx = sx < W / 2 ? W * 0.94 : W * 0.06;         // góc xa nhất so với nút
+        const fy = sy < H / 2 ? H * 0.92 : H * 0.08;
+
+        const size0 = Math.max(90, Math.max(W, H) * 0.28);   // cỡ cụm khói
+        const spread = Math.min(W, H) * 0.55;                // độ rộng làn khói
+        const A = rev ? { x: fx, y: fy } : { x: sx, y: sy };
+        const B = rev ? { x: sx, y: sy } : { x: fx, y: fy };
+        const len = Math.hypot(B.x - A.x, B.y - A.y) || 1;
+        const ux = (B.x - A.x) / len, uy = (B.y - A.y) / len, nx = -uy, ny = ux;
+        const E = { x: B.x + ux * size0 * 0.9, y: B.y + uy * size0 * 0.9 };   // bay lố ra ngoài thẻ cho "vút"
+        const Dx = E.x - A.x, Dy = E.y - A.y;
+        const pathAt = (p) => ({ x: A.x + Dx * p, y: A.y + Dy * p });   // bay thẳng, không uốn lượn
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        const T_FLY = 0.6;                                   // máy bay bay qua thẻ
+        const T_D = 0.7;                                     // bắt đầu tan
+        const FILM = 0.4;                                    // độ đậm tối đa của lớp sương mờ
+        const planeSize = Math.min(Math.max(Math.min(W, H) * 0.1, 20), 32);
+
+        const pad = 26;                                      // khói chỉ được tỏa nhẹ ra ngoài rìa tối đa ~26px
+        const host = document.createElement('div');
+        Object.assign(host.style, {
+            position: 'fixed', left: (rect.left - pad) + 'px', top: (rect.top - pad) + 'px',
+            width: (W + pad * 2) + 'px', height: (H + pad * 2) + 'px',
+            pointerEvents: 'none', zIndex: 80
+        });
+        const film = document.createElement('div');
+        Object.assign(film.style, {
+            position: 'absolute', left: pad + 'px', top: pad + 'px', width: W + 'px', height: H + 'px',
+            borderRadius: '1.5rem', opacity: 0,                  // lớp sương mờ vẫn bo theo thẻ
+            background: 'rgba(226,228,233,0.20)',
+            backdropFilter: 'blur(8px) saturate(0.85)',
+            webkitBackdropFilter: 'blur(8px) saturate(0.85)'
+        });
+        const cv = document.createElement('canvas');
+        cv.width = Math.round((W + pad * 2) * dpr); cv.height = Math.round((H + pad * 2) * dpr);
+        Object.assign(cv.style, { position: 'absolute', inset: 0, width: '100%', height: '100%' });
+        host.appendChild(film); host.appendChild(cv);
+        document.body.appendChild(host);
+        const ctx = cv.getContext('2d');
+        ctx.scale(dpr, dpr);
+        ctx.translate(pad, pad);                             // toạ độ vẽ vẫn tính theo góc trên-trái của thẻ
+
+        // đường bo góc (không phụ thuộc ctx.roundRect để chạy được trên mọi trình duyệt)
+        const rr = (g, x, y, w, h, r) => {
+            g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+            g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+        };
+
+        const sp = getSprites();
+        const plane = getPlane();
+        const parts = [];
+        const S = { p: 0, done: 0 };
+        let prev = pathAt(0);
+        const t0 = performance.now();
+
+        const liveCard = () => {
+            const nb = document.querySelector(`[data-tl-check="${CSS.escape(String(id))}"]`);
+            const c = nb && nb.closest('.tl-card');
+            return (c && c.isConnected) ? c : (card0.isConnected ? card0 : null);
+        };
+        const blit = (img, x, y, size, rot, alpha) => {
+            ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(rot);
+            ctx.drawImage(img, -size / 2, -size / 2, size, size); ctx.restore();
+        };
+        // Khói tỏa: tản ngang hai bên đường bay và trôi dạt ra xa dần
+        const emit = (x, y, t, core) => {
+            const o = core ? rnd(-6, 6) : rnd(-spread, spread);
+            const sd = o / spread;
+            parts.push({
+                x: x + nx * o + ux * rnd(-size0 * 0.25, size0 * 0.25),
+                y: y + ny * o + uy * rnd(-size0 * 0.25, size0 * 0.25),
+                born: t, ph: rnd(0, 6.28),
+                vx: nx * sd * rnd(20, 50) + rnd(-8, 8), vy: ny * sd * rnd(20, 50) - rnd(4, 14),
+                s0: size0 * (core ? rnd(0.35, 0.55) : rnd(0.7, 1.2)), grow: rnd(0.4, 0.8),
+                rot: rnd(0, 6.28), rs: rnd(-0.5, 0.5), a0: core ? rnd(0.2, 0.32) : rnd(0.2, 0.34),
+                dl: rnd(0, 0.2), fd: rnd(0.5, 0.7), rise: rnd(24, 54),
+                sp: sp[(Math.random() * 3) | 0]
+            });
+        };
+
+        function draw() {
+            const t = (performance.now() - t0) / 1000;
+            const c = liveCard();
+            if (c) { const r = c.getBoundingClientRect(); host.style.left = (r.left - pad) + 'px'; host.style.top = (r.top - pad) + 'px'; }
+
+            const h = pathAt(S.p);
+            if (S.p < 1) {
+                const dist = Math.hypot(h.x - prev.x, h.y - prev.y);
+                const n = Math.max(0, Math.ceil(dist / (size0 * 0.14)));
+                for (let i = 1; i <= n; i++) {
+                    const k = i / n, px = prev.x + (h.x - prev.x) * k, py = prev.y + (h.y - prev.y) * k;
+                    emit(px, py, t, true);
+                    for (let m = 0; m < 3; m++) emit(px, py, t, false);
+                }
+                prev = h;
+            }
+
+            ctx.clearRect(-pad, -pad, W + pad * 2, H + pad * 2);
+            const ops = [];
+            for (let i = parts.length - 1; i >= 0; i--) {
+                const q = parts[i];
+                const age = t - q.born;
+                const out = smooth((t - T_D - q.dl) / q.fd);
+                if (out >= 1) { parts.splice(i, 1); continue; }
+                ops.push({
+                    img: q.sp,
+                    x: q.x + q.vx * age + Math.sin(t * 1.6 + q.ph) * 6,
+                    y: q.y + q.vy * age - out * q.rise,
+                    size: q.s0 * (1 + q.grow * Math.min(1, age / 0.9) + out * 0.3),
+                    rot: q.rot + q.rs * age,
+                    alpha: q.a0 * smooth(age * 6) * (1 - out)
+                });
+            }
+            const paint = (mul) => {
+                for (let i = 0; i < ops.length; i++) { const o = ops[i]; blit(o.img, o.x, o.y, o.size, o.rot, o.alpha * mul); }
+            };
+
+            // Lượt 1: bên trong card — đầy đủ độ đậm (+ máy bay, bị cắt ở mép thẻ để "vút ra")
+            ctx.save(); ctx.beginPath(); rr(ctx, 0, 0, W, H, 24); ctx.clip();
+            paint(1);
+            if (S.p < 1) {                                               // máy bay (phẳng, xám đậm trung tính)
+                const a = pathAt(Math.max(0, S.p - 0.02)), z = pathAt(Math.min(1, S.p + 0.02));
+                const ang = Math.atan2(z.y - a.y, z.x - a.x);
+                ctx.save();
+                ctx.globalAlpha = 0.92 * smooth(S.p * 14);
+                ctx.translate(h.x, h.y); ctx.rotate(ang);
+                ctx.scale(planeSize, planeSize);
+                ctx.fillStyle = 'rgb(96,96,102)';
+                ctx.fill(plane);
+                ctx.restore();
+            }
+            ctx.restore();
+            // Lượt 2: mép gần (0–12px ngoài thẻ) — chỉ 38% độ đậm
+            ctx.save(); ctx.beginPath(); rr(ctx, -12, -12, W + 24, H + 24, 36); rr(ctx, 0, 0, W, H, 24); ctx.clip('evenodd');
+            paint(0.38);
+            ctx.restore();
+            // Lượt 3: mép xa (12–26px) — chỉ 13% độ đậm => khói tan dần ra ngoài, không bị cắt gắt
+            ctx.save(); ctx.beginPath(); rr(ctx, -pad, -pad, W + pad * 2, H + pad * 2, 50); rr(ctx, -12, -12, W + 24, H + 24, 36); ctx.clip('evenodd');
+            paint(0.13);
+            ctx.restore();
+            film.style.opacity = String(smooth(S.p * 1.2) * FILM * (1 - S.done));
+        }
+
+        gsap.ticker.add(draw);
+        const kill = () => { gsap.ticker.remove(draw); host.remove(); activeFx.delete(kill); if (kill.tl) kill.tl.kill(); };
+        const tl = gsap.timeline({ onComplete: kill });
+        kill.tl = tl; activeFx.add(kill);
+        tl.to(S, { p: 1, duration: T_FLY, ease: 'power2.in' }, 0);       // tăng tốc: bay vút
+        tl.to(S, { done: 1, duration: 0.9, ease: 'sine.inOut' }, T_D);   // khói tan nhanh
+    }
+
+    // Nút check bật nảy sau khi render lại
+    function pop(id) {
+        if (!enabled()) return;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            const nb = document.querySelector(`[data-tl-check="${CSS.escape(String(id))}"]`);
+            if (!nb) return;
+            gsap.fromTo(nb, { scale: 0.55 },
+                { scale: 1, duration: 0.7, ease: 'elastic.out(1, 0.45)', clearProps: 'transform' });
+        }));
+    }
+
+    // Lắng nghe ở pha capture => chạy TRƯỚC onclick inline, không đụng toggleComplete
+    function bind(container) {
+        if (container.__tlFxBound) return;
+        container.__tlFxBound = true;
+        container.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-tl-check]');
+            if (!btn) return;
+            ripple(btn);
+            pop(btn.dataset.tlCheck);
+        }, true);
+    }
+
+    return { enter, bind };
+})();
+
+
+/* ==========================================================
+   renderTimeline — LOGIC GIỮ NGUYÊN 100%
+   Chỉ thêm: class hook (tl-*), data-tl-check/data-done, và 2 dòng gọi TL_FX
+   ========================================================== */
+const renderTimeline = () => {
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const day = trip.days.find(d => d.date === state.activeDayDate);
             const container = document.getElementById('timeline-container');
@@ -417,24 +769,24 @@
                 }
 
                 html += `
-                    <div class="relative flex gap-3 md:gap-5 group mb-8 transition-opacity duration-300 ${isDone ? 'opacity-60 grayscale-[30%]' : 'opacity-100'}">
+                    <div class="tl-item relative flex gap-3 md:gap-5 group mb-8 transition-opacity duration-300 ${isDone ? 'opacity-60 grayscale-[30%]' : 'opacity-100'}">
                         
                         <!-- Cột thời gian Desktop -->
-                        <div class="w-16 flex-shrink-0 pt-4 text-right z-10 hidden md:block">
+                        <div class="tl-time w-16 flex-shrink-0 pt-4 text-right z-10 hidden md:block">
                             <div class="text-lg font-black ${isDone ? 'text-slate-400' : 'text-slate-800'} tracking-tight">${act.start}</div>
                             <div class="text-[13px] text-slate-400 font-bold">${act.end}</div>
                         </div>
 
                         <!-- Timeline Line & Node (Nổi khối 3D) -->
                         <div class="relative flex flex-col items-center z-10 pt-1 px-1 md:px-0">
-                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${isDone ? 'bg-white/60 backdrop-blur-md border border-white/80 text-slate-400' : 'bg-gradient-to-br from-blue-50 to-white border border-white text-blue-600'} z-10 relative ring-4 ring-slate-50/50">
+                            <div class="tl-node w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${isDone ? 'bg-white/60 backdrop-blur-md border border-white/80 text-slate-400' : 'bg-gradient-to-br from-blue-50 to-white border border-white text-blue-600'} z-10 relative ring-4 ring-slate-50/50">
                                 <i class="fa-solid ${iconClass} ${isDone ? '' : 'scale-110'}"></i>
                             </div>
-                            ${index < day.activities.length - 1 ? `<div class="absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200/60 -translate-x-1/2 z-0 rounded-full"></div>` : ''}
+                            ${index < day.activities.length - 1 ? `<div class="tl-line absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200/60 -translate-x-1/2 z-0 rounded-full"></div>` : ''}
                         </div>
 
                         <!-- TOÀN BỘ NỘI DUNG CỘT PHẢI -->
-                        <div class="flex-1 min-w-0 pr-1 md:pr-0 pb-1">
+                        <div class="tl-body flex-1 min-w-0 pr-1 md:pr-0 pb-1">
                             
                             <!-- Thời gian hiển thị nổi bên ngoài ở Mobile -->
                             <div class="md:hidden flex items-center gap-2 mb-2">
@@ -442,7 +794,7 @@
                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${status.color}">${status.label}</span>
                             </div>
 
-                            <div class="bg-white/60 backdrop-blur-3xl rounded-[1.5rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 flex flex-col overflow-hidden hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] transition-all">
+                            <div class="tl-card bg-white/60 backdrop-blur-3xl rounded-[1.5rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 flex flex-col overflow-hidden hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] transition-all">
                                 
                                 <div class="p-4 md:p-5 border-b border-white flex justify-between items-start gap-3 bg-white/40">
                                     <div class="flex-1 min-w-0">
@@ -466,7 +818,7 @@
     </span>` : ''}
 </div>
                                     </div>
-                                    <button onclick="toggleComplete('${act.id}')" class="text-3xl flex-shrink-0 transition-transform active:scale-90 ${isDone ? 'text-blue-500 drop-shadow-md hover:text-slate-400' : 'text-slate-300 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i></button>
+                                    <button data-tl-check="${act.id}" data-done="${isDone ? '1' : '0'}" onclick="toggleComplete('${act.id}')" class="text-3xl flex-shrink-0 transition-transform active:scale-90 ${isDone ? 'text-blue-500 drop-shadow-md hover:text-slate-400' : 'text-slate-300 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i></button>
                                 </div>
 
                                 ${(act.desc || act.guide) ? `
@@ -494,8 +846,8 @@
                                     ${routeHtml}
                                     <div class="flex items-center justify-between mt-1">
                                         <div>
-    ${act.budgetAmt ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-emerald-900 bg-emerald-100/80 backdrop-blur-md border border-emerald-200/80 px-3 py-1 rounded-full shadow-[0_3px_10px_rgba(16,185,129,0.08),inset_0_1px_2px_rgba(255,255,255,0.8)] drop-shadow-sm"><i class="fa-solid fa-sack-dollar text-emerald-600 text-[10px]"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)} ${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
-</div>
+                                    ${act.budgetAmt ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-emerald-900 bg-emerald-100/80 backdrop-blur-md border border-emerald-200/80 px-3 py-1 rounded-full shadow-[0_3px_10px_rgba(16,185,129,0.08),inset_0_1px_2px_rgba(255,255,255,0.8)] drop-shadow-sm"><i class="fa-solid fa-sack-dollar text-emerald-600 text-[10px]"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)} ${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
+                                </div>
                                         
                                         <!-- CỤM NÚT NHÂN BẢN / SỬA / XÓA (Liquid Glass Pill) -->
                                         <div class="flex gap-1.5 md:gap-2">
@@ -556,7 +908,7 @@
             if(expenseListHtml === '') expenseListHtml = '<div class="text-[13px] text-slate-500 italic py-2">Không có chi tiêu nào được ghi nhận.</div>';
 
             html += `
-                <div class="ml-0 md:ml-16 mt-6 mb-8 bg-slate-200/85 backdrop-blur-3xl rounded-[2rem] p-4 md:p-6 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_10px_30px_rgba(0,0,0,0.06)] border border-slate-300/80 relative overflow-hidden">
+                <div class="tl-extra ml-0 md:ml-16 mt-6 mb-8 bg-slate-200/85 backdrop-blur-3xl rounded-[2rem] p-4 md:p-6 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_10px_30px_rgba(0,0,0,0.06)] border border-slate-300/80 relative overflow-hidden">
     
     <!-- Icon trang trí (Màu xám chìm) -->
     <div class="absolute top-0 right-0 p-4 opacity-[0.05] pointer-events-none">
@@ -612,7 +964,7 @@
             `;
 
             html += `
-                <div class="ml-0 md:ml-16 mt-4 mb-8 text-center pb-8">
+                <div class="tl-extra ml-0 md:ml-16 mt-4 mb-8 text-center pb-8">
   <div class="tp-stamp" id="tpStamp">
     <div class="tp-stamp__glass" id="tpStampGlass">
       <span class="tp-stamp__bead" aria-hidden="true"><i class="fa-solid fa-feather"></i></span>
@@ -626,6 +978,10 @@
 </div>
             `;
             container.innerHTML = html;
+
+            // ===== ANIMATION (không đụng logic) =====
+            TL_FX.bind(container);
+            TL_FX.enter(container, trip.id + '|' + state.activeDayDate);
         };
 
 
