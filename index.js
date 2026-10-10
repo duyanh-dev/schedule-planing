@@ -357,10 +357,10 @@
 /* ==========================================================
    TL_FX — Animation cho Timeline (GSAP, phẳng: không shadow, không gradient)
    - Entrance: chờ preloader (html.fl-lock) gỡ xong mới chạy, chỉ chạy khi đổi trip/ngày
-   - Khói xám trắng, chỉ tỏa nhẹ ra rìa card (tối đa ~26px, nhạt dần) thay vì bị cắt phẳng ở mép
+   - Khói xám trắng, cắt gọn theo mép card (không tràn ra ngoài => nhẹ, không lag)
    - Check: máy bay bay vút từ nút sang góc xa, kéo làn khói mỏng tỏa rộng phía sau rồi tan (~1.6s)
    - Bỏ check: máy bay bay chiều ngược lại từ góc xa về nút, cũng kéo khói phía sau
-   - Khói luôn bám theo thẻ khi scroll
+   - Lớp hiệu ứng gắn trong thẻ => scroll mượt, không lệch (không đồng bộ vị trí mỗi frame)
    - html[data-animation-on="false"] (hoặc prefers-reduced-motion) => tắt hết animation, trả về giao diện mặc định
    ========================================================== */
 const TL_FX = (function () {
@@ -488,11 +488,11 @@ const TL_FX = (function () {
         return sprites;
     }
 
-    // Máy bay bay vút qua thẻ, kéo theo làn khói mỏng tỏa rộng phía sau rồi tan nhanh.
-    //  - CHECK   : máy bay xuất phát từ nút, bay sang góc xa rồi vút ra khỏi thẻ.
-    //  - BỎ CHECK: bay chiều ngược lại, từ góc xa quay về nút rồi vút ra khỏi thẻ.
-    // Host dùng position:fixed nhưng được ĐỒNG BỘ vị trí với thẻ thật mỗi frame
-    // => scroll lúc đang chạy thì hiệu ứng vẫn dính vào item.
+    // Máy bay bay THẲNG vút qua thẻ, kéo theo làn khói mỏng tỏa rộng phía sau rồi tan nhanh.
+    //  - CHECK   : từ nút bay sang góc xa rồi vút ra khỏi thẻ.
+    //  - BỎ CHECK: bay chiều ngược lại, từ góc xa về nút rồi vút ra khỏi thẻ.
+    // Lớp hiệu ứng được gắn TRỰC TIẾP vào trong thẻ (absolute) => scroll do trình duyệt tự lo,
+    // không đồng bộ vị trí bằng JS mỗi frame. Nếu timeline render lại thì tự gắn sang thẻ mới.
     let planePath = null;
     function getPlane() {                                     // thân máy bay phẳng, hướng về +x, không shadow/gradient
         if (planePath) return planePath;
@@ -515,7 +515,7 @@ const TL_FX = (function () {
 
         const rect = card0.getBoundingClientRect();
         const bb = btn.getBoundingClientRect();
-        const W = rect.width, H = rect.height;
+        const W = Math.round(rect.width), H = Math.round(rect.height);
         const sx = bb.left + bb.width / 2 - rect.left;
         const sy = bb.top + bb.height / 2 - rect.top;
         const fx = sx < W / 2 ? W * 0.94 : W * 0.06;         // góc xa nhất so với nút
@@ -529,43 +529,38 @@ const TL_FX = (function () {
         const ux = (B.x - A.x) / len, uy = (B.y - A.y) / len, nx = -uy, ny = ux;
         const E = { x: B.x + ux * size0 * 0.9, y: B.y + uy * size0 * 0.9 };   // bay lố ra ngoài thẻ cho "vút"
         const Dx = E.x - A.x, Dy = E.y - A.y;
-        const pathAt = (p) => ({ x: A.x + Dx * p, y: A.y + Dy * p });   // bay thẳng, không uốn lượn
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const heading = Math.atan2(uy, ux);                  // bay thẳng: hướng cố định
+        const pathAt = (p) => ({ x: A.x + Dx * p, y: A.y + Dy * p });
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
         const T_FLY = 0.6;                                   // máy bay bay qua thẻ
         const T_D = 0.7;                                     // bắt đầu tan
         const FILM = 0.4;                                    // độ đậm tối đa của lớp sương mờ
         const planeSize = Math.min(Math.max(Math.min(W, H) * 0.1, 20), 32);
 
-        const pad = 26;                                      // khói chỉ được tỏa nhẹ ra ngoài rìa tối đa ~26px
+        // Lớp hiệu ứng nằm trong thẻ; thẻ đã có overflow-hidden + bo góc nên tự cắt đúng mép
         const host = document.createElement('div');
         Object.assign(host.style, {
-            position: 'fixed', left: (rect.left - pad) + 'px', top: (rect.top - pad) + 'px',
-            width: (W + pad * 2) + 'px', height: (H + pad * 2) + 'px',
+            position: 'absolute', inset: '0', borderRadius: 'inherit', overflow: 'hidden',
             pointerEvents: 'none', zIndex: 80
         });
-        const film = document.createElement('div');
+        const film = document.createElement('div');          // sương mờ phẳng (không backdrop-filter => nhẹ)
         Object.assign(film.style, {
-            position: 'absolute', left: pad + 'px', top: pad + 'px', width: W + 'px', height: H + 'px',
-            borderRadius: '1.5rem', opacity: 0,                  // lớp sương mờ vẫn bo theo thẻ
-            background: 'rgba(226,228,233,0.20)',
-            backdropFilter: 'blur(8px) saturate(0.85)',
-            webkitBackdropFilter: 'blur(8px) saturate(0.85)'
+            position: 'absolute', inset: 0, opacity: 0, background: 'rgba(226,228,233,0.30)'
         });
         const cv = document.createElement('canvas');
-        cv.width = Math.round((W + pad * 2) * dpr); cv.height = Math.round((H + pad * 2) * dpr);
+        cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
         Object.assign(cv.style, { position: 'absolute', inset: 0, width: '100%', height: '100%' });
         host.appendChild(film); host.appendChild(cv);
-        document.body.appendChild(host);
         const ctx = cv.getContext('2d');
         ctx.scale(dpr, dpr);
-        ctx.translate(pad, pad);                             // toạ độ vẽ vẫn tính theo góc trên-trái của thẻ
 
-        // đường bo góc (không phụ thuộc ctx.roundRect để chạy được trên mọi trình duyệt)
-        const rr = (g, x, y, w, h, r) => {
-            g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
-            g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+        let posEl = null;
+        const attach = (card) => {
+            if (getComputedStyle(card).position === 'static') { card.style.position = 'relative'; posEl = card; }
+            card.appendChild(host);
         };
+        attach(card0);
 
         const sp = getSprites();
         const plane = getPlane();
@@ -577,7 +572,7 @@ const TL_FX = (function () {
         const liveCard = () => {
             const nb = document.querySelector(`[data-tl-check="${CSS.escape(String(id))}"]`);
             const c = nb && nb.closest('.tl-card');
-            return (c && c.isConnected) ? c : (card0.isConnected ? card0 : null);
+            return (c && c.isConnected) ? c : null;
         };
         const blit = (img, x, y, size, rot, alpha) => {
             ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(rot);
@@ -601,13 +596,15 @@ const TL_FX = (function () {
 
         function draw() {
             const t = (performance.now() - t0) / 1000;
-            const c = liveCard();
-            if (c) { const r = c.getBoundingClientRect(); host.style.left = (r.left - pad) + 'px'; host.style.top = (r.top - pad) + 'px'; }
+            if (!host.isConnected) {                          // timeline vừa render lại => gắn sang thẻ mới
+                const c = liveCard();
+                if (c) attach(c);
+            }
 
             const h = pathAt(S.p);
             if (S.p < 1) {
                 const dist = Math.hypot(h.x - prev.x, h.y - prev.y);
-                const n = Math.max(0, Math.ceil(dist / (size0 * 0.14)));
+                const n = Math.max(0, Math.ceil(dist / (size0 * 0.18)));
                 for (let i = 1; i <= n; i++) {
                     const k = i / n, px = prev.x + (h.x - prev.x) * k, py = prev.y + (h.y - prev.y) * k;
                     emit(px, py, t, true);
@@ -616,54 +613,37 @@ const TL_FX = (function () {
                 prev = h;
             }
 
-            ctx.clearRect(-pad, -pad, W + pad * 2, H + pad * 2);
-            const ops = [];
+            ctx.clearRect(0, 0, W, H);
             for (let i = parts.length - 1; i >= 0; i--) {
                 const q = parts[i];
                 const age = t - q.born;
                 const out = smooth((t - T_D - q.dl) / q.fd);
                 if (out >= 1) { parts.splice(i, 1); continue; }
-                ops.push({
-                    img: q.sp,
-                    x: q.x + q.vx * age + Math.sin(t * 1.6 + q.ph) * 6,
-                    y: q.y + q.vy * age - out * q.rise,
-                    size: q.s0 * (1 + q.grow * Math.min(1, age / 0.9) + out * 0.3),
-                    rot: q.rot + q.rs * age,
-                    alpha: q.a0 * smooth(age * 6) * (1 - out)
-                });
+                blit(q.sp,
+                     q.x + q.vx * age + Math.sin(t * 1.6 + q.ph) * 6,
+                     q.y + q.vy * age - out * q.rise,
+                     q.s0 * (1 + q.grow * Math.min(1, age / 0.9) + out * 0.3),
+                     q.rot + q.rs * age, q.a0 * smooth(age * 6) * (1 - out));
             }
-            const paint = (mul) => {
-                for (let i = 0; i < ops.length; i++) { const o = ops[i]; blit(o.img, o.x, o.y, o.size, o.rot, o.alpha * mul); }
-            };
 
-            // Lượt 1: bên trong card — đầy đủ độ đậm (+ máy bay, bị cắt ở mép thẻ để "vút ra")
-            ctx.save(); ctx.beginPath(); rr(ctx, 0, 0, W, H, 24); ctx.clip();
-            paint(1);
-            if (S.p < 1) {                                               // máy bay (phẳng, xám đậm trung tính)
-                const a = pathAt(Math.max(0, S.p - 0.02)), z = pathAt(Math.min(1, S.p + 0.02));
-                const ang = Math.atan2(z.y - a.y, z.x - a.x);
+            if (S.p < 1) {                                    // máy bay (phẳng, xám đậm trung tính)
                 ctx.save();
                 ctx.globalAlpha = 0.92 * smooth(S.p * 14);
-                ctx.translate(h.x, h.y); ctx.rotate(ang);
+                ctx.translate(h.x, h.y); ctx.rotate(heading);
                 ctx.scale(planeSize, planeSize);
                 ctx.fillStyle = 'rgb(96,96,102)';
                 ctx.fill(plane);
                 ctx.restore();
             }
-            ctx.restore();
-            // Lượt 2: mép gần (0–12px ngoài thẻ) — chỉ 38% độ đậm
-            ctx.save(); ctx.beginPath(); rr(ctx, -12, -12, W + 24, H + 24, 36); rr(ctx, 0, 0, W, H, 24); ctx.clip('evenodd');
-            paint(0.38);
-            ctx.restore();
-            // Lượt 3: mép xa (12–26px) — chỉ 13% độ đậm => khói tan dần ra ngoài, không bị cắt gắt
-            ctx.save(); ctx.beginPath(); rr(ctx, -pad, -pad, W + pad * 2, H + pad * 2, 50); rr(ctx, -12, -12, W + 24, H + 24, 36); ctx.clip('evenodd');
-            paint(0.13);
-            ctx.restore();
             film.style.opacity = String(smooth(S.p * 1.2) * FILM * (1 - S.done));
         }
 
         gsap.ticker.add(draw);
-        const kill = () => { gsap.ticker.remove(draw); host.remove(); activeFx.delete(kill); if (kill.tl) kill.tl.kill(); };
+        const kill = () => {
+            gsap.ticker.remove(draw); host.remove(); activeFx.delete(kill);
+            if (kill.tl) kill.tl.kill();
+            if (posEl && posEl.isConnected) posEl.style.position = '';
+        };
         const tl = gsap.timeline({ onComplete: kill });
         kill.tl = tl; activeFx.add(kill);
         tl.to(S, { p: 1, duration: T_FLY, ease: 'power2.in' }, 0);       // tăng tốc: bay vút
