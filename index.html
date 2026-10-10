@@ -1002,6 +1002,31 @@
     </div>
 </div>
 
+<!-- Import Success Modal (Liquid Glass) -->
+<div id="import-success-modal" class="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-900/30 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
+    <div id="import-success-card" class="w-full max-w-xs bg-white/60 backdrop-blur-3xl rounded-[2rem] p-6 text-center scale-90 opacity-0 transition-all duration-300 ease-out">
+
+        <!-- Viên ngọc icon -->
+        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-500/15 backdrop-blur-xl flex items-center justify-center mb-4">
+            <div class="w-11 h-11 rounded-full bg-emerald-500 flex items-center justify-center">
+                <i class="fa-solid fa-check text-white text-xl"></i>
+            </div>
+        </div>
+
+        <h3 class="text-lg font-black text-slate-800 mb-1">Nhập thành công</h3>
+        <p id="import-success-msg" class="text-sm font-medium text-slate-500 mb-6 leading-relaxed"></p>
+
+        <div class="flex flex-col gap-2.5">
+            <button onclick="reloadAfterImport()" class="w-full h-12 rounded-[1.25rem] bg-slate-800/90 hover:bg-slate-900 backdrop-blur-xl text-white font-bold text-sm active:scale-95 transition-all touch-manipulation">
+                Đóng & tải lại trang
+            </button>
+            <!-- <button onclick="reloadAfterImport()" class="w-full h-12 rounded-[1.25rem] bg-white/60 hover:bg-white/80 backdrop-blur-xl text-slate-700 font-bold text-sm active:scale-95 transition-all touch-manipulation">
+                Đóng
+            </button> -->
+        </div>
+    </div>
+</div>
+
     <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 
     <!-- Thư viện xuất PDF (html2pdf) -->

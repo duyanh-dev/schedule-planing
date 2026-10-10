@@ -34,7 +34,26 @@ window.exportSingleTrip = () => {
     URL.revokeObjectURL(url);
 };
 
-// --- 2. NHẬP FILE VÀO DANH SÁCH CHUYẾN ĐI (DASHBOARD) ---
+// --- 2. MODAL THÔNG BÁO NHẬP THÀNH CÔNG (THÊM) ---
+window.showImportSuccess = (tripTitle) => {
+    const modal = document.getElementById('import-success-modal');
+    const card = document.getElementById('import-success-card');
+
+    // Dùng textContent để tên chuyến đi không bị hiểu thành HTML
+    document.getElementById('import-success-msg').textContent = `Chuyến đi "${tripTitle}" đã được thêm vào danh sách của bạn.`;
+
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    // Đợi 1 frame để transition chạy mượt
+    requestAnimationFrame(() => {
+        card.classList.remove('scale-90', 'opacity-0');
+    });
+};
+
+window.reloadAfterImport = () => {
+    window.location.reload();
+};
+
+// --- 3. NHẬP FILE VÀO DANH SÁCH CHUYẾN ĐI (DASHBOARD) ---
 window.importSingleTrip = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -81,8 +100,8 @@ window.importSingleTrip = (event) => {
                     localStorage.setItem('wanderlog_trips', JSON.stringify(state.trips));
                 }
                 
-                alert(`✅ Đã nhập thành công chuyến đi: "${tripTitle}"!`);
-                window.location.reload(); 
+                // SỬA: thay alert + reload mặc định bằng modal liquid glass
+                showImportSuccess(tripTitle);
             } else {
                 throw new Error("Biến state.trips chưa được khởi tạo!");
             }
