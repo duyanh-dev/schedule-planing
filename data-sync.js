@@ -31,6 +31,25 @@ const cleanExportName = (raw) => {
     return { tripName, fileName };
 };
 
+// --- Co modal theo vùng nhìn thấy thật (tránh bàn phím + thanh điều hướng Safari) ---
+const syncExportViewport = () => {
+    const modal = document.getElementById('export-modal');
+    const vv = window.visualViewport;
+    if (!modal || !vv) return;
+
+    modal.style.height = vv.height + 'px';
+    modal.style.transform = `translateY(${vv.offsetTop}px)`;
+
+    // Bàn phím mở thì vùng nhìn thấy thấp hơn nhiều so với innerHeight
+    const kbOpen = (window.innerHeight - vv.height) > 120;
+    modal.classList.toggle('kb-open', kbOpen);
+};
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncExportViewport);
+    window.visualViewport.addEventListener('scroll', syncExportViewport);
+}
+
 // Tự giãn chiều cao ô nhập để luôn hiện đủ chữ
 const autosizeExportInput = () => {
     const el = document.getElementById('export-filename');
@@ -48,6 +67,15 @@ const updateExportPreview = () => {
     }
     document.getElementById('export-preview-file').textContent = `${fileName}.json`;
     document.getElementById('export-preview-trip').textContent = tripName;
+};
+
+// Bấm vào ô nhập: chọn hết chữ, rồi đợi bàn phím mở xong để co modal và cuộn ô nhập vào tầm nhìn
+window.onExportNameFocus = (el) => {
+    el.select();
+    setTimeout(() => {
+        syncExportViewport();
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 350);
 };
 
 // Gõ hoặc dán: bỏ xuống dòng, giãn lại chiều cao, cập nhật xem trước
@@ -82,6 +110,7 @@ window.exportSingleTrip = () => {
 
     const modal = document.getElementById('export-modal');
     const card = document.getElementById('export-card');
+    syncExportViewport();
     modal.classList.remove('opacity-0', 'pointer-events-none');
     requestAnimationFrame(() => {
         card.classList.remove('scale-90', 'opacity-0');
@@ -90,8 +119,14 @@ window.exportSingleTrip = () => {
 };
 
 const hideExportModal = () => {
+    const modal = document.getElementById('export-modal');
     document.getElementById('export-card').classList.add('scale-90', 'opacity-0');
-    document.getElementById('export-modal').classList.add('opacity-0', 'pointer-events-none');
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    modal.classList.remove('kb-open');
+    // Trả về trạng thái mặc định, lần mở sau sẽ đo lại
+    modal.style.height = '';
+    modal.style.transform = '';
+    document.getElementById('export-filename').blur(); // Đóng bàn phím nếu đang mở
 };
 
 window.resetExportName = () => {

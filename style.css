@@ -603,6 +603,36 @@ input[type="time"]::-webkit-date-and-time-value {
     word-break: break-word;
 }
 
+/* ===== Export modal: co theo vùng nhìn thấy thật trên iPhone ===== */
+.lg-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;                 /* JS sẽ ghi đè bằng visualViewport.height */
+    box-sizing: border-box;
+    display: flex;
+    padding: max(env(safe-area-inset-top), 0.75rem) 1rem max(env(safe-area-inset-bottom), 0.75rem);
+    overflow-y: auto;               /* modal cao hơn màn hình thì cuộn */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+/* margin:auto giúp căn giữa, và khi quá cao vẫn cuộn được từ đầu (không bị cắt mất phần trên) */
+.lg-sheet .lg-card {
+    margin: auto;
+    flex-shrink: 0;
+    max-height: none;
+    overflow: hidden;
+}
+
+/* Chế độ gọn khi bàn phím đang mở */
+.lg-sheet.kb-open .lg-card { padding: 1rem; }
+.lg-sheet.kb-open .lg-hide-kb { display: none; }
+.lg-sheet.kb-open .lg-btn { height: 2.75rem; }
+.lg-sheet.kb-open .lg-preview { margin-top: 0.5rem; }
+.lg-sheet.kb-open .lg-preview-row { padding: 0.4rem 0; }
+
 
 /* Khi đang xuất PDF: html2canvas không hỗ trợ backdrop-filter, và animation đang chạy dở
    có thể làm phần tử bị mờ/lệch chỗ lúc chụp */
