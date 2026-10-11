@@ -1960,84 +1960,153 @@ const renderTimeline = () => {
             renderApp();
         };
 
-        // --- GLOBAL TIMELINE MODAL ---
+               // --- GLOBAL TIMELINE MODAL (Liquid Glass v3) ---
+        let gtObserver = null;
+
+        // Đóng modal Toàn cảnh (ưu tiên hàm đóng có sẵn của bạn)
+        const closeGlobalTimelineSafe = () => {
+            if (typeof closeGlobalTimeline === 'function') closeGlobalTimeline();
+            else if (typeof gtModal !== 'undefined') gtModal.classList.remove('active');
+        };
+
+        // Nhảy từ modal Toàn cảnh sang đúng hoạt động ở timeline chính
+        const goToActivityFromGlobal = (actId, dayDate) => {
+            closeGlobalTimelineSafe();
+
+            // Chuyển sang đúng ngày nếu đang ở ngày khác
+            if (state.activeDayDate !== dayDate) {
+                state.activeDayDate = dayDate;
+                // Nếu app có hàm vẽ lại thanh chọn ngày thì gọi ở đây để tab ngày sáng đúng
+                if (typeof renderDays === 'function') renderDays(); // <-- đổi đúng tên hàm của bạn
+            }
+            renderTimeline();
+
+            // Chờ modal đóng xong rồi cuộn tới item (thử lại tối đa ~1 giây)
+            let tries = 0;
+            const seek = () => {
+                const checkBtn = document.querySelector(`#timeline-container [data-tl-check="${actId}"]`);
+                const item = checkBtn ? checkBtn.closest('.tl-item') : null;
+                if (!item) { if (tries++ < 20) setTimeout(seek, 50); return; }
+
+                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                const card = item.querySelector('.tl-card');
+                if (card && window.gsap) {
+                    // Nháy nổi bật 2 lần để người dùng thấy ngay đó là hoạt động vừa chọn
+                    gsap.timeline({ repeat: 1, onComplete: () => gsap.set(card, { clearProps: 'boxShadow,scale' }) })
+                        .fromTo(card,
+                            { boxShadow: '0 0 0 0px rgba(0,113,227,0.55)', scale: 1 },
+                            { boxShadow: '0 0 0 6px rgba(0,113,227,0.55)', scale: 1.03, duration: 0.35, ease: 'power2.out' })
+                        .to(card, { boxShadow: '0 0 0 0px rgba(0,113,227,0)', scale: 1, duration: 0.9, ease: 'power2.inOut' });
+                }
+            };
+            setTimeout(seek, 350);
+        };
+
         const renderGlobalTimeline = () => {
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const content = document.getElementById('global-timeline-content');
-            
-            // Đệm tàng hình để đẩy viên pill xuống một chút cho đẹp
+
+            // Dọn animation / observer của lần render trước
+            if (gtObserver) { gtObserver.disconnect(); gtObserver = null; }
+            if (window.gsap) gsap.killTweensOf(content.querySelectorAll('*'));
+
+            // Tôn trọng chế độ giảm chuyển động (Settings + hệ điều hành)
+            let animOn = !!window.gsap;
+            try {
+                if (localStorage.getItem('animationOn') === 'false') animOn = false;
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) animOn = false;
+            } catch (e) {}
+            const hide = animOn ? 'style="opacity:0"' : '';
+            const fmtMoney = (n) => new Intl.NumberFormat('vi-VN').format(n);
+
             let html = '<div class="h-2 md:h-3 w-full flex-shrink-0"></div>';
 
             trip.days.forEach((day, idx) => {
                 html += `
                 <div class="mb-6 md:mb-8 relative group">
-                    
-                    <!-- Sticky Day Header (Apple Dynamic Island / Dark Glass Pill) -->
-                    <div class="sticky top-2 md:top-3 z-30 flex justify-center mb-5 md:mb-6 pointer-events-none">
-                        <div class="bg-slate-900/85 backdrop-blur-2xl px-5 md:px-6 py-2 md:py-2.5 rounded-full shadow-[0_12px_30px_rgba(15,23,42,0.25)] border border-slate-700/60 flex items-center gap-3 pointer-events-auto transition-transform hover:scale-105">
-                            <span class="font-black text-white text-[14px] md:text-[15px] drop-shadow-md tracking-wide">Ngày ${idx + 1}</span>
-                            <div class="w-1.5 h-1.5 rounded-full bg-slate-500/80 shadow-inner"></div>
-                            <span class="text-slate-300 font-semibold text-[12px] md:text-[13px] tracking-wide">${formatDisplayDate(day.date)}</span>
+
+                    <!-- Header ngày: liquid glass, căn trái -->
+                    <div class="sticky top-2 md:top-3 z-30 flex justify-start mb-4 md:mb-5 md:px-2 pointer-events-none">
+                        <div data-gt-pill ${hide} class="inline-flex items-center gap-2.5 pl-1.5 pr-4 md:pr-5 py-1.5 rounded-full bg-indigo-300/35 backdrop-blur-xl backdrop-saturate-150 pointer-events-auto">
+                            <span class="w-7 h-7 md:w-8 md:h-8 flex-shrink-0 rounded-full bg-white/70 flex items-center justify-center text-indigo-600">
+                                <i class="fa-solid fa-calendar-day text-[12px] md:text-[13px]"></i>
+                            </span>
+                            <span class="font-black text-indigo-950 text-[14px] md:text-[15px] tracking-wide">Ngày ${idx + 1}</span>
+                            <span class="w-1 h-1 rounded-full bg-indigo-500/50"></span>
+                            <span class="text-indigo-700 font-semibold text-[12px] md:text-[13px] tracking-wide">${formatDisplayDate(day.date)}</span>
                         </div>
                     </div>
-                    
-                    <div class="space-y-3 relative z-10 md:px-2">
+
+                    <div class="space-y-2.5 relative z-10 md:px-2">
                 `;
-                
-                if(day.activities.length === 0) {
-                    html += `<p class="text-[13px] text-slate-500 italic font-medium p-5 bg-white/50 backdrop-blur-md rounded-2xl border border-white/80 shadow-sm text-center">Chưa có hoạt động nào được lên lịch.</p>`;
+
+                if (day.activities.length === 0) {
+                    html += `
+                    <div data-gt-card>
+                        <p data-gt-panel ${hide} class="text-[13px] text-slate-500 italic font-medium p-5 bg-slate-500/[0.08] backdrop-blur-xl backdrop-saturate-150 rounded-[1.5rem] text-center">Chưa có hoạt động nào được lên lịch.</p>
+                    </div>`;
                 } else {
                     day.activities.forEach(act => {
                         const status = getActivityStatus(act, day.date);
-                        
+
                         // Lộ trình
                         let routeTxt = '';
-                        if(act.from && act.to) routeTxt = `${act.from} ➔ ${act.to}`;
-                        else if(act.to || act.from) routeTxt = act.to || act.from;
+                        if (act.from && act.to) routeTxt = `${act.from} ➔ ${act.to}`;
+                        else if (act.to || act.from) routeTxt = act.to || act.from;
 
-                        // Ngân sách (Chi tiết)
+                        // Ngân sách: hàng riêng, không bao giờ làm rớt dòng các phần khác
                         let budgetHtml = '';
-                        if(act.budgetAmt) {
-                            budgetHtml = `<div class="text-[11px] font-black text-emerald-700 bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 shadow-[0_2px_8px_rgba(16,185,129,0.1)] px-2.5 py-1 rounded-lg inline-flex items-center"><i class="fa-solid fa-sack-dollar mr-1.5"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)} ${act.budgetCur}</div>`;
+                        if (act.budgetAmt) {
+                            budgetHtml = `
+                            <div class="mt-2.5 flex min-w-0">
+                                <div data-gt-money title="${fmtMoney(act.budgetAmt)} ${act.budgetCur}" class="max-w-full min-w-0 inline-flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-700">
+                                    <i data-gt-coin class="fa-solid fa-sack-dollar inline-block flex-shrink-0 text-[12px]"></i>
+                                    <span class="min-w-0 truncate text-[12px] font-black tabular-nums leading-none">${fmtMoney(act.budgetAmt)}</span>
+                                    <span class="flex-shrink-0 text-[10px] font-extrabold opacity-70 leading-none">${act.budgetCur}</span>
+                                </div>
+                            </div>`;
                         }
 
                         // Tags (Loại và Phương tiện)
                         let extraTagsHtml = '';
-                        if(act.type) {
-                            extraTagsHtml += `<span class="text-[10px] font-bold text-slate-500 bg-slate-100/80 backdrop-blur-sm px-2 py-1.5 rounded-lg border border-slate-200/50 shadow-sm">${act.type}</span>`;
+                        if (act.type) {
+                            extraTagsHtml += `<span class="text-[10px] font-bold text-slate-600 bg-slate-500/10 px-2 py-1.5 rounded-lg">${act.type}</span>`;
                         }
-                        if(act.transport) {
-                            extraTagsHtml += `<span class="text-[10px] font-bold text-slate-500 bg-slate-100/80 backdrop-blur-sm px-2 py-1.5 rounded-lg border border-slate-200/50 shadow-sm"><i class="fa-solid fa-car-side mr-1"></i>${act.transport}</span>`;
+                        if (act.transport) {
+                            extraTagsHtml += `<span class="text-[10px] font-bold text-slate-600 bg-slate-500/10 px-2 py-1.5 rounded-lg"><i class="fa-solid fa-car-side mr-1"></i>${act.transport}</span>`;
                         }
 
                         html += `
-                        <!-- Thẻ Hoạt Động (Kính Lỏng Trắng Nổi) -->
-                        <div class="flex items-start gap-3 md:gap-4 p-3.5 md:p-4 rounded-[1.25rem] border border-white/80 bg-white/60 backdrop-blur-xl shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all">
-                            
-                            <!-- Cột giờ (Giữ nguyên gọn gàng cho Mobile) -->
-                            <div class="flex-shrink-0 text-center w-11 md:w-14 pt-0.5">
-                                <div class="text-[13px] md:text-[15px] font-black text-slate-800 drop-shadow-sm">${act.start}</div>
-                                <div class="text-[8px] md:text-[9px] font-black uppercase mt-1.5 ${status.color.split(' ')[0]} bg-white shadow-sm border border-slate-100 px-1 py-1 rounded-md tracking-wider">${status.type === 'done' ? 'XONG' : (status.type==='future'? 'SẮP' : 'TRỄ')}</div>
+                        <!-- Hoạt động: 2 mảnh kính tách rời (trái: giờ / phải: nội dung) -->
+                        <div data-gt-card class="flex items-stretch gap-2 touch-manipulation">
+
+                            <!-- Mảnh kính TRÁI -->
+                            <div data-gt-panel ${hide} class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] bg-slate-500/[0.12] backdrop-blur-xl backdrop-saturate-150">
+                                <div class="text-[13px] md:text-[15px] font-black text-slate-800 leading-none">${act.start}</div>
+                                <div data-gt-chip data-st="${status.type}" class="text-[8px] md:text-[9px] font-black uppercase ${status.color.split(' ')[0]} bg-white/70 px-1.5 py-1 rounded-md tracking-wider">${status.type === 'done' ? 'XONG' : (status.type === 'future' ? 'SẮP' : 'TRỄ')}</div>
                             </div>
-                            
-                            <div class="flex-1 min-w-0 border-l border-white/60 pl-3 md:pl-4 relative">
-                                <!-- Line dọc phân cách tinh tế -->
-                                <div class="absolute left-[-1px] top-1.5 bottom-1.5 w-[2px] bg-slate-200/50 rounded-full"></div>
-                                
-                                <!-- Tên Hoạt động (Break-words chống tràn) -->
-                                <div class="text-[14px] md:text-base font-bold text-slate-800 break-words drop-shadow-sm leading-snug pr-1 ${act.isCompleted ? 'line-through text-slate-400' : ''}">${act.details}</div>
-                                
+
+                            <!-- Mảnh kính PHẢI -->
+                            <div data-gt-panel ${hide} class="flex-1 min-w-0 p-3.5 md:p-4 rounded-[1.4rem] bg-slate-500/[0.08] backdrop-blur-xl backdrop-saturate-150">
+                                <div class="text-[14px] md:text-base font-bold text-slate-800 break-words leading-snug ${act.isCompleted ? 'line-through text-slate-400' : ''}">${act.details}</div>
+
                                 ${routeTxt ? `
-                                <div class="text-[11px] md:text-xs font-semibold text-blue-600 mt-2 break-words bg-blue-50/70 backdrop-blur-sm inline-block px-2.5 py-1.5 rounded-lg border border-blue-100/50 shadow-inner max-w-full">
+                                <div class="text-[11px] md:text-xs font-semibold text-blue-600 mt-2 break-words bg-blue-500/10 inline-block px-2.5 py-1.5 rounded-lg max-w-full">
                                     <i class="fa-solid fa-location-arrow mr-1.5 opacity-80"></i>${routeTxt}
                                 </div>` : ''}
 
-                                <!-- Hàng chứa Tiền và Tags -->
-                                ${(budgetHtml || extraTagsHtml) ? `
-                                <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                                    ${budgetHtml}${extraTagsHtml}
-                                </div>` : ''}
-                                
+                                ${budgetHtml}
+
+                                ${extraTagsHtml ? `<div class="mt-2 flex flex-wrap items-center gap-1.5">${extraTagsHtml}</div>` : ''}
+
+                                <!-- Nút xem hoạt động này (nhảy sang timeline chính) -->
+                                <div class="mt-3 flex justify-end">
+                                    <button type="button" onclick="goToActivityFromGlobal('${act.id}', '${day.date}')" class="h-8 pl-1.5 pr-3.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 text-[11px] font-black tracking-wide transition-all active:scale-95 flex items-center gap-2 touch-manipulation">
+                                        <span class="w-5 h-5 flex-shrink-0 rounded-full bg-white/70 flex items-center justify-center"><i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></span>
+                                        <span class="truncate">Xem hoạt động này</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         `;
@@ -2046,6 +2115,78 @@ const renderTimeline = () => {
                 html += `</div></div>`;
             });
             content.innerHTML = html;
+
+            // ====== ANIMATION (lỗi gì cũng không được làm hỏng nội dung) ======
+            try {
+                if (!animOn) return;
+
+                // 1) Nhấn lún kiểu iOS trên cả hàng (2 mảnh lún cùng nhau)
+                content.querySelectorAll('[data-gt-card]').forEach(card => {
+                    card.addEventListener('pointerenter', () => gsap.to(card, { scale: 1.01, duration: 0.5, ease: 'power3.out' }));
+                    card.addEventListener('pointerdown', () => gsap.to(card, { scale: 0.975, duration: 0.25, ease: 'power2.out' }));
+                    card.addEventListener('pointerup', () => gsap.to(card, { scale: 1.01, duration: 0.6, ease: 'elastic.out(1,0.5)' }));
+                    ['pointerleave', 'pointercancel'].forEach(ev => card.addEventListener(ev, () => gsap.to(card, { scale: 1, duration: 0.6, ease: 'elastic.out(1,0.6)' })));
+                });
+
+                // 2) Hiện dần khi cuộn tới
+                const playCards = (cards) => {
+                    cards.forEach((card, i) => {
+                        const d = i * 0.08;
+
+                        // Thẻ trồi lên 3D
+                        gsap.fromTo(card,
+                            { y: 40, scale: 0.92, rotateX: -14, transformPerspective: 900, transformOrigin: '50% 100%' },
+                            { y: 0, scale: 1, rotateX: 0, duration: 1, ease: 'expo.out', delay: d });
+
+                        // Hai mảnh kính "tách giọt" ra khỏi nhau (khoảng cách 0 -> 8px, bật đàn hồi)
+                        gsap.fromTo(card, { columnGap: 0 },
+                            { columnGap: 8, duration: 1.1, ease: 'elastic.out(1,0.5)', delay: d + 0.1, clearProps: 'columnGap' });
+
+                        // Mờ -> rõ (đặt trên từng mảnh để backdrop-blur không bị mất)
+                        gsap.fromTo(card.querySelectorAll('[data-gt-panel]'), { opacity: 0 },
+                            { opacity: 1, duration: 0.8, ease: 'power2.out', delay: d });
+
+                        // Chip trạng thái bật lên, "SẮP" nhấp nháy nhẹ
+                        const chip = card.querySelector('[data-gt-chip]');
+                        if (chip) {
+                            gsap.fromTo(chip, { scale: 0 }, { scale: 1, duration: 0.6, ease: 'back.out(2.4)', delay: d + 0.2 });
+                            if (chip.dataset.st === 'future') {
+                                gsap.to(chip, { opacity: 0.55, duration: 1.4, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: d + 1 });
+                            }
+                        }
+
+                        // Ngân sách: bật lên + đồng xu lắc (chạy một lần, không lặp)
+                        const cap = card.querySelector('[data-gt-money]');
+                        if (cap) {
+                            gsap.fromTo(cap, { scale: 0.6, transformOrigin: 'left center' },
+                                { scale: 1, duration: 0.8, ease: 'back.out(2.2)', delay: d + 0.25 });
+                            const coin = cap.querySelector('[data-gt-coin]');
+                            if (coin) gsap.fromTo(coin, { rotate: -30 }, { rotate: 0, duration: 1.3, ease: 'elastic.out(1,0.35)', delay: d + 0.35 });
+                        }
+                    });
+                };
+
+                gtObserver = new IntersectionObserver((entries) => {
+                    const cards = [];
+                    entries.forEach(en => {
+                        if (!en.isIntersecting) return;
+                        gtObserver.unobserve(en.target);
+                        if (en.target.hasAttribute('data-gt-pill')) {
+                            gsap.fromTo(en.target,
+                                { opacity: 0, x: -30, scale: 0.7, transformOrigin: 'left center' },
+                                { opacity: 1, x: 0, scale: 1, duration: 1, ease: 'elastic.out(1,0.55)' });
+                        } else {
+                            cards.push(en.target);
+                        }
+                    });
+                    if (cards.length) playCards(cards);
+                }, { threshold: 0.12 });
+
+                content.querySelectorAll('[data-gt-pill],[data-gt-card]').forEach(el => gtObserver.observe(el));
+            } catch (err) {
+                // Nếu animation lỗi: hiện nội dung bình thường
+                content.querySelectorAll('[data-gt-pill],[data-gt-panel]').forEach(el => { el.style.opacity = 1; });
+            }
         };
         const gtModal = document.getElementById('global-timeline-modal');
         const openGlobalTimeline = () => { renderGlobalTimeline(); gtModal.classList.add('active'); };

@@ -644,3 +644,12 @@ input[type="time"]::-webkit-date-and-time-value {
     animation: none !important;
     transition: none !important;
 }
+
+
+/* Nền blur bên ngoài modal Toàn cảnh (giống #fab-overlay) */
+html[data-animation-on="true"] #gt-modal {
+    background: radial-gradient(circle at 90% 95%, rgba(255, 255, 255, .55), rgba(248, 250, 252, .45));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: opacity .3s ease;
+}
