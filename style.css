@@ -602,3 +602,15 @@ input[type="time"]::-webkit-date-and-time-value {
     overflow-wrap: anywhere;
     word-break: break-word;
 }
+
+
+/* Khi đang xuất PDF: html2canvas không hỗ trợ backdrop-filter, và animation đang chạy dở
+   có thể làm phần tử bị mờ/lệch chỗ lúc chụp */
+.pdf-exporting *,
+.pdf-exporting *::before,
+.pdf-exporting *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    animation: none !important;
+    transition: none !important;
+}
