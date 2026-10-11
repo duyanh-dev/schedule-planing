@@ -2,48 +2,157 @@
 // DATA SYNC LOGIC (SINGLE TRIP EXPORT/IMPORT)
 // ==========================================
 
-// Chuyến đi đã đọc từ file, đang chờ người dùng xác nhận
-let pendingImportTrip = null;
+// ------------------------------------------
+// A. EXPORT 1 CHUYẾN ĐI (TÊN NHẬP = TÊN FILE = TÊN CHUYẾN ĐI)
+// ------------------------------------------
+let pendingExportTrip = null;   // Chuyến đi đang chờ xuất
+let defaultExportName = '';     // Tên mặc định = tên hiện tại của chuyến đi
 
-// --- 1. XUẤT 1 CHUYẾN ĐI ĐANG MỞ RA FILE ---
+// Tên chuyến đi hiện tại (hỗ trợ name, title, tripName, destination)
+const getTripTitle = (t) => t.name || t.title || t.tripName || t.destination || '';
+
+// Tách tên người dùng nhập thành 2 phần:
+//  - tripName: tên chuyến đi (giữ nguyên chữ người dùng gõ)
+//  - fileName: tên file (chỉ thay ký tự bị cấm, giữ chữ có dấu tiếng Việt)
+const cleanExportName = (raw) => {
+    const tripName = (raw || '')
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/\.json$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 100)
+        .trim();
+
+    const fileName = tripName
+        .replace(/[\\/:*?"<>|\x00-\x1f]/g, '_')
+        .replace(/^\.+/, '')
+        .trim();
+
+    return { tripName, fileName };
+};
+
+// Tự giãn chiều cao ô nhập để luôn hiện đủ chữ
+const autosizeExportInput = () => {
+    const el = document.getElementById('export-filename');
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+};
+
+// Cập nhật khung xem trước (để trống thì hiện tên mặc định)
+const updateExportPreview = () => {
+    let { tripName, fileName } = cleanExportName(document.getElementById('export-filename').value);
+    if (!tripName) {
+        const def = cleanExportName(defaultExportName);
+        tripName = def.tripName || 'Chuyen_di';
+        fileName = def.fileName || 'Chuyen_di';
+    }
+    document.getElementById('export-preview-file').textContent = `${fileName}.json`;
+    document.getElementById('export-preview-trip').textContent = tripName;
+};
+
+// Gõ hoặc dán: bỏ xuống dòng, giãn lại chiều cao, cập nhật xem trước
+window.onExportNameInput = (el) => {
+    if (/[\r\n]/.test(el.value)) el.value = el.value.replace(/[\r\n]+/g, ' ');
+    autosizeExportInput();
+    updateExportPreview();
+};
+
+// Bấm Enter / Xong trên bàn phím = tải về
+window.onExportNameKey = (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmExportTrip();
+    }
+};
+
+// Mở modal đặt tên (nút gọi vẫn là exportSingleTrip())
 window.exportSingleTrip = () => {
     // Tìm chuyến đi đang được mở dựa vào activeTripId
     const currentTrip = state.trips.find(t => t.id === state.activeTripId);
-    
+
     if (!currentTrip) {
         alert("Không tìm thấy dữ liệu chuyến đi này!");
         return;
     }
 
-    // Tự động tìm tên chuyến đi (hỗ trợ name, title, tripName) hoặc dùng tên mặc định
-    const rawName = currentTrip.name || currentTrip.title || currentTrip.tripName || "Chuyen_di";
-    
-    // Đóng gói riêng Object của chuyến đi này
-    const blob = new Blob([JSON.stringify(currentTrip)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    
-    // Lọc ký tự đặc biệt để tạo tên file an toàn
-    const safeName = rawName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    const dateStr = new Date().toISOString().slice(0, 10); 
-    a.download = `Trip_${safeName}_${dateStr}.json`; 
-    
-    document.body.appendChild(a);
-    a.click();
-    
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    pendingExportTrip = currentTrip;
+    defaultExportName = getTripTitle(currentTrip) || 'Chuyen_di';
+    document.getElementById('export-filename').value = defaultExportName;
+    updateExportPreview();
+
+    const modal = document.getElementById('export-modal');
+    const card = document.getElementById('export-card');
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    requestAnimationFrame(() => {
+        card.classList.remove('scale-90', 'opacity-0');
+        autosizeExportInput();
+    });
 };
 
-// --- 2. KIỂM TRA TRÙNG DỮ LIỆU ---
-const getTripTitle = (t) => t.name || t.title || t.tripName || t.destination || '';
+const hideExportModal = () => {
+    document.getElementById('export-card').classList.add('scale-90', 'opacity-0');
+    document.getElementById('export-modal').classList.add('opacity-0', 'pointer-events-none');
+};
+
+window.resetExportName = () => {
+    document.getElementById('export-filename').value = defaultExportName;
+    autosizeExportInput();
+    updateExportPreview();
+};
+
+window.cancelExportTrip = () => {
+    pendingExportTrip = null;
+    hideExportModal();
+};
+
+// Tải về: file mang tên mới, và bản sao của chuyến đi trong file cũng mang tên mới
+window.confirmExportTrip = () => {
+    const currentTrip = pendingExportTrip;
+    if (!currentTrip) return;
+
+    let { tripName, fileName } = cleanExportName(document.getElementById('export-filename').value);
+    if (!tripName) {
+        // Để trống thì dùng tên hiện tại của chuyến đi
+        const def = cleanExportName(defaultExportName);
+        tripName = def.tripName || 'Chuyen_di';
+        fileName = def.fileName || 'Chuyen_di';
+    }
+
+    // Tạo bản sao để đổi tên, KHÔNG đụng vào chuyến đi gốc trong state
+    const exportCopy = JSON.parse(JSON.stringify(currentTrip));
+    const nameKeys = ['name', 'title', 'tripName'].filter(k => exportCopy[k]);
+    if (nameKeys.length === 0) nameKeys.push('title');
+    nameKeys.forEach(k => { exportCopy[k] = tripName; });
+
+    // Đóng gói bản sao
+    const blob = new Blob([JSON.stringify(exportCopy)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileName}.json`;
+
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    pendingExportTrip = null;
+    hideExportModal();
+};
+
+// ------------------------------------------
+// B. IMPORT: KIỂM TRA TRÙNG + ĐỔI TÊN (1), (2)
+// ------------------------------------------
+
+// Chuyến đi đã đọc từ file, đang chờ người dùng xác nhận
+let pendingImportTrip = null;
 
 // Tên trường đang chứa tên chuyến đi (theo cùng thứ tự ưu tiên với getTripTitle)
 const getTitleKey = (t) => ['name', 'title', 'tripName', 'destination'].find(k => t[k]);
 
-// (THÊM) Tạo tên không trùng: "Tên" -> "Tên (1)" -> "Tên (2)"...
+// Tạo tên không trùng: "Tên" -> "Tên (1)" -> "Tên (2)"...
 const getUniqueTitle = (title) => {
     const existing = new Set(
         (state.trips || []).map(t => getTripTitle(t).trim().toLowerCase())
@@ -102,7 +211,9 @@ const findDuplicateTrips = (importedTrip) => {
     return result;
 };
 
-// --- 3. MODAL XÁC NHẬN ---
+// ------------------------------------------
+// C. MODAL XÁC NHẬN NHẬP
+// ------------------------------------------
 window.showImportConfirm = (trip, tripTitle) => {
     const modal = document.getElementById('import-confirm-modal');
     const card = document.getElementById('import-confirm-card');
@@ -131,7 +242,7 @@ window.showImportConfirm = (trip, tripTitle) => {
         lines.push(`• "${getTripTitle(t)}" (${getTripRangeText(t)}): ${reason}`);
     });
 
-    // (THÊM) Báo trước tên mới nếu bị đổi hậu tố
+    // Báo trước tên mới nếu bị đổi hậu tố
     const finalTitle = getUniqueTitle(tripTitle);
     if (finalTitle !== tripTitle) {
         lines.push(`\n→ Sẽ được lưu với tên "${finalTitle}"`);
@@ -167,7 +278,9 @@ window.cancelImport = () => {
     hideImportConfirm();
 };
 
-// --- 4. MODAL THÔNG BÁO NHẬP THÀNH CÔNG ---
+// ------------------------------------------
+// D. MODAL THÔNG BÁO NHẬP THÀNH CÔNG
+// ------------------------------------------
 window.showImportSuccess = (tripTitle) => {
     const modal = document.getElementById('import-success-modal');
     const card = document.getElementById('import-success-card');
@@ -184,13 +297,15 @@ window.reloadAfterImport = () => {
     window.location.reload();
 };
 
-// --- 5. XÁC NHẬN NHẬP: đổi tên nếu trùng, cấp ID mới, đẩy vào state và lưu ---
+// ------------------------------------------
+// E. XÁC NHẬN NHẬP: đổi tên nếu trùng, cấp ID mới, đẩy vào state và lưu
+// ------------------------------------------
 window.confirmImport = () => {
     const importedTrip = pendingImportTrip;
     if (!importedTrip) return;
 
     try {
-        // (THÊM) Đổi tên có hậu tố (1), (2)... nếu trùng tên với chuyến đi đang có
+        // Đổi tên có hậu tố (1), (2)... nếu trùng tên với chuyến đi đang có
         const originalTitle = getTripTitle(importedTrip);
         const tripTitle = getUniqueTitle(originalTitle);
         if (tripTitle !== originalTitle) {
@@ -200,7 +315,7 @@ window.confirmImport = () => {
         // Cấp lại ID mới để tránh trùng lặp
         const newTripId = 'trip_' + Date.now();
         importedTrip.id = newTripId;
-        
+
         importedTrip.days.forEach((day, index) => {
             day.id = `day_${Date.now()}_${index}`;
         });
@@ -208,14 +323,14 @@ window.confirmImport = () => {
         // Đẩy dữ liệu vào state và Lưu
         if (typeof state !== 'undefined' && Array.isArray(state.trips)) {
             state.trips.push(importedTrip);
-            
+
             // Gọi hàm lưu dữ liệu của bạn (nếu có)
             if (typeof saveData === 'function') {
                 saveData();
             } else {
                 localStorage.setItem('wanderlog_trips', JSON.stringify(state.trips));
             }
-            
+
             pendingImportTrip = null;
             hideImportConfirm();
             showImportSuccess(tripTitle);
@@ -230,7 +345,9 @@ window.confirmImport = () => {
     }
 };
 
-// --- 6. NHẬP FILE: đọc + kiểm tra, rồi hiện modal xác nhận ---
+// ------------------------------------------
+// F. NHẬP FILE: đọc + kiểm tra, rồi hiện modal xác nhận
+// ------------------------------------------
 window.importSingleTrip = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -240,11 +357,11 @@ window.importSingleTrip = (event) => {
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            const importedTrip = JSON.parse(e.target.result); 
-            
+            const importedTrip = JSON.parse(e.target.result);
+
             // 🔎 DEBUG: In dữ liệu ra console để theo dõi
             console.log("Dữ liệu đọc được từ file:", importedTrip);
-            
+
             // 1. Tự động tìm thuộc tính Tên chuyến đi (bất kể bạn đặt tên biến là gì)
             const tripTitle = importedTrip.name || importedTrip.title || importedTrip.tripName || importedTrip.destination;
 
@@ -261,7 +378,7 @@ window.importSingleTrip = (event) => {
             // 3. Giữ lại chờ xác nhận, chưa ghi vào state
             pendingImportTrip = importedTrip;
             showImportConfirm(importedTrip, tripTitle);
-            
+
         } catch (error) {
             console.error("Chi tiết Lỗi Import:", error);
             alert("❌ Không thể nạp file: " + error.message);
