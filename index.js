@@ -1961,7 +1961,133 @@ const renderTimeline = () => {
         };
 
                // --- GLOBAL TIMELINE MODAL (Liquid Glass v3) ---
+        // let gtObserver = null;
+
+        // Đóng modal Toàn cảnh (ưu tiên hàm đóng có sẵn của bạn)
+        // const closeGlobalTimelineSafe = () => {
+        //     if (typeof closeGlobalTimeline === 'function') closeGlobalTimeline();
+        //     else if (typeof gtModal !== 'undefined') gtModal.classList.remove('active');
+        // };
+
+        // Nhảy từ modal Toàn cảnh sang đúng hoạt động ở timeline chính
+        // const goToActivityFromGlobal = (actId, dayDate) => {
+        //     closeGlobalTimelineSafe();
+
+        //     // Chuyển sang đúng ngày nếu đang ở ngày khác
+        //     if (state.activeDayDate !== dayDate) {
+        //         state.activeDayDate = dayDate;
+        //         // Nếu app có hàm vẽ lại thanh chọn ngày thì gọi ở đây để tab ngày sáng đúng
+        //         if (typeof renderDays === 'function') renderDays(); // <-- đổi đúng tên hàm của bạn
+        //     }
+        //     renderTimeline();
+
+        //     // Chờ modal đóng xong rồi cuộn tới item (thử lại tối đa ~1 giây)
+        //     let tries = 0;
+        //     const seek = () => {
+        //         const checkBtn = document.querySelector(`#timeline-container [data-tl-check="${actId}"]`);
+        //         const item = checkBtn ? checkBtn.closest('.tl-item') : null;
+        //         if (!item) { if (tries++ < 20) setTimeout(seek, 50); return; }
+
+        //         item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        //         const card = item.querySelector('.tl-card');
+        //         if (card && window.gsap) {
+        //             // Nháy nổi bật 2 lần để người dùng thấy ngay đó là hoạt động vừa chọn
+        //             gsap.timeline({ repeat: 1, onComplete: () => gsap.set(card, { clearProps: 'boxShadow,scale' }) })
+        //                 .fromTo(card,
+        //                     { boxShadow: '0 0 0 0px rgba(0,113,227,0.55)', scale: 1 },
+        //                     { boxShadow: '0 0 0 6px rgba(0,113,227,0.55)', scale: 1.03, duration: 0.35, ease: 'power2.out' })
+        //                 .to(card, { boxShadow: '0 0 0 0px rgba(0,113,227,0)', scale: 1, duration: 0.9, ease: 'power2.inOut' });
+        //         }
+        //     };
+        //     setTimeout(seek, 350);
+        // };
+
+                // --- GLOBAL TIMELINE MODAL (Liquid Glass v4) ---
+               // --- GLOBAL TIMELINE MODAL (Liquid Glass v6) ---
         let gtObserver = null;
+        let gtTodayObserver = null;
+
+        // Trạng thái nút "Hôm nay" (giữ lại giữa các lần vẽ lại để không bị nháy)
+        let gtDrop = { hidden: true, above: false };
+        let gtDropReady = false;
+
+        // Hình nút "Hôm nay": viên thuốc bình thường 104x50, chỉ nhô một chỏm nhọn nhỏ (7px) ở giữa cạnh trên / cạnh dưới
+        const GT_TAB_UP   = "path('M21.5 7 L42 7 C47 7 49.5 3 52 0.5 C54.5 3 57 7 62 7 L82.5 7 A21.5 21.5 0 0 1 82.5 50 L21.5 50 A21.5 21.5 0 0 1 21.5 7 Z')";
+        const GT_TAB_DOWN = "path('M21.5 0 L82.5 0 A21.5 21.5 0 0 1 82.5 43 L62 43 C57 43 54.5 47 52 49.5 C49.5 47 47 43 42 43 L21.5 43 A21.5 21.5 0 0 1 21.5 0 Z')";
+
+        // Chế độ animation: full = đầy đủ | lite = chỉ trượt nhẹ | has=false = không animation
+        // Đọc từ html[data-animation-on] (Settings). Thiếu thuộc tính thì coi như bật.
+        const gtAnimMode = () => {
+            const has = !!window.gsap;
+            let full = has;
+            try {
+                if (document.documentElement.getAttribute('data-animation-on') === 'false') full = false;
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) full = false;
+            } catch (e) {}
+            return { has, full };
+        };
+
+        // Tìm khung cuộn thật sự chứa nội dung modal
+        const gtScrollParent = (el) => {
+            let p = el;
+            while (p) {
+                const oy = getComputedStyle(p).overflowY;
+                if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+                p = p.parentElement;
+            }
+            return null;
+        };
+
+        // Áp trạng thái (ẩn/hiện + chỏm nhọn lên/xuống) lên nút "Hôm nay"
+        const gtApplyDrop = (btn) => {
+            const above = gtDrop.above;
+            const clip = above ? GT_TAB_UP : GT_TAB_DOWN;
+            btn.style.clipPath = clip;
+            btn.style.webkitClipPath = clip;
+            // Chừa 7px cho chỏm nhọn để chữ vẫn nằm giữa phần thân nút
+            btn.style.paddingTop = above ? '7px' : '0px';
+            btn.style.paddingBottom = above ? '0px' : '7px';
+            btn.style.pointerEvents = gtDrop.hidden ? 'none' : 'auto';
+            btn.classList.toggle('opacity-0', gtDrop.hidden);
+            btn.classList.toggle('translate-y-2', gtDrop.hidden && gtAnimMode().full);
+        };
+
+        // Tính lại: đang xem ngày hôm nay thì ẩn; ngày hôm nay ở trên -> chỏm nhọn lên, ở dưới -> chỏm nhọn xuống
+        const gtRefreshDrop = () => {
+            const content = document.getElementById('global-timeline-content');
+            if (!content) return;
+            const day = content.querySelector('[data-gt-today]');
+            const btn = content.querySelector('[data-gt-today-btn]');
+            if (!day || !btn) return;
+            const sc = gtScrollParent(content) || gtModal;
+            const sr = sc.getBoundingClientRect();
+            const dr = day.getBoundingClientRect();
+            const visible = dr.bottom > sr.top && dr.top < sr.bottom;
+            gtDrop.hidden = visible;
+            if (!visible) gtDrop.above = dr.top < sr.top;
+            gtApplyDrop(btn);
+        };
+
+        // Cuộn tới ngày hiện tại trong modal Toàn cảnh
+        const gtScrollToToday = (smooth = true) => {
+            const content = document.getElementById('global-timeline-content');
+            if (!content) return;
+            const el = content.querySelector('[data-gt-today]');
+            if (el) {
+                el.scrollIntoView({ behavior: (smooth && gtAnimMode().full) ? 'smooth' : 'auto', block: 'start' });
+            } else {
+                const sp = gtScrollParent(content);
+                if (sp) sp.scrollTop = 0;
+            }
+        };
+
+        // Mở modal: tự cuộn tới ngày hiện tại (nếu chuyến đi có hôm nay)
+        const openGlobalTimeline = () => {
+            renderGlobalTimeline();
+            gtModal.classList.add('active');
+            requestAnimationFrame(() => requestAnimationFrame(() => gtScrollToToday(false)));
+        };
 
         // Đóng modal Toàn cảnh (ưu tiên hàm đóng có sẵn của bạn)
         const closeGlobalTimelineSafe = () => {
@@ -1973,69 +2099,136 @@ const renderTimeline = () => {
         const goToActivityFromGlobal = (actId, dayDate) => {
             closeGlobalTimelineSafe();
 
-            // Chuyển sang đúng ngày nếu đang ở ngày khác
             if (state.activeDayDate !== dayDate) {
                 state.activeDayDate = dayDate;
-                // Nếu app có hàm vẽ lại thanh chọn ngày thì gọi ở đây để tab ngày sáng đúng
-                if (typeof renderDays === 'function') renderDays(); // <-- đổi đúng tên hàm của bạn
+                if (typeof renderDays === 'function') renderDays(); // <-- đổi đúng tên hàm vẽ thanh chọn ngày của bạn
             }
             renderTimeline();
 
-            // Chờ modal đóng xong rồi cuộn tới item (thử lại tối đa ~1 giây)
             let tries = 0;
             const seek = () => {
                 const checkBtn = document.querySelector(`#timeline-container [data-tl-check="${actId}"]`);
                 const item = checkBtn ? checkBtn.closest('.tl-item') : null;
                 if (!item) { if (tries++ < 20) setTimeout(seek, 50); return; }
 
-                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const m = gtAnimMode();
+                item.scrollIntoView({ behavior: m.full ? 'smooth' : 'auto', block: 'center' });
 
                 const card = item.querySelector('.tl-card');
-                if (card && window.gsap) {
-                    // Nháy nổi bật 2 lần để người dùng thấy ngay đó là hoạt động vừa chọn
-                    gsap.timeline({ repeat: 1, onComplete: () => gsap.set(card, { clearProps: 'boxShadow,scale' }) })
-                        .fromTo(card,
-                            { boxShadow: '0 0 0 0px rgba(0,113,227,0.55)', scale: 1 },
-                            { boxShadow: '0 0 0 6px rgba(0,113,227,0.55)', scale: 1.03, duration: 0.35, ease: 'power2.out' })
-                        .to(card, { boxShadow: '0 0 0 0px rgba(0,113,227,0)', scale: 1, duration: 0.9, ease: 'power2.inOut' });
+                if (card && m.has) {
+                    if (m.full) {
+                        gsap.timeline({ repeat: 1, onComplete: () => gsap.set(card, { clearProps: 'boxShadow,scale' }) })
+                            .fromTo(card,
+                                { boxShadow: '0 0 0 0px rgba(0,113,227,0.55)', scale: 1 },
+                                { boxShadow: '0 0 0 6px rgba(0,113,227,0.55)', scale: 1.03, duration: 0.35, ease: 'power2.out' })
+                            .to(card, { boxShadow: '0 0 0 0px rgba(0,113,227,0)', scale: 1, duration: 0.9, ease: 'power2.inOut' });
+                    } else {
+                        // Chế độ nhẹ: chỉ một lần mờ dần, không phóng to
+                        gsap.fromTo(card,
+                            { boxShadow: '0 0 0 4px rgba(0,113,227,0.5)' },
+                            { boxShadow: '0 0 0 0px rgba(0,113,227,0)', duration: 0.7, ease: 'power1.out', clearProps: 'boxShadow' });
+                    }
                 }
             };
             setTimeout(seek, 350);
         };
 
-        const renderGlobalTimeline = () => {
+        // Tick hoàn thành ngay trong modal Toàn cảnh (dùng lại toggleComplete có sẵn)
+        const toggleCompleteFromGlobal = (actId, dayDate) => {
+            const prevDay = state.activeDayDate;
+            // toggleComplete có thể chỉ xét ngày đang chọn -> tạm đặt đúng ngày rồi trả lại
+            state.activeDayDate = dayDate;
+            try { toggleComplete(actId); }
+            catch (e) { console.error(e); }
+            finally { state.activeDayDate = prevDay; }
+
+            // Nếu vừa tạm đổi ngày thì đồng bộ lại timeline chính về ngày đang chọn
+            if (prevDay !== dayDate) { try { renderTimeline(); } catch (e) {} }
+
+            // Vẽ lại modal ngay tại chỗ (giữ vị trí cuộn, không chạy lại animation vào)
+            renderGlobalTimeline({ silent: true });
+
+            // Hiệu ứng bật nhẹ cho nút vừa tick (chỉ ở chế độ animation đầy đủ)
+            if (gtAnimMode().full) {
+                const content = document.getElementById('global-timeline-content');
+                const nb = [...content.querySelectorAll('[data-gt-check]')].find(b => b.dataset.gtCheck === String(actId));
+                const ic = nb && nb.querySelector('i');
+                if (ic) gsap.fromTo(ic, { scale: 0.5 }, { scale: 1, duration: 0.5, ease: 'back.out(3)' });
+            }
+        };
+
+        const renderGlobalTimeline = (opts = {}) => {
+            const silent = !!opts.silent;
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const content = document.getElementById('global-timeline-content');
 
+            // Giữ vị trí cuộn khi vẽ lại tại chỗ
+            const scroller = silent ? gtScrollParent(content) : null;
+            const keepTop = scroller ? scroller.scrollTop : 0;
+
             // Dọn animation / observer của lần render trước
             if (gtObserver) { gtObserver.disconnect(); gtObserver = null; }
+            if (gtTodayObserver) { gtTodayObserver.disconnect(); gtTodayObserver = null; }
             if (window.gsap) gsap.killTweensOf(content.querySelectorAll('*'));
 
-            // Tôn trọng chế độ giảm chuyển động (Settings + hệ điều hành)
-            let animOn = !!window.gsap;
-            try {
-                if (localStorage.getItem('animationOn') === 'false') animOn = false;
-                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) animOn = false;
-            } catch (e) {}
-            const hide = animOn ? 'style="opacity:0"' : '';
+            const m = gtAnimMode();
+            const animOn = m.full;                         // animation đầy đủ
+            const intro = m.has && !silent;                // có hiệu ứng vào ở lần mở đầu (đầy đủ hoặc trượt nhẹ)
+            const hide = intro ? 'style="opacity:0"' : '';
             const fmtMoney = (n) => new Intl.NumberFormat('vi-VN').format(n);
+
+            // Mở modal mới: nút "Hôm nay" bắt đầu ở trạng thái ẩn, chỉ cập nhật sau khi đã cuộn tới hôm nay
+            if (!silent) {
+                gtDrop = { hidden: true, above: false };
+                gtDropReady = false;
+                requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+                    gtDropReady = true;
+                    gtRefreshDrop();
+                })));
+            }
+
+            // Ngày hôm nay (định dạng YYYY-MM-DD theo giờ máy)
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            let hasToday = false;
 
             let html = '<div class="h-2 md:h-3 w-full flex-shrink-0"></div>';
 
             trip.days.forEach((day, idx) => {
+                const isToday = String(day.date).slice(0, 10) === todayStr;
+                if (isToday) hasToday = true;
+
+                // Header ngày: hôm nay nổi bật (xanh dương đặc) / ngày thường (kính indigo)
+                const pillHtml = isToday ? `
+                    <div data-gt-pill data-gt-today-pill ${hide} class="inline-flex items-center gap-2.5 max-w-full pl-1.5 pr-3 md:pr-4 py-2 rounded-full bg-blue-500/85 backdrop-blur-xl backdrop-saturate-150 pointer-events-auto">
+                        <span class="w-7 h-7 md:w-8 md:h-8 flex-shrink-0 rounded-full bg-white/90 flex items-center justify-center text-blue-600">
+                            <i class="fa-solid fa-calendar-day text-[12px] md:text-[13px]"></i>
+                        </span>
+                        <span class="font-black text-white text-[14px] md:text-[15px] tracking-wide whitespace-nowrap">Ngày ${idx + 1}</span>
+                        <span class="text-white/85 font-semibold text-[12px] md:text-[13px] tracking-wide whitespace-nowrap">${formatDisplayDate(day.date)}</span>
+                        <span class="inline-flex items-center gap-1 flex-shrink-0 bg-white/90 text-blue-600 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full leading-none">
+                           Hôm nay
+                        </span>
+                    </div>` : `
+                    <div data-gt-pill ${hide} class="inline-flex items-center gap-2.5 pl-1.5 pr-4 md:pr-5 py-1.5 rounded-full bg-indigo-300/35 backdrop-blur-xl backdrop-saturate-150 pointer-events-auto">
+                        <span class="w-7 h-7 md:w-8 md:h-8 flex-shrink-0 rounded-full bg-white/70 flex items-center justify-center text-indigo-600">
+                            <i class="fa-solid fa-calendar-day text-[12px] md:text-[13px]"></i>
+                        </span>
+                        <span class="font-black text-indigo-950 text-[14px] md:text-[15px] tracking-wide">Ngày ${idx + 1}</span>
+                        <span class="w-1 h-1 rounded-full bg-indigo-500/50"></span>
+                        <span class="text-indigo-700 font-semibold text-[12px] md:text-[13px] tracking-wide">${formatDisplayDate(day.date)}</span>
+                    </div>`;
+
+                // Tông kính của hai mảnh: ngày hôm nay ngả xanh dương
+                const leftBg = isToday ? 'bg-blue-500/[0.16]' : 'bg-slate-500/[0.12]';
+                const rightBg = isToday ? 'bg-blue-500/[0.09]' : 'bg-slate-500/[0.08]';
+
                 html += `
-                <div class="mb-6 md:mb-8 relative group">
+                <div data-gt-day="${day.date}" ${isToday ? 'data-gt-today' : ''} class="mb-6 md:mb-8 relative group">
 
                     <!-- Header ngày: liquid glass, căn trái -->
                     <div class="sticky top-2 md:top-3 z-30 flex justify-start mb-4 md:mb-5 md:px-2 pointer-events-none">
-                        <div data-gt-pill ${hide} class="inline-flex items-center gap-2.5 pl-1.5 pr-4 md:pr-5 py-1.5 rounded-full bg-indigo-300/35 backdrop-blur-xl backdrop-saturate-150 pointer-events-auto">
-                            <span class="w-7 h-7 md:w-8 md:h-8 flex-shrink-0 rounded-full bg-white/70 flex items-center justify-center text-indigo-600">
-                                <i class="fa-solid fa-calendar-day text-[12px] md:text-[13px]"></i>
-                            </span>
-                            <span class="font-black text-indigo-950 text-[14px] md:text-[15px] tracking-wide">Ngày ${idx + 1}</span>
-                            <span class="w-1 h-1 rounded-full bg-indigo-500/50"></span>
-                            <span class="text-indigo-700 font-semibold text-[12px] md:text-[13px] tracking-wide">${formatDisplayDate(day.date)}</span>
-                        </div>
+                        ${pillHtml}
                     </div>
 
                     <div class="space-y-2.5 relative z-10 md:px-2">
@@ -2044,7 +2237,7 @@ const renderTimeline = () => {
                 if (day.activities.length === 0) {
                     html += `
                     <div data-gt-card>
-                        <p data-gt-panel ${hide} class="text-[13px] text-slate-500 italic font-medium p-5 bg-slate-500/[0.08] backdrop-blur-xl backdrop-saturate-150 rounded-[1.5rem] text-center">Chưa có hoạt động nào được lên lịch.</p>
+                        <p data-gt-panel ${hide} class="text-[13px] text-slate-500 italic font-medium p-5 ${rightBg} backdrop-blur-xl backdrop-saturate-150 rounded-[1.5rem] text-center">Chưa có hoạt động nào được lên lịch.</p>
                     </div>`;
                 } else {
                     day.activities.forEach(act => {
@@ -2082,14 +2275,19 @@ const renderTimeline = () => {
                         <div data-gt-card class="flex items-stretch gap-2 touch-manipulation">
 
                             <!-- Mảnh kính TRÁI -->
-                            <div data-gt-panel ${hide} class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] bg-slate-500/[0.12] backdrop-blur-xl backdrop-saturate-150">
+                            <div data-gt-panel ${hide} class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] ${leftBg} backdrop-blur-xl backdrop-saturate-150">
                                 <div class="text-[13px] md:text-[15px] font-black text-slate-800 leading-none">${act.start}</div>
                                 <div data-gt-chip data-st="${status.type}" class="text-[8px] md:text-[9px] font-black uppercase ${status.color.split(' ')[0]} bg-white/70 px-1.5 py-1 rounded-md tracking-wider">${status.type === 'done' ? 'XONG' : (status.type === 'future' ? 'SẮP' : 'TRỄ')}</div>
                             </div>
 
                             <!-- Mảnh kính PHẢI -->
-                            <div data-gt-panel ${hide} class="flex-1 min-w-0 p-3.5 md:p-4 rounded-[1.4rem] bg-slate-500/[0.08] backdrop-blur-xl backdrop-saturate-150">
-                                <div class="text-[14px] md:text-base font-bold text-slate-800 break-words leading-snug ${act.isCompleted ? 'line-through text-slate-400' : ''}">${act.details}</div>
+                            <div data-gt-panel ${hide} class="flex-1 min-w-0 p-3.5 md:p-4 rounded-[1.4rem] ${rightBg} backdrop-blur-xl backdrop-saturate-150">
+
+                                <!-- Tên hoạt động + nút tick hoàn thành -->
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="flex-1 min-w-0 text-[14px] md:text-base font-bold text-slate-800 break-words leading-snug ${act.isCompleted ? 'line-through text-slate-400' : ''}">${act.details}</div>
+                                    <button type="button" data-gt-check="${act.id}" onclick="toggleCompleteFromGlobal('${act.id}', '${day.date}')" aria-label="Đánh dấu hoàn thành" class="flex-shrink-0 -mt-0.5 text-2xl leading-none transition-transform active:scale-90 touch-manipulation ${act.isCompleted ? 'text-blue-500' : 'text-slate-300 hover:text-blue-400'}"><i class="fa-solid ${act.isCompleted ? 'fa-circle-check' : 'fa-circle'} inline-block"></i></button>
+                                </div>
 
                                 ${routeTxt ? `
                                 <div class="text-[11px] md:text-xs font-semibold text-blue-600 mt-2 break-words bg-blue-500/10 inline-block px-2.5 py-1.5 rounded-lg max-w-full">
@@ -2114,22 +2312,61 @@ const renderTimeline = () => {
                 }
                 html += `</div></div>`;
             });
+
+            // Chừa chỗ cuối danh sách + nút "Hôm nay" ở góc dưới bên phải (chỉ có khi chuyến đi có ngày hôm nay)
+            html += `<div class="h-20 w-full flex-shrink-0"></div>`;
+            if (hasToday) {
+                html += `
+                <div class="sticky bottom-3 z-40 h-0 pointer-events-none">
+                    <div class="absolute bottom-0 right-2 md:right-4 pointer-events-none">
+                        <button type="button" data-gt-today-btn onclick="gtScrollToToday(true)" aria-label="Đến ngày hôm nay" class="${animOn ? 'transition-all duration-500 ease-out' : 'transition-opacity duration-150'} w-[104px] h-[50px] flex items-center justify-center text-white text-[13px] font-black tracking-wide whitespace-nowrap bg-blue-500/80 backdrop-blur-xl backdrop-saturate-150 active:scale-95 touch-manipulation">Hôm nay</button>
+                    </div>
+                </div>`;
+            }
+
             content.innerHTML = html;
+            if (scroller) scroller.scrollTop = keepTop;
+
+            // Áp ngay trạng thái đã lưu cho nút (vẽ lại tại chỗ không bị nháy)
+            const todayBtn = content.querySelector('[data-gt-today-btn]');
+            if (todayBtn) gtApplyDrop(todayBtn);
+
+            // Theo dõi ngày hôm nay vào/ra khỏi khung nhìn để đổi hướng chỏm nhọn
+            try {
+                const todayDay = content.querySelector('[data-gt-today]');
+                if (todayDay && todayBtn) {
+                    gtTodayObserver = new IntersectionObserver(() => { if (gtDropReady) gtRefreshDrop(); }, { threshold: 0 });
+                    gtTodayObserver.observe(todayDay);
+                }
+            } catch (err) {}
 
             // ====== ANIMATION (lỗi gì cũng không được làm hỏng nội dung) ======
             try {
-                if (!animOn) return;
+                if (!m.has) return;
 
-                // 1) Nhấn lún kiểu iOS trên cả hàng (2 mảnh lún cùng nhau)
-                content.querySelectorAll('[data-gt-card]').forEach(card => {
-                    card.addEventListener('pointerenter', () => gsap.to(card, { scale: 1.01, duration: 0.5, ease: 'power3.out' }));
-                    card.addEventListener('pointerdown', () => gsap.to(card, { scale: 0.975, duration: 0.25, ease: 'power2.out' }));
-                    card.addEventListener('pointerup', () => gsap.to(card, { scale: 1.01, duration: 0.6, ease: 'elastic.out(1,0.5)' }));
-                    ['pointerleave', 'pointercancel'].forEach(ev => card.addEventListener(ev, () => gsap.to(card, { scale: 1, duration: 0.6, ease: 'elastic.out(1,0.6)' })));
-                });
+                // 1) Nhấn lún kiểu iOS trên cả hàng (chỉ ở chế độ đầy đủ)
+                if (animOn) {
+                    content.querySelectorAll('[data-gt-card]').forEach(card => {
+                        card.addEventListener('pointerenter', () => gsap.to(card, { scale: 1.01, duration: 0.5, ease: 'power3.out' }));
+                        card.addEventListener('pointerdown', () => gsap.to(card, { scale: 0.975, duration: 0.25, ease: 'power2.out' }));
+                        card.addEventListener('pointerup', () => gsap.to(card, { scale: 1.01, duration: 0.6, ease: 'elastic.out(1,0.5)' }));
+                        ['pointerleave', 'pointercancel'].forEach(ev => card.addEventListener(ev, () => gsap.to(card, { scale: 1, duration: 0.6, ease: 'elastic.out(1,0.6)' })));
+                    });
+                }
 
-                // 2) Hiện dần khi cuộn tới
-                const playCards = (cards) => {
+                // Vẽ lại tại chỗ (tick hoàn thành) thì không chạy lại animation vào
+                if (!intro) return;
+
+                // 2a) Chế độ NHẸ: chỉ một cú trượt rất ngắn, không 3D, không đàn hồi, không lặp
+                const playCardsLite = (cards) => {
+                    gsap.fromTo(cards, { y: 14 }, { y: 0, duration: 0.3, ease: 'power2.out' });
+                    const panels = [];
+                    cards.forEach(c => c.querySelectorAll('[data-gt-panel]').forEach(p => panels.push(p)));
+                    gsap.fromTo(panels, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+                };
+
+                // 2b) Chế độ ĐẦY ĐỦ
+                const playCardsFull = (cards) => {
                     cards.forEach((card, i) => {
                         const d = i * 0.08;
 
@@ -2172,14 +2409,18 @@ const renderTimeline = () => {
                         if (!en.isIntersecting) return;
                         gtObserver.unobserve(en.target);
                         if (en.target.hasAttribute('data-gt-pill')) {
-                            gsap.fromTo(en.target,
-                                { opacity: 0, x: -30, scale: 0.7, transformOrigin: 'left center' },
-                                { opacity: 1, x: 0, scale: 1, duration: 1, ease: 'elastic.out(1,0.55)' });
+                            if (animOn) {
+                                gsap.fromTo(en.target,
+                                    { opacity: 0, x: -30, scale: 0.7, transformOrigin: 'left center' },
+                                    { opacity: 1, x: 0, scale: 1, duration: 1, ease: 'elastic.out(1,0.55)' });
+                            } else {
+                                gsap.fromTo(en.target, { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' });
+                            }
                         } else {
                             cards.push(en.target);
                         }
                     });
-                    if (cards.length) playCards(cards);
+                    if (cards.length) (animOn ? playCardsFull : playCardsLite)(cards);
                 }, { threshold: 0.12 });
 
                 content.querySelectorAll('[data-gt-pill],[data-gt-card]').forEach(el => gtObserver.observe(el));
@@ -2189,7 +2430,7 @@ const renderTimeline = () => {
             }
         };
         const gtModal = document.getElementById('global-timeline-modal');
-        const openGlobalTimeline = () => { renderGlobalTimeline(); gtModal.classList.add('active'); };
+        // const openGlobalTimeline = () => { renderGlobalTimeline(); gtModal.classList.add('active'); };
         const closeGlobalTimeline = () => gtModal.classList.remove('active');
 
         // --- NEW TRIP MODAL ---
