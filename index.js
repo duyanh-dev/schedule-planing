@@ -1345,8 +1345,27 @@ const TL_FX = (function () {
    Đường gập là x + y = d. Phần x + y > d bị nhấc lên và lật qua đường gập
    (điểm (x,y) -> (d - y, d - x)), tạo thành mặt sau tờ giấy.
    q = 1: giấy phẳng hoàn toàn.  q = 0: giấy đang bị cong nhiều nhất (và mờ hẳn). */
+/* ==========================================================
+   TỜ GIẤY UỐN GÓC (bản tối ưu) + XÓA CARD CUỐI "HÚT VÀO TÂM"
+   Thay thế: TL_PAPER và TL_DELETE_FX cũ.
+   GIỮ NGUYÊN: TL_DUP_FX, TL_FX, renderTimeline (chỉ sửa nhánh ngày trống, xem cuối file).
+   ========================================================== */
+ 
+/* ===== Helper dùng chung: góc giấy cong bằng clip-path + "mặt sau tờ giấy" =====
+   Đường gập là x + y = d. Phần x + y > d bị nhấc lên, lật qua nếp gập
+   (x,y) -> (d - y, d - x). q = 1: giấy phẳng.  q = 0: cong nhiều nhất (mờ hẳn). */
 const TL_PAPER = {
-    clip(poly, d, sign) { // cắt đa giác theo nửa mặt phẳng (Sutherland–Hodgman)
+    LITE_BACKDROP: true, // tắt backdrop-filter của card trong lúc chạy (mượt hơn nhiều trên mobile/Safari)
+    _styled: false,
+    ensureStyle() {
+        if (this._styled) return;
+        this._styled = true;
+        const s = document.createElement('style');
+        s.textContent = '.tl-paper-run,.tl-paper-run *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}';
+        document.head.appendChild(s);
+    },
+ 
+    clip(poly, d, sign) { // Sutherland–Hodgman
         const out = [];
         for (let i = 0; i < poly.length; i++) {
             const a = poly[i], b = poly[(i + 1) % poly.length];
@@ -1359,7 +1378,6 @@ const TL_PAPER = {
         }
         return out;
     },
-    /* Hình chữ nhật bo góc dưới dạng đa giác lồi (n đoạn mỗi góc) để nếp gập + mặt sau giấy bo đúng như card */
     roundedRect(w, h, r, n = 8) {
         r = Math.max(0, Math.min(r, w / 2, h / 2));
         if (!r) return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
@@ -1377,124 +1395,155 @@ const TL_PAPER = {
         if (pts.length < 3) return 'polygon(0px 0px,0px 0px,0px 0px)';
         return 'polygon(' + pts.map(p => (p.x + dx).toFixed(1) + 'px ' + (p.y + dy).toFixed(1) + 'px').join(',') + ')';
     },
-
-    /* Chạy animation bằng GSAP (không có GSAP thì tự dùng requestAnimationFrame).
-       reverse=false: dán xuống (q 0->1, power3.out)
-       reverse=true : bóc ra   (q 1->0, power3.in) = đúng đảo ngược của dán.
-       LƯU Ý QUAN TRỌNG: .tl-card có class `transition-all` (Tailwind) -> làm clip-path/opacity/transform
-       bị trễ ~150ms và không nội suy được giữa các đa giác khác số đỉnh => card "không chạy theo kịp"
-       nếp gấp. Vì vậy tắt transition của card trong lúc chạy rồi trả lại sau. */
+ 
+    /* reverse=false: dán (q 0->1, power3.out) | reverse=true: bóc (q 1->0, power3.in)
+       Khác bản cũ:
+       1) Đo kích thước lại đúng lúc tween BẮT ĐẦU (sau delay). Bản cũ đo trước delay 600ms của Duplicate,
+          trong lúc hộp thoại còn đóng/thanh cuộn đổi => nếp gập + mặt sau tờ giấy lệch so với card.
+       2) Huỷ lần chạy cũ trên cùng card (trước đây prevTransition bị ghi đè thành 'none' => card mất transition).
+       3) Mặt sau + bóng dịch translateY cùng card => không hở khe ở nếp gập.
+       4) Item bị gỡ khỏi DOM (đổi tab/ngày giữa chừng) => tự dừng, không chạy ma.
+       5) Tắt backdrop-filter lồng nhau trong lúc chạy (nguyên nhân giật chính khi clip-path đổi mỗi frame). */
     run(item, card, { reverse = false, duration = 0.8, delay = 0, onDone } = {}) {
-        const w = card.offsetWidth, h = card.offsetHeight;
-        const ir = item.getBoundingClientRect(), cr = card.getBoundingClientRect();
-        const ox = cr.left - ir.left, oy = cr.top - ir.top;
-        const M = Math.ceil(Math.max(w, h) * 0.5);
-        const W = w + 2 * M, H = h + 2 * M;
-
+        if (card._tlPaper) card._tlPaper.cancel();
+ 
         const prevTransition = card.style.transition, prevWill = card.style.willChange;
         card.style.transition = 'none';
         card.style.willChange = 'clip-path, opacity, transform';
-
-        // Bóng đổ nhẹ lên nền ngay sau nếp gập (chỉ tối dần, KHÔNG có màu trắng)
+        if (this.LITE_BACKDROP) { this.ensureStyle(); card.classList.add('tl-paper-run'); }
+ 
         const shade = document.createElement('div');
-        shade.style.cssText = 'position:absolute;pointer-events:none;z-index:20;display:none;' +
-            'left:' + ox + 'px;top:' + oy + 'px;width:' + w + 'px;height:' + h + 'px;will-change:clip-path';
-        item.appendChild(shade);
-
-        // Mặt sau tờ giấy lật lên (không dùng filter/blur để mượt hơn)
+        shade.style.cssText = 'position:absolute;pointer-events:none;z-index:20;display:none;will-change:clip-path,opacity,transform';
         const flap = document.createElement('div');
-        flap.style.cssText = 'position:absolute;pointer-events:none;z-index:25;display:none;will-change:clip-path,opacity;' +
-            'left:' + (ox - M) + 'px;top:' + (oy - M) + 'px;width:' + W + 'px;height:' + H + 'px';
+        flap.style.cssText = 'position:absolute;pointer-events:none;z-index:25;display:none;will-change:clip-path,opacity,transform';
+        item.appendChild(shade);
         item.appendChild(flap);
-
-        const rect = this.roundedRect(w, h, parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0);
-        const dMin = 0.5 * (w + h), dMax = w + h + 2;
+ 
+        let w = 0, h = 0, M = 0, rect = [], dMin = 0, dMax = 0, band = 0.012;
         const pc = v => (v * 100).toFixed(2) + '%';
         const st = { q: reverse ? 1 : 0 };
-        const band = Math.max(0.012, 28 / (W + H));
-
+ 
+        const measure = () => {
+            card.style.transform = ''; // đo khi chưa bị dịch
+            const ir = item.getBoundingClientRect(), cr = card.getBoundingClientRect();
+            w = card.offsetWidth; h = card.offsetHeight;
+            const ox = cr.left - ir.left, oy = cr.top - ir.top;
+            M = Math.ceil(Math.max(w, h) * 0.5);
+            const W = w + 2 * M, H = h + 2 * M;
+            rect = this.roundedRect(w, h, parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0);
+            dMin = 0.5 * (w + h); dMax = w + h + 2;
+            band = Math.max(0.012, 28 / (W + H));
+            shade.style.left = ox + 'px'; shade.style.top = oy + 'px';
+            shade.style.width = w + 'px'; shade.style.height = h + 'px';
+            flap.style.left = (ox - M) + 'px'; flap.style.top = (oy - M) + 'px';
+            flap.style.width = W + 'px'; flap.style.height = H + 'px';
+        };
+ 
         const apply = q => {
-            if (q >= 0.999) { // giấy đã phẳng hoàn toàn
+            if (q >= 0.999) {
                 card.style.clipPath = ''; card.style.opacity = ''; card.style.transform = '';
                 flap.style.display = 'none'; shade.style.display = 'none';
                 return;
             }
             const d = dMin + (dMax - dMin) * q;
-            const visible = this.clip(rect, d, 1);          // phần còn dán trên nền
-            const gap = this.clip(rect, d, -1);             // phần đã bốc lên (vùng gốc)
-            const lifted = gap.map(p => ({ x: d - p.y, y: d - p.x })); // phần đó sau khi lật qua nếp gập
+            const visible = this.clip(rect, d, 1);
+            const gap = this.clip(rect, d, -1);
+            const lifted = gap.map(p => ({ x: d - p.y, y: d - p.x }));
             const op = Math.min(1, q / 0.2);
-
+            const tr = 'translateY(' + (-(1 - q) * 4).toFixed(2) + 'px)';
+ 
             card.style.clipPath = this.css(visible, 0, 0);
             card.style.opacity = op;
-            card.style.transform = 'translateY(' + (-(1 - q) * 4) + 'px)';
-
+            card.style.transform = tr;
+ 
             const f2 = d / (w + h);
             shade.style.background = 'linear-gradient(135deg,transparent ' + pc(Math.max(0, f2 - 0.005)) +
                 ',rgba(15,23,42,.15) ' + pc(f2) + ',rgba(15,23,42,0) ' + pc(Math.min(1, f2 + 0.08)) + ')';
             shade.style.clipPath = this.css(gap, 0, 0);
             shade.style.opacity = op;
+            shade.style.transform = tr;
             shade.style.display = gap.length >= 3 ? 'block' : 'none';
-
-            const f = (d + 2 * M) / (W + H);
+ 
+            const f = (d + 2 * M) / (w + h + 4 * M);
             flap.style.background = 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 ' + pc(Math.max(0, f - band * 5)) +
                 ',#e2e8f0 ' + pc(Math.max(0, f - band * 2.2)) + ',#b6c2d1 ' + pc(Math.max(0, f - band * 0.6)) +
                 ',#8d9bb0 ' + pc(f) + ')';
             flap.style.clipPath = this.css(lifted, M, M);
             flap.style.opacity = op;
+            flap.style.transform = tr;
             flap.style.display = lifted.length >= 3 ? 'block' : 'none';
         };
-
-        apply(st.q);
+ 
         let done = false, tween = null, raf = 0;
+        const handle = { cancel: () => finish() };
         const finish = () => {
             if (done) return; done = true;
             cancelAnimationFrame(raf);
             if (tween && tween.kill) tween.kill();
             flap.remove(); shade.remove();
             card.style.willChange = prevWill;
+            if (card._tlPaper === handle) card._tlPaper = null;
             if (!reverse) { // dán xong: trả card về nguyên trạng
                 card.style.clipPath = ''; card.style.opacity = ''; card.style.transform = '';
-                // trả transition sau 1 frame để không kích hoạt hiệu ứng chuyển ngoài ý muốn
+                card.classList.remove('tl-paper-run');
                 requestAnimationFrame(() => { card.style.transition = prevTransition; });
             }
             if (onDone) onDone();
         };
-
+        card._tlPaper = handle;
+ 
+        measure();
+        apply(st.q);
+ 
         if (typeof gsap !== 'undefined') {
             tween = gsap.to(st, {
                 q: reverse ? 0 : 1, duration, delay,
                 ease: reverse ? 'power3.in' : 'power3.out',
-                onUpdate: () => apply(st.q),
+                onStart: () => { if (!item.isConnected) return finish(); measure(); apply(st.q); },
+                onUpdate: () => { if (!item.isConnected) return finish(); apply(st.q); },
                 onComplete: finish
             });
         } else {
             const t0 = performance.now() + delay * 1000;
+            let started = false;
             const frame = now => {
                 if (done) return;
-                const t = Math.min(1, Math.max(0, (now - t0) / (duration * 1000)));
-                if (now >= t0) apply(reverse ? 1 - t * t * t : 1 - Math.pow(1 - t, 3));
-                if (now >= t0 && t >= 1) return finish();
+                if (!item.isConnected) return finish();
+                if (now >= t0) {
+                    if (!started) { started = true; measure(); }
+                    const t = Math.min(1, (now - t0) / (duration * 1000));
+                    apply(reverse ? 1 - t * t * t : 1 - Math.pow(1 - t, 3));
+                    if (t >= 1) return finish();
+                }
                 raf = requestAnimationFrame(frame);
             };
             raf = requestAnimationFrame(frame);
         }
-        return { cancel: finish };
+        return handle;
     }
 };
-
-/* ===== HIỆU ỨNG XÓA CARD: tờ giấy bị bóc ra ở góc (ngược lại với dán) =====
-   Trước khi render lại chụp các item cũ; sau khi render, item nào biến mất
-   được dựng lại thành "bóng ma" chạy animation rồi tự gỡ. */
+ 
+/* ===== XÓA CARD =====
+   - Còn >= 1 card sau khi xóa : tờ giấy bị bóc ra (như cũ) + khép khoảng trống.
+   - Xóa card CUỐI (ngày trống) : playLast() -> card bị "hút" thành hạt vào tâm khung "Chưa có lịch trình",
+     khung nổi lên, icon bật + sóng + tia sáng. Không dùng bóc giấy. Chỉ dùng transform/opacity => mượt. */
 const TL_DELETE_FX = {
     snapshot(container, key) {
+        const cr = container.getBoundingClientRect();
         return {
             same: container.dataset.tlKey === key,
-            items: Array.from(container.querySelectorAll('.tl-item[data-act-id]')).map(el => ({
-                id: el.dataset.actId, el, h: el.offsetHeight
-            }))
+            // bỏ qua "bóng ma" đang chạy dở để xóa liên tiếp không bị animate đôi
+            items: Array.from(container.querySelectorAll('.tl-item[data-act-id]:not([data-tl-ghost])')).map(el => {
+                const r = el.getBoundingClientRect();
+                return {
+                    id: el.dataset.actId, el, h: el.offsetHeight, w: el.offsetWidth,
+                    top: r.top - cr.top - container.clientTop,
+                    left: r.left - cr.left - container.clientLeft
+                };
+            })
         };
     },
+ 
     play(container, snap, key) {
         container.dataset.tlKey = key;
         if (!snap || !snap.same || !snap.items.length) return;
@@ -1503,25 +1552,23 @@ const TL_DELETE_FX = {
         snap.items.forEach((it, i) => {
             if (alive.has(it.id) || !it.h) return;
             const ghost = it.el;
+            ghost.dataset.tlGhost = '1';
             ghost.style.pointerEvents = 'none';
             ghost.style.height = it.h + 'px';
-            // Tìm vị trí cũ: ngay trước item còn sống kế tiếp, nếu không có thì trước phần tổng kết
             let ref = null;
             for (let j = i + 1; j < snap.items.length; j++) {
-                const n = container.querySelector('.tl-item[data-act-id="' + snap.items[j].id + '"]');
+                const n = container.querySelector('.tl-item[data-act-id="' + snap.items[j].id + '"]:not([data-tl-ghost])');
                 if (n) { ref = n; break; }
             }
             if (!ref) ref = container.querySelector('.tl-extra');
             container.insertBefore(ghost, ref);
-
+ 
             const card = ghost.querySelector('.tl-card');
             const node = ghost.querySelector('.tl-node');
             const ease = 'cubic-bezier(.4,0,.2,1)';
-
-            // 1) Tờ giấy bị bóc ra từ góc dưới-phải rồi mờ đi
+ 
             if (card) TL_PAPER.run(ghost, card, { reverse: true, duration: 0.8 });
-
-            // 2) Node tròn trên timeline co lại rồi biến mất
+ 
             if (node) {
                 node.animate([
                     { transform: 'scale(1)', opacity: 1 },
@@ -1529,13 +1576,142 @@ const TL_DELETE_FX = {
                     { transform: 'scale(0)', opacity: 0 }
                 ], { duration: 500, delay: 250, easing: ease, fill: 'forwards' });
             }
-
-            // 3) Khoảng trống khép lại + màn hình tự trượt về card gần nhất, cùng một nhịp => không giật
+ 
             this.collapse(container, ghost, it, snap, i, alive);
         });
     },
-
-    /* Tìm phần tử đang cuộn (null = cuộn cả trang) */
+ 
+    /* ===== Xóa card cuối: ngày chuyển sang khung "Chưa có lịch trình" ===== */
+    playLast(container, snap, key) {
+        container.dataset.tlKey = key;
+        const empty = container.querySelector('.tl-empty');
+        if (!empty || !snap || !snap.same) return;
+        const gone = snap.items.filter(it => it.h);
+        if (!gone.length || typeof Element.prototype.animate !== 'function') return;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+ 
+        TL_PAPER.ensureStyle();
+ 
+        // 1) Dựng lại card cũ thành "bóng ma" đè đúng vị trí cũ (position:absolute => không làm khung trống bị đẩy)
+        const prevPos = container.style.position;
+        if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
+        gone.forEach(it => {
+            const g = it.el;
+            g.dataset.tlGhost = '1';
+            Object.assign(g.style, {
+                position: 'absolute', margin: '0', pointerEvents: 'none', zIndex: '30',
+                left: it.left + 'px', top: it.top + 'px', width: it.w + 'px', height: it.h + 'px'
+            });
+            container.appendChild(g);
+        });
+ 
+        // 2) Đo MỘT lần trước khi chạy bất kỳ animation nào
+        const icon = empty.querySelector('.tl-empty-icon');
+        const ir = icon.getBoundingClientRect();
+        const ix = ir.left + ir.width / 2, iy = ir.top + ir.height / 2;
+        const T = 760, STAG = 70;
+        const arrive = Math.round(T * 0.62) + (gone.length - 1) * STAG; // lúc card chạm tâm icon
+        const jobs = [];
+ 
+        gone.forEach((it, i) => {
+            const g = it.el, d = i * STAG;
+            const card = g.querySelector('.tl-card');
+ 
+            // phần phụ (giờ, node, đường kẻ, thanh nút) mờ dần
+            g.querySelectorAll('.tl-time,.tl-node,.tl-line,.tl-body > :not(.tl-card)').forEach(el => {
+                const end = el.classList.contains('tl-node') ? { opacity: 0, transform: 'scale(0)' }
+                    : el.classList.contains('tl-line') ? { opacity: 0 }
+                    : { opacity: 0, transform: 'translateY(8px)' };
+                const start = el.classList.contains('tl-node') ? { opacity: 1, transform: 'scale(1)' }
+                    : el.classList.contains('tl-line') ? { opacity: 1 }
+                    : { opacity: 1, transform: 'none' };
+                jobs.push(el.animate([start, end], {
+                    duration: 320, delay: d + 60, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards'
+                }).finished);
+            });
+ 
+            if (card) {
+                const cr = card.getBoundingClientRect();
+                const dx = ix - (cr.left + cr.width / 2), dy = iy - (cr.top + cr.height / 2);
+                card.style.transition = 'none';
+                card.style.willChange = 'transform, opacity';
+                card.classList.add('tl-paper-run'); // bỏ backdrop-filter cho nhẹ
+                // phồng nhẹ (lấy đà) -> cong vòng, thu nhỏ -> bị hút vào tâm icon
+                jobs.push(card.animate([
+                    { transform: 'translate(0,0) scale(1) rotate(0deg)', opacity: 1, offset: 0 },
+                    { transform: 'translate(0,-8px) scale(1.03) rotate(0deg)', opacity: 1, offset: .16 },
+                    { transform: 'translate(' + (dx * .55).toFixed(1) + 'px,' + (dy * .55 - 28).toFixed(1) + 'px) scale(.42) rotate(-9deg)', opacity: .9, offset: .6 },
+                    { transform: 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(.04) rotate(-24deg)', opacity: 0, offset: 1 }
+                ], { duration: T, delay: d, easing: 'cubic-bezier(.6,.02,.3,1)', fill: 'forwards' }).finished);
+            }
+        });
+ 
+        // 3) Khung "Chưa có lịch trình" nổi lên khi card đang bị hút vào
+        empty.animate([
+            { opacity: 0, transform: 'translateY(18px) scale(.94)' },
+            { opacity: 1, transform: 'none' }
+        ], { duration: 640, delay: Math.max(0, arrive - 340), easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' });
+ 
+        // 4) Icon bật lên đúng lúc card chạm tâm
+        icon.animate([
+            { transform: 'scale(.4) rotate(-20deg)', opacity: 0 },
+            { transform: 'scale(1.22) rotate(6deg)', opacity: 1, offset: .55 },
+            { transform: 'scale(1) rotate(0deg)', opacity: 1 }
+        ], { duration: 650, delay: arrive - 80, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+ 
+        // 5) Hai vòng sóng lan ra
+        [0, 170].forEach(extra => {
+            const ring = document.createElement('span');
+            ring.style.cssText = 'position:absolute;inset:0;border-radius:9999px;border:2px solid rgba(59,130,246,.5);pointer-events:none;opacity:0';
+            icon.appendChild(ring);
+            const a = ring.animate([
+                { transform: 'scale(1)', opacity: 0 },
+                { transform: 'scale(1.3)', opacity: .7, offset: .12 },
+                { transform: 'scale(2.6)', opacity: 0 }
+            ], { duration: 800, delay: arrive + extra, easing: 'cubic-bezier(.2,.6,.3,1)', fill: 'backwards' });
+            a.finished.then(() => ring.remove(), () => ring.remove());
+        });
+ 
+        // 6) Hạt sáng bắn tỏa ra (card "tan" thành hạt)
+        const COLORS = ['#60a5fa', '#93c5fd', '#38bdf8', '#a5b4fc', '#cbd5e1'];
+        const N = 12;
+        for (let k = 0; k < N; k++) {
+            const ang = (k / N) * Math.PI * 2 + Math.random() * 0.4;
+            const rad = 44 + Math.random() * 40;
+            const dot = document.createElement('span');
+            dot.style.cssText = 'position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;' +
+                'border-radius:9999px;pointer-events:none;opacity:0;background:' + COLORS[k % COLORS.length];
+            icon.appendChild(dot);
+            const tx = (Math.cos(ang) * rad).toFixed(1), ty = (Math.sin(ang) * rad).toFixed(1);
+            const a = dot.animate([
+                { transform: 'translate(0,0) scale(.6)', opacity: 0 },
+                { transform: 'translate(' + (tx * .15) + 'px,' + (ty * .15) + 'px) scale(1)', opacity: 1, offset: .12 },
+                { transform: 'translate(' + tx + 'px,' + ty + 'px) scale(0)', opacity: 0 }
+            ], { duration: 600 + Math.random() * 250, delay: arrive, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' });
+            a.finished.then(() => dot.remove(), () => dot.remove());
+        }
+ 
+        // 7) Chữ + nút xuất hiện lần lượt
+        empty.querySelectorAll('.tl-empty-stagger').forEach((el, k) => {
+            el.animate([
+                { opacity: 0, transform: 'translateY(10px)' },
+                { opacity: 1, transform: 'none' }
+            ], { duration: 520, delay: arrive + 60 + k * 90, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' });
+        });
+ 
+        // 8) Khung trống nằm ngoài màn hình (do trang ngắn lại) -> cuộn nhẹ tới
+        const er = empty.getBoundingClientRect();
+        if (er.top < 0 || er.bottom > window.innerHeight) {
+            setTimeout(() => { if (empty.isConnected) empty.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120);
+        }
+ 
+        // 9) Dọn dẹp
+        Promise.allSettled(jobs).then(() => {
+            gone.forEach(it => it.el.remove());
+            container.style.position = prevPos;
+        });
+    },
+ 
     scrollParent(el) {
         for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
             const o = getComputedStyle(p).overflowY;
@@ -1543,17 +1719,14 @@ const TL_DELETE_FX = {
         }
         return null;
     },
-
-    /* Thu gọn chỗ trống của card đã xóa. Chiều cao và vị trí cuộn chạy CHUNG một tiến độ p (0->1):
-       - Đang ở cuối trang: trang ngắn lại bao nhiêu thì cuộn lên đúng bấy nhiêu => nội dung không bị giật xuống.
-       - Card gần nhất (ưu tiên card phía trên, nếu không có thì card phía dưới) chưa nằm gọn trong màn hình:
-         màn hình tự trượt để đưa nó vào giữa.
-       - Người dùng tự lăn chuột / chạm màn hình: dừng việc tự cuộn, chỉ còn khép khoảng trống. */
+ 
+    /* Khép khoảng trống + tự cuộn cùng một tiến độ p (giữ nguyên logic cũ).
+       Sửa: nếu ghost bị gỡ khỏi DOM giữa chừng (đổi tab/ngày) thì dừng NGAY, không kéo cuộn trang mới. */
     collapse(container, ghost, it, snap, i, alive) {
         const mb = parseFloat(getComputedStyle(ghost).marginBottom) || 0;
         const full = it.h + mb;
-
-        if (typeof gsap === 'undefined') { // dự phòng: khép khoảng trống như cũ, không tự cuộn
+ 
+        if (typeof gsap === 'undefined') {
             const c = ghost.animate([
                 { height: it.h + 'px', marginBottom: mb + 'px', opacity: 1 },
                 { height: '0px', marginBottom: '0px', opacity: 0 }
@@ -1561,7 +1734,7 @@ const TL_DELETE_FX = {
             c.onfinish = () => ghost.remove();
             return;
         }
-
+ 
         const sp = this.scrollParent(ghost);
         const getTop = () => sp ? sp.scrollTop : (window.pageYOffset || document.documentElement.scrollTop || 0);
         const setTop = v => sp ? sp.scrollTo({ top: v, behavior: 'instant' }) : window.scrollTo({ top: v, left: 0, behavior: 'instant' });
@@ -1570,16 +1743,16 @@ const TL_DELETE_FX = {
         const docH = sp ? sp.scrollHeight : document.documentElement.scrollHeight;
         const s0 = getTop();
         const maxAfter = Math.max(0, docH - full - vh);
-
-        // Card gần nhất còn lại: ưu tiên phía trên, không có thì phía dưới
+ 
+        const sel = id => container.querySelector('.tl-item[data-act-id="' + id + '"]:not([data-tl-ghost])');
         let target = null, targetBelow = false;
-        for (let j = i - 1; j >= 0 && !target; j--) if (alive.has(snap.items[j].id)) target = container.querySelector('.tl-item[data-act-id="' + snap.items[j].id + '"]');
-        for (let j = i + 1; j < snap.items.length && !target; j++) if (alive.has(snap.items[j].id)) { target = container.querySelector('.tl-item[data-act-id="' + snap.items[j].id + '"]'); targetBelow = true; }
-
-        let final = Math.min(s0, maxAfter); // chỉ bị kéo lại khi đang ở cuối trang
+        for (let j = i - 1; j >= 0 && !target; j--) if (alive.has(snap.items[j].id)) target = sel(snap.items[j].id);
+        for (let j = i + 1; j < snap.items.length && !target; j++) if (alive.has(snap.items[j].id)) { target = sel(snap.items[j].id); targetBelow = true; }
+ 
+        let final = Math.min(s0, maxAfter);
         if (target) {
             const r = target.getBoundingClientRect();
-            const absTop = s0 + (r.top - viewTop) - (targetBelow ? full : 0); // vị trí tuyệt đối SAU khi khép
+            const absTop = s0 + (r.top - viewTop) - (targetBelow ? full : 0);
             const hgt = r.height, pad = 16;
             const topAfter = absTop - final;
             const fits = topAfter >= pad && (hgt > vh - 2 * pad ? topAfter < vh - 2 * pad : topAfter + hgt <= vh - pad);
@@ -1588,17 +1761,18 @@ const TL_DELETE_FX = {
                 final = Math.max(0, Math.min(want, maxAfter));
             }
         }
-
+ 
         let userMoved = false;
         const stop = () => { userMoved = true; };
         const evs = ['wheel', 'touchstart', 'keydown', 'mousedown'];
         evs.forEach(e => window.addEventListener(e, stop, { passive: true }));
         const cleanup = () => evs.forEach(e => window.removeEventListener(e, stop));
-
+ 
         const st = { p: 0 };
-        gsap.to(st, {
+        const tw = gsap.to(st, {
             p: 1, duration: 0.55, delay: 0.65, ease: 'power2.inOut',
             onUpdate: () => {
+                if (!ghost.isConnected) { tw.kill(); cleanup(); return; } // render lại/đổi tab giữa chừng
                 const p = st.p;
                 ghost.style.height = (it.h * (1 - p)) + 'px';
                 ghost.style.marginBottom = (mb * (1 - p)) + 'px';
@@ -1609,6 +1783,23 @@ const TL_DELETE_FX = {
         });
     }
 };
+ 
+/* ===== KHUNG "CHƯA CÓ LỊCH TRÌNH" (có class để animate) ===== */
+const tlEmptyHtml = (dateStr) => `
+    <div class="tl-empty text-center py-12 md:py-16 px-4 md:ml-16 relative z-10 bg-white/50 backdrop-blur-2xl border border-white/80 shadow-[0_10px_40px_rgba(0,0,0,0.03)] rounded-[2rem] mb-10">
+        <div class="tl-empty-icon relative w-20 h-20 rounded-full bg-white/80 backdrop-blur-md border border-white flex items-center justify-center text-slate-300 mx-auto mb-4 text-4xl shadow-[0_8px_20px_rgba(0,0,0,0.04)]"><i class="fa-solid fa-mug-hot"></i></div>
+        <h3 class="tl-empty-stagger text-xl font-black text-slate-700">Chưa có lịch trình</h3>
+        <p class="tl-empty-stagger text-slate-500 text-[13px] md:text-sm mt-2 font-medium">Bấm <strong class="text-blue-600">+ Thêm</strong> để lên kế hoạch cho ngày này.</p>
+ 
+        <div class="tl-empty-stagger mt-6 flex justify-center" data-html2canvas-ignore>
+            <button onclick="confirmDeleteDay('${dateStr}')" class="h-[3.25rem] px-6 bg-red-100/80 backdrop-blur-xl hover:bg-red-200/80 text-red-900 rounded-[1.25rem] font-bold text-[13px] transition-all shadow-[0_4px_12px_rgba(244,63,94,0.06),inset_0_2px_4px_rgba(255,255,255,0.8)] active:scale-95 flex items-center justify-center gap-2.5 border border-rose-200/70 touch-manipulation group">
+                <div class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-rose-200 shadow-[0_2px_5px_rgba(0,0,0,0.06)] group-hover:scale-110 transition-transform flex-shrink-0">
+                    <i class="fa-solid fa-trash-can text-rose-600 text-[13px]"></i>
+                </div>
+                <span class="drop-shadow-sm pr-1">Xóa ngày này</span>
+            </button>
+        </div>
+    </div>`;
 
 /* ===== HIỆU ỨNG NHÂN BẢN (Duplicate): cuộn tới card mới + tờ giấy được dán xuống =====
    Chỉ kích hoạt khi người dùng bấm nút Duplicate, không đụng tới logic duplicateActivity.
@@ -1740,25 +1931,10 @@ const renderTimeline = () => {
             
             // 1. TRƯỜNG HỢP NGÀY TRỐNG (THÊM NÚT XÓA NGÀY)
             if (!day || day.activities.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 md:py-16 px-4 md:ml-16 relative z-10 bg-white/50 backdrop-blur-2xl border border-white/80 shadow-[0_10px_40px_rgba(0,0,0,0.03)] rounded-[2rem] mb-10">
-                        <div class="w-20 h-20 rounded-full bg-white/80 backdrop-blur-md border border-white flex items-center justify-center text-slate-300 mx-auto mb-4 text-4xl shadow-[0_8px_20px_rgba(0,0,0,0.04)]"><i class="fa-solid fa-mug-hot"></i></div>
-                        <h3 class="text-xl font-black text-slate-700">Chưa có lịch trình</h3>
-                        <p class="text-slate-500 text-[13px] md:text-sm mt-2 font-medium">Bấm <strong class="text-blue-600">+ Thêm</strong> để lên kế hoạch cho ngày này.</p>
-                        
-                        <!-- Nút Xóa Ngày (Kính lỏng, xuất hiện khi ngày không có hoạt động) -->
-                       <div class="mt-6 flex justify-center" data-html2canvas-ignore>
-                            <button onclick="confirmDeleteDay('${day.date}')" class="h-[3.25rem] px-6 bg-red-100/80 backdrop-blur-xl hover:bg-red-200/80 text-red-900 rounded-[1.25rem] font-bold text-[13px] transition-all shadow-[0_4px_12px_rgba(244,63,94,0.06),inset_0_2px_4px_rgba(255,255,255,0.8)] active:scale-95 flex items-center justify-center gap-2.5 border border-rose-200/70 touch-manipulation group">
-                                <div class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-rose-200 shadow-[0_2px_5px_rgba(0,0,0,0.06)] group-hover:scale-110 transition-transform flex-shrink-0">
-                                    <i class="fa-solid fa-trash-can text-rose-600 text-[13px]"></i>
-                                </div>
-                                <span class="drop-shadow-sm pr-1">Xóa ngày này</span>
-                            </button>
-                        </div>
-                    </div>`;
-                TL_DELETE_FX.play(container, tlSnap, tlKey);
-                return;
-            }
+    container.innerHTML = tlEmptyHtml(state.activeDayDate);
+    TL_DELETE_FX.playLast(container, tlSnap, tlKey);
+    return;
+}
 
             let html = '';
             let dailyTotalVND = 0; 
