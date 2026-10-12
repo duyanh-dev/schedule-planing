@@ -1373,32 +1373,67 @@ const renderTimeline = () => {
 
                 const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-location-crosshairs';
 
-                // Lộ trình hiển thị (UI 2 khối hộp kính đối xứng đã làm ở bước trước)
+                // ===== LỘ TRÌNH: khối kính nổi, không viền, không bóng =====
                 let routeHtml = '';
                 if (act.from && act.to) {
                     routeHtml = `
-                    <div class="bg-white/50 backdrop-blur-xl border border-white/80 rounded-[1.25rem] p-3.5 flex flex-col gap-2.5 shadow-[0_4px_15px_rgba(0,0,0,0.02)]">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex-1 min-w-0">
+                    <div class="bg-slate-200/45 backdrop-blur-2xl rounded-[1.5rem] p-2 flex flex-col gap-2">
+                        <div class="flex items-stretch gap-1.5">
+                            <div class="flex-1 min-w-0 bg-gradient-to-br from-white to-white/70 backdrop-blur-2xl rounded-[1.1rem] p-3">
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Từ</div>
                                 <div class="text-[13px] font-semibold text-slate-700 break-words leading-relaxed">${act.from}</div>
                             </div>
-                            <div class="pt-3 text-slate-300 flex-shrink-0"><i class="fa-solid fa-arrow-right-long"></i></div>
-                            <div class="flex-1 min-w-0 text-right">
+                            <div class="flex items-center flex-shrink-0 text-slate-400"><i class="fa-solid fa-arrow-right-long text-xs"></i></div>
+                            <div class="flex-1 min-w-0 bg-gradient-to-br from-white to-white/70 backdrop-blur-2xl rounded-[1.1rem] p-3">
                                 <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Đến</div>
                                 <div class="text-[13px] font-semibold text-slate-700 break-words leading-relaxed">${act.to}</div>
                             </div>
                         </div>
-                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full h-10 bg-blue-600/90 backdrop-blur-2xl border border-blue-400/60 hover:bg-blue-600 text-white rounded-[1rem] font-bold text-[11px] uppercase tracking-wider transition-all active:scale-95 mt-2 shadow-[0_4px_12px_rgba(37,99,235,0.2),inset_0_1px_3px_rgba(255,255,255,0.35)] flex items-center justify-center gap-2 px-3 touch-manipulation group">
-                            <div class="w-6 h-6 flex-shrink-0 rounded-full bg-white/20 flex items-center justify-center border border-white/30 shadow-inner group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-map-location-dot text-white text-[10px] drop-shadow-sm"></i>
+                        <button onclick="openGoogleMaps('${(act.from || '').replace(/'/g, "\\'")}', '${(act.to || '').replace(/'/g, "\\'")}')" class="w-full h-10 bg-blue-600/90 backdrop-blur-2xl hover:bg-blue-600 text-white rounded-[1rem] font-bold text-[11px] uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-2 px-3 touch-manipulation group">
+                            <div class="w-6 h-6 flex-shrink-0 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-map-location-dot text-white text-[10px]"></i>
                             </div>
-                            <span class="drop-shadow-sm truncate">Chỉ đường Google Maps</span>
+                            <span class="truncate">Chỉ đường Google Maps</span>
                         </button>
                     </div>`;
                 } else if (act.to || act.from) {
-                    routeHtml = `<div class="bg-white/50 backdrop-blur-md border border-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-2.5 rounded-xl text-[13px] font-semibold text-slate-700 break-words leading-relaxed"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${act.to || act.from}</div>`;
+                    routeHtml = `<div class="bg-gradient-to-br from-white/95 to-white/65 backdrop-blur-2xl p-3.5 rounded-[1.25rem] text-[13px] font-semibold text-slate-700 break-words leading-relaxed"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${act.to || act.from}</div>`;
                 }
+
+                // ===== CÁC KHỐI NỘI DUNG: mỗi phần nổi khối riêng (liquid glass) =====
+                const descHtml = act.desc ? `
+                    <div class="bg-gradient-to-br from-white/95 to-white/65 backdrop-blur-2xl rounded-[1.25rem] p-3.5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="w-6 h-6 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-slate-400 flex-shrink-0"><i class="fa-regular fa-comment-dots text-[11px]"></i></span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chi tiết</span>
+                        </div>
+                        <p class="text-[13px] text-slate-700 font-medium leading-relaxed break-words">${act.desc}</p>
+                    </div>` : '';
+
+                const guideHtml = act.guide ? `
+                    <div class="bg-gradient-to-br from-blue-100/70 to-sky-50/40 backdrop-blur-2xl rounded-[1.25rem] p-3.5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="w-6 h-6 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-blue-500 flex-shrink-0"><i class="fa-solid fa-route text-[11px]"></i></span>
+                            <span class="text-[10px] font-black text-blue-400 uppercase tracking-widest">Hướng dẫn</span>
+                        </div>
+                        <p class="text-[13px] text-blue-700 font-semibold leading-relaxed break-words">${act.guide}</p>
+                    </div>` : '';
+
+                const noteHtml = act.note ? `
+                    <div class="bg-gradient-to-br from-amber-100/75 to-yellow-50/40 backdrop-blur-2xl rounded-[1.25rem] p-3.5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="w-6 h-6 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-amber-500 flex-shrink-0"><i class="fa-solid fa-star text-[11px]"></i></span>
+                            <span class="text-[10px] font-black text-amber-500/80 uppercase tracking-widest">Lưu ý</span>
+                        </div>
+                        <p class="text-[13px] font-semibold text-amber-900 leading-relaxed break-words">${act.note}</p>
+                    </div>` : '';
+
+                // ===== GIÁ TIỀN: một dòng riêng, không bao giờ rớt dòng =====
+                const budgetHtml = act.budgetAmt
+                    ? `<div class="flex items-center">
+                            <span class="inline-flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 text-[12px] font-extrabold text-emerald-900 bg-gradient-to-br from-emerald-100/85 to-emerald-50/50 backdrop-blur-xl px-3.5 py-1.5 rounded-full"><i class="fa-solid fa-sack-dollar text-emerald-600 text-[11px]"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)} ${act.budgetCur}</span>
+                       </div>`
+                    : `<div class="text-[11px] text-slate-400 font-medium italic px-1">Không có chi phí</div>`;
 
                 html += `
                     <div class="tl-item relative flex gap-3 md:gap-5 group mb-8 transition-opacity duration-300 ${isDone ? 'opacity-60 grayscale-[30%]' : 'opacity-100'}">
@@ -1409,7 +1444,7 @@ const renderTimeline = () => {
                             <div class="text-[13px] text-slate-400 font-bold">${act.end}</div>
                         </div>
 
-                        <!-- Timeline Line & Node (Nổi khối 3D) -->
+                        <!-- Timeline Line & Node -->
                         <div class="relative flex flex-col items-center z-10 pt-1 px-1 md:px-0">
                             <div class="tl-node w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${isDone ? 'bg-white/60 backdrop-blur-md border border-white/80 text-slate-400' : 'bg-gradient-to-br from-blue-50 to-white border border-white text-blue-600'} z-10 relative ring-4 ring-slate-50/50">
                                 <i class="fa-solid ${iconClass} ${isDone ? '' : 'scale-110'}"></i>
@@ -1417,83 +1452,59 @@ const renderTimeline = () => {
                             ${index < day.activities.length - 1 ? `<div class="tl-line absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200/60 -translate-x-1/2 z-0 rounded-full"></div>` : ''}
                         </div>
 
-                        <!-- TOÀN BỘ NỘI DUNG CỘT PHẢI -->
+                        <!-- NỘI DUNG CỘT PHẢI -->
                         <div class="tl-body flex-1 min-w-0 pr-1 md:pr-0 pb-1">
                             
-                            <!-- Thời gian hiển thị nổi bên ngoài ở Mobile -->
+                            <!-- Thời gian hiển thị ở Mobile -->
                             <div class="md:hidden flex items-center gap-2 mb-2">
                                 <span class="text-[15px] font-black text-slate-800 tracking-tight">${act.start} - ${act.end}</span>
                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${status.color}">${status.label}</span>
                             </div>
 
-                            <div class="tl-card bg-white/60 backdrop-blur-3xl rounded-[1.5rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 flex flex-col overflow-hidden hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] transition-all">
+                            <!-- THẺ CHÍNH: kính lỏng, không viền, không bóng -->
+                            <div class="tl-card bg-gradient-to-br from-slate-100 to-slate-100/70 backdrop-blur-3xl rounded-[1.75rem] flex flex-col p-2.5 md:p-3 gap-2.5 transition-all">
                                 
-                                <div class="p-4 md:p-5 border-b border-white flex justify-between items-start gap-3 bg-white/40">
+                                <!-- Header: trạng thái, tiêu đề, nhãn, nút hoàn thành -->
+                                <div class="px-2 pt-2 pb-1 flex justify-between items-start gap-3">
                                     <div class="flex-1 min-w-0">
                                         <div class="hidden md:flex items-center gap-2 mb-1.5">
-                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_2px_rgba(255,255,255,0.8)] ${status.color}">
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md ${status.color}">
                                                 ${status.label}
                                             </span>
                                         </div>
                                         <h3 class="text-[17px] md:text-lg font-black leading-snug ${isDone ? 'line-through text-slate-400' : 'text-slate-800'} break-words">${act.details}</h3>
                                         
                                         <div class="mt-2.5 flex flex-wrap items-center gap-2">
-    <!-- Nhãn Loại hoạt động -->
-    <span class="text-[10px] font-extrabold text-slate-700 bg-white/80 backdrop-blur-md border border-white/90 px-3 py-1 rounded-full uppercase tracking-wider shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_2px_rgba(255,255,255,0.9)] drop-shadow-sm">
-        ${act.type}
-    </span>
-
-    <!-- Nhãn Phương tiện di chuyển (nếu có) -->
-    ${act.transport ? `
-    <span class="text-[10px] font-extrabold text-blue-700 bg-blue-50/80 backdrop-blur-md border border-blue-100/90 px-3 py-1 rounded-full uppercase tracking-wider shadow-[0_2px_8px_rgba(37,99,235,0.06),inset_0_1px_2px_rgba(255,255,255,0.9)] drop-shadow-sm flex items-center gap-1">
-        <i class="fa-solid fa-car-side text-blue-500 text-[9px]"></i>${act.transport}
-    </span>` : ''}
-</div>
-                                    </div>
-                                    <button data-tl-check="${act.id}" data-done="${isDone ? '1' : '0'}" onclick="toggleComplete('${act.id}')" class="text-3xl flex-shrink-0 transition-transform active:scale-90 ${isDone ? 'text-blue-500 drop-shadow-md hover:text-slate-400' : 'text-slate-300 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i></button>
-                                </div>
-
-                                ${(act.desc || act.guide) ? `
-                                <div class="p-4 md:p-5 bg-slate-50/40 backdrop-blur-md border-b border-white space-y-3">
-                                    ${act.desc ? `
-                                    <div>
-                                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5"><i class="fa-regular fa-comment-dots mr-1"></i>Chi tiết</div>
-                                        <p class="text-[13px] text-slate-700 font-medium leading-relaxed">${act.desc}</p>
-                                    </div>` : ''}
-                                    ${(act.desc && act.guide) ? `<div class="w-full h-px bg-white/60 my-1"></div>` : ''}
-                                    ${act.guide ? `
-                                    <div>
-                                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5"><i class="fa-solid fa-route mr-1"></i>Hướng dẫn</div>
-                                        <p class="text-[13px] text-blue-600 font-semibold leading-relaxed">${act.guide}</p>
-                                    </div>` : ''}
-                                </div>` : ''}
-
-                                ${act.note ? `
-                                <div class="p-4 md:p-5 bg-amber-50/40 backdrop-blur-md border-b border-white">
-                                    <div class="text-[13px] font-semibold text-amber-900 leading-relaxed"><i class="fa-solid fa-star text-amber-500 mr-1.5"></i>${act.note}</div>
-                                </div>` : ''}
-
-                                <!-- VÙNG 4: LỘ TRÌNH, NGÂN SÁCH & TOOLBAR -->
-                                <div class="p-4 md:p-5 bg-white/30 flex flex-col gap-3">
-                                    ${routeHtml}
-                                    <div class="flex items-center justify-between mt-1">
-                                        <div>
-                                    ${act.budgetAmt ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-emerald-900 bg-emerald-100/80 backdrop-blur-md border border-emerald-200/80 px-3 py-1 rounded-full shadow-[0_3px_10px_rgba(16,185,129,0.08),inset_0_1px_2px_rgba(255,255,255,0.8)] drop-shadow-sm"><i class="fa-solid fa-sack-dollar text-emerald-600 text-[10px]"></i>${new Intl.NumberFormat('vi-VN').format(act.budgetAmt)} ${act.budgetCur}</span>` : '<span class="text-[11px] text-slate-400 font-medium italic">Không có chi phí</span>'}
-                                </div>
-                                        
-                                        <!-- CỤM NÚT NHÂN BẢN / SỬA / XÓA (Liquid Glass Pill) -->
-                                        <div class="flex gap-1.5 md:gap-2">
-                                            <!-- Nút Duplicate (Thanh thoát, Kính lỏng) -->
-                                            <button onclick="duplicateActivity('${act.id}')" title="Duplicate" class="px-3 md:px-3.5 h-8 rounded-full bg-white/40 backdrop-blur-md border border-white/80 hover:bg-emerald-50/80 text-slate-500 hover:text-emerald-600 shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 flex items-center justify-center gap-1.5 touch-manipulation">
-                                                <span class="text-[8px] md:text-[10px] font-black uppercase tracking-widest drop-shadow-sm">Duplicate</span>
-                                            </button>
-                                            
-                                            <button onclick="editActivity('${act.id}')" title="Sửa" class="w-8 h-8 rounded-full bg-white/40 backdrop-blur-md border border-white/80 hover:bg-blue-50/80 text-slate-500 hover:text-blue-600 shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-pen text-xs"></i></button>
-                                            
-                                            <button onclick="deleteActivity('${act.id}')" title="Xóa" class="w-8 h-8 rounded-full bg-white/40 backdrop-blur-md border border-white/80 hover:bg-red-50/80 text-slate-500 hover:text-red-500 shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-trash text-xs"></i></button>
+                                            <span class="text-[10px] font-extrabold text-slate-700 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full uppercase tracking-wider">
+                                                ${act.type}
+                                            </span>
+                                            ${act.transport ? `
+                                            <span class="text-[10px] font-extrabold text-blue-700 bg-blue-100/70 backdrop-blur-md px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                                                <i class="fa-solid fa-car-side text-blue-500 text-[9px]"></i>${act.transport}
+                                            </span>` : ''}
                                         </div>
                                     </div>
+                                    <button data-tl-check="${act.id}" data-done="${isDone ? '1' : '0'}" onclick="toggleComplete('${act.id}')" class="text-3xl flex-shrink-0 transition-transform active:scale-90 ${isDone ? 'text-blue-500 hover:text-slate-400' : 'text-slate-300 hover:text-blue-400'}"><i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i></button>
                                 </div>
+
+                                ${descHtml}
+                                ${guideHtml}
+                                ${noteHtml}
+                                ${routeHtml}
+
+                                <!-- Chi phí (một dòng riêng, không bị nút đè) -->
+                                <div class="px-1 pb-1">
+                                    ${budgetHtml}
+                                </div>
+                            </div>
+
+                            <!-- THANH NÚT: tách ra ngoài thẻ, góc dưới bên phải, nhỏ gọn -->
+                            <div class="flex justify-end items-center gap-1.5 mt-2 pr-1.5">
+                                <button onclick="duplicateActivity('${act.id}')" title="Duplicate" class="px-2.5 h-7 rounded-full bg-white/45 backdrop-blur-xl hover:bg-emerald-100/70 text-slate-400 hover:text-emerald-600 transition-all active:scale-95 flex items-center justify-center touch-manipulation">
+                                    <span class="text-[8px] md:text-[9px] font-black uppercase tracking-widest">Duplicate</span>
+                                </button>
+                                <button onclick="editActivity('${act.id}')" title="Sửa" class="w-7 h-7 rounded-full bg-white/45 backdrop-blur-xl hover:bg-blue-100/70 text-slate-400 hover:text-blue-600 transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                                <button onclick="deleteActivity('${act.id}')" title="Xóa" class="w-7 h-7 rounded-full bg-white/45 backdrop-blur-xl hover:bg-red-100/70 text-slate-400 hover:text-red-500 transition-all active:scale-95 flex items-center justify-center touch-manipulation"><i class="fa-solid fa-trash text-[10px]"></i></button>
                             </div>
                         </div>
                     </div>
@@ -1567,7 +1578,6 @@ const renderTimeline = () => {
                 Đã tiêu hôm nay:
             </span>
             <div class="text-right min-w-0">
-                <!-- Chuyển về màu Xám Đen (Slate-800) cực kỳ điềm đạm, sang trọng -->
                 <div class="text-[14px] md:text-base font-black text-slate-800 truncate drop-shadow-sm">
                     ${new Intl.NumberFormat('vi-VN').format(dailyTotalVND)} VND
                 </div>
@@ -1582,7 +1592,6 @@ const renderTimeline = () => {
                 Còn lại:
             </span>
             <div class="text-right min-w-0">
-                <!-- Màu tín hiệu: Xanh ngọc dịu (Emerald-600) hoặc Đỏ san hô (Rose-500) -->
                 <div class="text-[14px] md:text-base font-black truncate drop-shadow-sm ${remainingVND >= 0 ? 'text-emerald-600/90' : 'text-rose-500'}">
                     ${new Intl.NumberFormat('vi-VN').format(remainingVND)} VND
                 </div>
