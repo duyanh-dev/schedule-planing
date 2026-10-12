@@ -1426,41 +1426,66 @@ const TL_DELETE_FX = {
    Chỉ kích hoạt khi người dùng bấm nút Duplicate, không đụng tới logic duplicateActivity. */
 const TL_DUP_FX = {
     armedAt: 0,
+    knownIds: null,
+    WINDOW: 120000, // thời gian tối đa (ms) chờ người dùng xác nhận trước khi hủy cờ
+    collectIds() {
+        const ids = new Set();
+        try {
+            if (typeof state !== 'undefined' && state && Array.isArray(state.trips)) {
+                state.trips.forEach(t => (t.days || []).forEach(d => (d.activities || []).forEach(a => ids.add(String(a.id)))));
+            }
+        } catch (e) { /* bỏ qua, sẽ dùng snapshot dự phòng */ }
+        return ids;
+    },
     bind(container) {
         if (container._tlDupBound) return;
         container._tlDupBound = true;
-        // Capture phase: chạy trước onclick của nút nên cờ luôn được đặt kịp lúc
+        // Capture phase: chạy trước onclick của nút nên cờ + danh sách ID cũ luôn được ghi nhận kịp lúc
         container.addEventListener('click', e => {
-            if (e.target.closest && e.target.closest('button[title="Duplicate"]')) this.armedAt = Date.now();
+            if (e.target.closest && e.target.closest('button[title="Duplicate"]')) {
+                this.armedAt = Date.now();
+                this.knownIds = this.collectIds();
+            }
         }, true);
     },
     play(container, snap) {
-        if (!this.armedAt || Date.now() - this.armedAt > 4000) return;
-        if (!snap || !snap.same) return;
-        const oldIds = new Set(snap.items.map(i => i.id));
-        const fresh = Array.from(container.querySelectorAll('.tl-item[data-act-id]')).filter(e => !oldIds.has(e.dataset.actId));
-        if (!fresh.length) return;
+        if (!this.armedAt) return;
+        if (Date.now() - this.armedAt > this.WINDOW) { this.armedAt = 0; this.knownIds = null; return; }
+ 
+        // Danh sách ID trước khi nhân bản (ưu tiên toàn bộ state; dự phòng: snapshot của ngày hiện tại)
+        let known = this.knownIds && this.knownIds.size ? this.knownIds : null;
+        if (!known) {
+            if (!snap || !snap.same) return;
+            known = new Set(snap.items.map(i => i.id));
+        }
+ 
+        const fresh = Array.from(container.querySelectorAll('.tl-item[data-act-id]')).filter(e => !known.has(String(e.dataset.actId)));
+        if (!fresh.length) return; // chưa có card mới (đang chờ xác nhận) -> giữ cờ, chờ lần render sau
         this.armedAt = 0;
-
+        this.knownIds = null;
+ 
         const item = fresh[0];
         const card = item.querySelector('.tl-card');
         const node = item.querySelector('.tl-node');
         const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        // Cuộn mượt tới card mới
-        requestAnimationFrame(() => item.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }));
+ 
+        // Cuộn mượt tới card mới (chờ hộp thoại đóng xong rồi mới cuộn)
+        setTimeout(() => {
+            if (!item.isConnected) return;
+            item.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+        }, reduce ? 0 : 250);
         if (reduce || !card) return;
-
-        const delay = 380; // chờ màn hình cuộn tới nơi rồi mới "bùng" lên
+ 
+        const delay = 600; // chờ hộp thoại đóng + màn hình cuộn tới nơi rồi mới "bùng" lên
         const ease = 'cubic-bezier(.2,.8,.2,1)';
-
+ 
         // 1) Card bật ra từ phía dưới, vọt nhẹ rồi hạ xuống
         card.animate([
             { opacity: 0, transform: 'translateY(44px) scale(.85)', filter: 'blur(12px)' },
             { opacity: 1, transform: 'translateY(-8px) scale(1.03)', filter: 'blur(0px)', offset: .6 },
             { opacity: 1, transform: 'translateY(0) scale(1)', filter: 'blur(0px)' }
         ], { duration: 800, delay, easing: ease, fill: 'backwards' });
-
+ 
         // 2) Node tròn xoay và nảy lên
         if (node) {
             node.animate([
@@ -1469,7 +1494,7 @@ const TL_DUP_FX = {
                 { transform: 'scale(1) rotate(0deg)', opacity: 1 }
             ], { duration: 750, delay, easing: ease, fill: 'backwards' });
         }
-
+ 
         // 3) Vòng sáng xanh lan tỏa quanh card (2 nhịp)
         card.style.position = 'relative';
         const ring = document.createElement('div');
@@ -1480,39 +1505,6 @@ const TL_DUP_FX = {
             { boxShadow: '0 0 0 20px rgba(59,130,246,0)', opacity: 0 }
         ], { duration: 900, delay: delay + 350, iterations: 2, easing: 'ease-out', fill: 'both' })
             .onfinish = () => ring.remove();
-
-        // 4) Nhãn "Đã nhân bản" nổi lên rồi mờ dần
-        const chip = document.createElement('div');
-        chip.innerHTML = '<i class="fa-solid fa-copy" style="margin-right:6px;font-size:10px"></i>Đã nhân bản';
-        chip.style.cssText = 'position:absolute;top:-13px;right:18px;z-index:30;pointer-events:none;padding:5px 12px;border-radius:9999px;background:rgba(16,185,129,.95);color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap';
-        card.appendChild(chip);
-        chip.animate([
-            { opacity: 0, transform: 'translateY(12px) scale(.7)' },
-            { opacity: 1, transform: 'translateY(0) scale(1)', offset: .2 },
-            { opacity: 1, transform: 'translateY(-2px) scale(1)', offset: .75 },
-            { opacity: 0, transform: 'translateY(-10px) scale(.95)' }
-        ], { duration: 2000, delay: delay + 200, easing: 'ease-out', fill: 'both' })
-            .onfinish = () => chip.remove();
-
-        // 5) Hạt lấp lánh bung ra từ viền card
-        const cr = card.getBoundingClientRect();
-        const colors = ['#60a5fa', '#34d399', '#38bdf8', '#a78bfa', '#fbbf24'];
-        for (let k = 0; k < 14; k++) {
-            const p = document.createElement('div');
-            const size = 4 + Math.random() * 6;
-            const ang = (Math.PI * 2 * k) / 14 + Math.random() * .4;
-            const sx = cr.width / 2 + Math.cos(ang) * (cr.width / 2.2);
-            const sy = cr.height / 2 + Math.sin(ang) * (cr.height / 2.2);
-            p.style.cssText = 'position:absolute;z-index:30;pointer-events:none;border-radius:9999px;left:' + sx + 'px;top:' + sy + 'px;width:' + size + 'px;height:' + size + 'px;background:' + colors[k % colors.length];
-            card.appendChild(p);
-            const dist = 30 + Math.random() * 50;
-            p.animate([
-                { transform: 'translate(-50%,-50%) scale(0)', opacity: 0 },
-                { transform: 'translate(calc(-50% + ' + Math.cos(ang) * dist * .5 + 'px), calc(-50% + ' + Math.sin(ang) * dist * .5 + 'px)) scale(1.2)', opacity: 1, offset: .35 },
-                { transform: 'translate(calc(-50% + ' + Math.cos(ang) * dist + 'px), calc(-50% + ' + Math.sin(ang) * dist + 'px)) scale(0)', opacity: 0 }
-            ], { duration: 900 + Math.random() * 300, delay: delay + 250, easing: 'ease-out', fill: 'both' })
-                .onfinish = () => p.remove();
-        }
     }
 };
 
