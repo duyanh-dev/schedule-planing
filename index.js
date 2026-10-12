@@ -1462,7 +1462,7 @@ const renderTimeline = () => {
                             </div>
 
                             <!-- THẺ CHÍNH: kính lỏng, không viền, không bóng -->
-                            <div class="tl-card bg-gradient-to-br from-slate-100 to-slate-100/70 backdrop-blur-3xl rounded-[1.75rem] flex flex-col p-2.5 md:p-3 gap-2.5 transition-all">
+                            <div class="tl-card bg-gradient-to-br from-slate-100 to-slate-100/70 backdrop-blur-3xl rounded-[1.75rem] shadow-[0_10px_32px_rgba(15,23,42,0.08),0_2px_6px_rgba(15,23,42,0.04)] hover:shadow-[0_14px_40px_rgba(15,23,42,0.10),0_3px_8px_rgba(15,23,42,0.05)] flex flex-col p-2.5 md:p-3 gap-2.5 transition-all">
                                 
                                 <!-- Header: trạng thái, tiêu đề, nhãn, nút hoàn thành -->
                                 <div class="px-2 pt-2 pb-1 flex justify-between items-start gap-3">
@@ -1789,16 +1789,109 @@ const renderTimeline = () => {
             }
         };
 
-        const deleteActivity = (actId) => {
-            if(confirm('Bạn có chắc chắn muốn xóa hoạt động này?')) {
-                const trip = state.trips.find(t => t.id === state.activeTripId);
-                const day = trip.days.find(d => d.date === state.activeDayDate);
-                day.activities = day.activities.filter(a => a.id !== actId);
+        // ===== MODAL XÁC NHẬN DÙNG CHUNG (Liquid Glass, không shadow, không border) =====
+// Dùng được cho mọi chỗ đang dùng confirm(): deleteActivity, confirmDeleteDay, ...
+const showConfirmModal = ({
+    title = 'Xác nhận',
+    message = '',
+    highlight = '',            // tên mục đang xóa (hiện trong khối kính nhỏ)
+    confirmText = 'Xóa',
+    cancelText = 'Hủy',
+    onConfirm = () => {}
+} = {}) => {
+    // Chỉ cho phép 1 modal tại một thời điểm
+    const old = document.getElementById('glass-confirm-root');
+    if (old) old.remove();
 
-                saveData(); // <--- THÊM DÒNG NÀY VÀO ĐÂY
-                renderApp();
-            }
-        };
+    const root = document.createElement('div');
+    root.id = 'glass-confirm-root';
+    root.setAttribute('data-html2canvas-ignore', '');
+    root.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-900/20 backdrop-blur-md opacity-0 transition-opacity duration-300';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+
+    root.innerHTML = `
+        <div data-gc-panel class="w-full max-w-[22rem] bg-white/75 backdrop-blur-3xl rounded-[2rem] p-6 text-center scale-90 opacity-0 transition-all duration-300 ease-out">
+            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-rose-100 to-rose-50 flex items-center justify-center text-rose-500 mx-auto mb-4 text-2xl">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <h3 data-gc-title class="text-lg font-black text-slate-800 leading-snug"></h3>
+            <p data-gc-message class="text-[13px] font-medium text-slate-500 leading-relaxed mt-1.5"></p>
+            <div data-gc-highlight class="hidden mt-4 bg-gradient-to-br from-white to-white/60 backdrop-blur-xl rounded-[1.25rem] px-4 py-3 text-[13px] font-bold text-slate-700 break-words"></div>
+            <div class="flex gap-2.5 mt-6">
+                <button type="button" data-gc-cancel class="flex-1 h-12 rounded-[1.1rem] bg-slate-200/60 hover:bg-slate-200/90 backdrop-blur-xl text-slate-600 font-bold text-[13px] transition-all active:scale-95 touch-manipulation"></button>
+                <button type="button" data-gc-ok class="flex-1 h-12 rounded-[1.1rem] bg-rose-500/90 hover:bg-rose-500 backdrop-blur-xl text-white font-bold text-[13px] transition-all active:scale-95 touch-manipulation"></button>
+            </div>
+        </div>
+    `;
+
+    // Nội dung động gán bằng textContent để tránh chèn HTML
+    root.querySelector('[data-gc-title]').textContent = title;
+    root.querySelector('[data-gc-message]').textContent = message;
+    root.querySelector('[data-gc-cancel]').textContent = cancelText;
+    root.querySelector('[data-gc-ok]').textContent = confirmText;
+    if (highlight) {
+        const h = root.querySelector('[data-gc-highlight]');
+        h.textContent = highlight;
+        h.classList.remove('hidden');
+    }
+
+    const panel = root.querySelector('[data-gc-panel]');
+    let closed = false;
+
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+
+    const close = (cb) => {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener('keydown', onKey);
+        root.classList.add('opacity-0');
+        panel.classList.add('scale-90', 'opacity-0');
+        panel.classList.remove('scale-100', 'opacity-100');
+        setTimeout(() => {
+            root.remove();
+            if (typeof cb === 'function') cb();
+        }, 220);
+    };
+
+    root.querySelector('[data-gc-cancel]').addEventListener('click', () => close());
+    root.querySelector('[data-gc-ok]').addEventListener('click', () => close(onConfirm));
+    // Bấm ra vùng nền để hủy
+    root.addEventListener('click', (e) => { if (e.target === root) close(); });
+    document.addEventListener('keydown', onKey);
+
+    document.body.appendChild(root);
+
+    // Animation mở
+    requestAnimationFrame(() => {
+        root.classList.remove('opacity-0');
+        panel.classList.remove('scale-90', 'opacity-0');
+        panel.classList.add('scale-100', 'opacity-100');
+    });
+};
+
+// ===== deleteActivity: logic giữ nguyên, chỉ thay confirm() bằng modal =====
+const deleteActivity = (actId) => {
+    const trip0 = state.trips.find(t => t.id === state.activeTripId);
+    const day0 = trip0 && trip0.days.find(d => d.date === state.activeDayDate);
+    const target = day0 && day0.activities.find(a => a.id === actId);
+
+    showConfirmModal({
+        title: 'Xóa hoạt động này?',
+        message: 'Hoạt động sẽ bị xóa khỏi lịch trình và không thể hoàn tác.',
+        highlight: target ? target.details : '',
+        confirmText: 'Xóa',
+        cancelText: 'Hủy',
+        onConfirm: () => {
+            const trip = state.trips.find(t => t.id === state.activeTripId);
+            const day = trip.days.find(d => d.date === state.activeDayDate);
+            day.activities = day.activities.filter(a => a.id !== actId);
+
+            saveData();
+            renderApp();
+        }
+    });
+};
 
         const toggleSidebar = () => {
             const sidebar = document.getElementById('sidebar');
