@@ -1359,6 +1359,20 @@ const TL_PAPER = {
         }
         return out;
     },
+    /* Hình chữ nhật bo góc dưới dạng đa giác lồi (n đoạn mỗi góc) để nếp gập + mặt sau giấy bo đúng như card */
+    roundedRect(w, h, r, n = 8) {
+        r = Math.max(0, Math.min(r, w / 2, h / 2));
+        if (!r) return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
+        const pts = [];
+        const arc = (cx, cy, a0) => {
+            for (let k = 0; k <= n; k++) {
+                const a = a0 + (Math.PI / 2) * k / n;
+                pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+            }
+        };
+        arc(w - r, r, -Math.PI / 2); arc(w - r, h - r, 0); arc(r, h - r, Math.PI / 2); arc(r, r, Math.PI);
+        return pts;
+    },
     css(pts, dx, dy) {
         if (pts.length < 3) return 'polygon(0px 0px,0px 0px,0px 0px)';
         return 'polygon(' + pts.map(p => (p.x + dx).toFixed(1) + 'px ' + (p.y + dy).toFixed(1) + 'px').join(',') + ')';
@@ -1393,7 +1407,7 @@ const TL_PAPER = {
             'left:' + (ox - M) + 'px;top:' + (oy - M) + 'px;width:' + W + 'px;height:' + H + 'px';
         item.appendChild(flap);
 
-        const rect = [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
+        const rect = this.roundedRect(w, h, parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0);
         const dMin = 0.5 * (w + h), dMax = w + h + 2;
         const pc = v => (v * 100).toFixed(2) + '%';
         const st = { q: reverse ? 1 : 0 };
@@ -1516,12 +1530,82 @@ const TL_DELETE_FX = {
                 ], { duration: 500, delay: 250, easing: ease, fill: 'forwards' });
             }
 
-            // 3) Khoảng trống khép lại mượt để các card bên dưới trượt lên
-            const collapse = ghost.animate([
-                { height: it.h + 'px', marginBottom: '32px', opacity: 1 },
+            // 3) Khoảng trống khép lại + màn hình tự trượt về card gần nhất, cùng một nhịp => không giật
+            this.collapse(container, ghost, it, snap, i, alive);
+        });
+    },
+
+    /* Tìm phần tử đang cuộn (null = cuộn cả trang) */
+    scrollParent(el) {
+        for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+            const o = getComputedStyle(p).overflowY;
+            if ((o === 'auto' || o === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+        }
+        return null;
+    },
+
+    /* Thu gọn chỗ trống của card đã xóa. Chiều cao và vị trí cuộn chạy CHUNG một tiến độ p (0->1):
+       - Đang ở cuối trang: trang ngắn lại bao nhiêu thì cuộn lên đúng bấy nhiêu => nội dung không bị giật xuống.
+       - Card gần nhất (ưu tiên card phía trên, nếu không có thì card phía dưới) chưa nằm gọn trong màn hình:
+         màn hình tự trượt để đưa nó vào giữa.
+       - Người dùng tự lăn chuột / chạm màn hình: dừng việc tự cuộn, chỉ còn khép khoảng trống. */
+    collapse(container, ghost, it, snap, i, alive) {
+        const mb = parseFloat(getComputedStyle(ghost).marginBottom) || 0;
+        const full = it.h + mb;
+
+        if (typeof gsap === 'undefined') { // dự phòng: khép khoảng trống như cũ, không tự cuộn
+            const c = ghost.animate([
+                { height: it.h + 'px', marginBottom: mb + 'px', opacity: 1 },
                 { height: '0px', marginBottom: '0px', opacity: 0 }
-            ], { duration: 450, delay: 780, easing: ease, fill: 'forwards' });
-            collapse.onfinish = () => ghost.remove();
+            ], { duration: 450, delay: 650, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
+            c.onfinish = () => ghost.remove();
+            return;
+        }
+
+        const sp = this.scrollParent(ghost);
+        const getTop = () => sp ? sp.scrollTop : (window.pageYOffset || document.documentElement.scrollTop || 0);
+        const setTop = v => sp ? sp.scrollTo({ top: v, behavior: 'instant' }) : window.scrollTo({ top: v, left: 0, behavior: 'instant' });
+        const vh = sp ? sp.clientHeight : window.innerHeight;
+        const viewTop = sp ? sp.getBoundingClientRect().top : 0;
+        const docH = sp ? sp.scrollHeight : document.documentElement.scrollHeight;
+        const s0 = getTop();
+        const maxAfter = Math.max(0, docH - full - vh);
+
+        // Card gần nhất còn lại: ưu tiên phía trên, không có thì phía dưới
+        let target = null, targetBelow = false;
+        for (let j = i - 1; j >= 0 && !target; j--) if (alive.has(snap.items[j].id)) target = container.querySelector('.tl-item[data-act-id="' + snap.items[j].id + '"]');
+        for (let j = i + 1; j < snap.items.length && !target; j++) if (alive.has(snap.items[j].id)) { target = container.querySelector('.tl-item[data-act-id="' + snap.items[j].id + '"]'); targetBelow = true; }
+
+        let final = Math.min(s0, maxAfter); // chỉ bị kéo lại khi đang ở cuối trang
+        if (target) {
+            const r = target.getBoundingClientRect();
+            const absTop = s0 + (r.top - viewTop) - (targetBelow ? full : 0); // vị trí tuyệt đối SAU khi khép
+            const hgt = r.height, pad = 16;
+            const topAfter = absTop - final;
+            const fits = topAfter >= pad && (hgt > vh - 2 * pad ? topAfter < vh - 2 * pad : topAfter + hgt <= vh - pad);
+            if (!fits) {
+                const want = hgt < vh - 2 * pad ? absTop - (vh - hgt) / 2 : absTop - pad;
+                final = Math.max(0, Math.min(want, maxAfter));
+            }
+        }
+
+        let userMoved = false;
+        const stop = () => { userMoved = true; };
+        const evs = ['wheel', 'touchstart', 'keydown', 'mousedown'];
+        evs.forEach(e => window.addEventListener(e, stop, { passive: true }));
+        const cleanup = () => evs.forEach(e => window.removeEventListener(e, stop));
+
+        const st = { p: 0 };
+        gsap.to(st, {
+            p: 1, duration: 0.55, delay: 0.65, ease: 'power2.inOut',
+            onUpdate: () => {
+                const p = st.p;
+                ghost.style.height = (it.h * (1 - p)) + 'px';
+                ghost.style.marginBottom = (mb * (1 - p)) + 'px';
+                ghost.style.opacity = String(1 - p);
+                if (!userMoved && Math.abs(final - s0) > 0.5) setTop(s0 + (final - s0) * p);
+            },
+            onComplete: () => { cleanup(); ghost.remove(); }
         });
     }
 };
