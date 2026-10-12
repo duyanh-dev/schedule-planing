@@ -2296,7 +2296,7 @@ const deleteActivity = (actId) => {
             renderApp();
         };
 
-        // --- GLOBAL TIMELINE MODAL (Liquid Glass v9 - nhẹ, ít animation) ---
+        // --- GLOBAL TIMELINE MODAL (Liquid Glass v11 - card nổi khối, nền trắng blur dịu) ---
         let gtObserver = null;
         let gtTodayObserver = null;
 
@@ -2307,6 +2307,34 @@ const deleteActivity = (actId) => {
         // Chỏm nhọn nhỏ (24x6px) dán ở giữa cạnh trên / cạnh dưới của nút
         const GT_NUB_UP   = "path('M0 6 C6 6 8.5 3.2 12 0.4 C15.5 3.2 18 6 24 6 Z')";
         const GT_NUB_DOWN = "path('M0 0 C6 0 8.5 2.8 12 5.6 C15.5 2.8 18 0 24 0 Z')";
+
+        // Đổ bóng nổi khối kiểu liquid glass (không gradient, không border)
+        // Lớp ngoài: bóng tiếp xúc + bóng đổ mềm + bóng xa => cảm giác thẻ nổi lên khỏi nền
+        // Lớp trong: highlight sáng phía trên + bóng tối nhẹ phía dưới => cảm giác khối kính dày
+        const GT_SHADOW_LIGHT =
+    '0 1px 2px rgba(15,23,42,0.08), ' +
+    '0 6px 12px -6px rgba(15,23,42,0.16), ' +
+    'inset 0 2px 4px -1px rgba(255,255,255,0.9), ' +
+    'inset 0 -3px 6px -2px rgba(15,23,42,0.08)';
+const GT_SHADOW_BTN =
+    '0 1px 2px rgba(15,23,42,0.06), ' +
+    '0 3px 6px -2px rgba(37,99,235,0.2), ' +
+    'inset 0 2px 3px -1px rgba(255,255,255,0.8)';
+    const GT_SHADOW_PILL_BLUE =
+    '0 1px 2px rgba(15,23,42,0.06), ' +
+    '0 4px 8px -3px rgba(37,99,235,0.3), ' +
+    'inset 0 2px 3px -1px rgba(255,255,255,0.6), ' +
+    'inset 0 -2px 4px -2px rgba(30,64,175,0.2)';
+const GT_SHADOW_PILL_INDIGO =
+    '0 1px 2px rgba(15,23,42,0.06), ' +
+    '0 4px 8px -3px rgba(79,70,229,0.28), ' +
+    'inset 0 2px 3px -1px rgba(255,255,255,0.7), ' +
+    'inset 0 -2px 4px -2px rgba(55,48,163,0.15)';
+const GT_SHADOW_TODAYBTN =
+    '0 1px 2px rgba(15,23,42,0.06), ' +
+    '0 4px 8px -3px rgba(37,99,235,0.3), ' +
+    'inset 0 2px 3px -1px rgba(255,255,255,0.7), ' +
+    'inset 0 -2px 4px -2px rgba(30,64,175,0.18)';
 
         // Chế độ animation: full = bật | has=false = không có gsap
         // Đọc từ html[data-animation-on] (Settings). Thiếu thuộc tính thì coi như bật.
@@ -2540,7 +2568,7 @@ const deleteActivity = (actId) => {
 
                 // Header ngày: mỏng, tinh tế. Hôm nay = kính xanh dương / ngày thường = kính indigo nhạt
                 const pillHtml = isToday ? `
-                    <div data-gt-pill data-gt-today-pill ${hide} class="relative inline-flex items-center gap-2 max-w-full h-8 pl-1 pr-1.5 rounded-full bg-blue-500/75 backdrop-blur-2xl backdrop-saturate-200 pointer-events-auto">
+                    <div data-gt-pill data-gt-today-pill ${hide} style="box-shadow:${GT_SHADOW_PILL_BLUE}" class="relative inline-flex items-center gap-2 max-w-full h-8 pl-1 pr-1.5 rounded-full bg-blue-500/75 backdrop-blur-2xl backdrop-saturate-200 pointer-events-auto">
                         <span class="absolute left-3 top-[2px] w-9 h-[4px] rounded-full bg-white/45 blur-[1.5px] pointer-events-none"></span>
                         <span class="relative w-6 h-6 flex-shrink-0 rounded-full bg-white/85 flex items-center justify-center text-blue-600">
                             <i class="fa-solid fa-calendar-day text-[11px]"></i>
@@ -2549,19 +2577,22 @@ const deleteActivity = (actId) => {
                         <span class="relative text-white/80 font-semibold text-[11.5px] whitespace-nowrap">${formatDisplayDate(day.date)}</span>
                         <span class="relative flex-shrink-0 bg-white/85 text-blue-600 text-[9.5px] font-black uppercase tracking-wider px-2 py-[5px] rounded-full leading-none">Hôm nay</span>
                     </div>` : `
-                    <div data-gt-pill ${hide} class="relative inline-flex items-center gap-2 h-8 pl-1 pr-3.5 rounded-full bg-indigo-400/20 backdrop-blur-2xl backdrop-saturate-200 pointer-events-auto">
-                        <span class="absolute left-3 top-[2px] w-9 h-[4px] rounded-full bg-white/55 blur-[1.5px] pointer-events-none"></span>
-                        <span class="relative w-6 h-6 flex-shrink-0 rounded-full bg-white/65 flex items-center justify-center text-indigo-600">
+                    <div data-gt-pill ${hide} style="box-shadow:${GT_SHADOW_PILL_INDIGO}" class="relative inline-flex items-center gap-2 h-8 pl-1 pr-3.5 rounded-full bg-indigo-500/[0.24] backdrop-blur-2xl backdrop-saturate-200 pointer-events-auto">
+                        <span class="absolute left-3 top-[2px] w-9 h-[4px] rounded-full bg-white/60 blur-[1.5px] pointer-events-none"></span>
+                        <span class="relative w-6 h-6 flex-shrink-0 rounded-full bg-white/80 flex items-center justify-center text-indigo-600">
                             <i class="fa-solid fa-calendar-day text-[11px]"></i>
                         </span>
                         <span class="relative font-extrabold text-indigo-950 text-[13px] tracking-wide whitespace-nowrap">Ngày ${idx + 1}</span>
-                        <span class="relative w-[3px] h-[3px] rounded-full bg-indigo-500/40"></span>
-                        <span class="relative text-indigo-700/80 font-semibold text-[11.5px] whitespace-nowrap">${formatDisplayDate(day.date)}</span>
+                        <span class="relative w-[3px] h-[3px] rounded-full bg-indigo-600/50"></span>
+                        <span class="relative text-indigo-800 font-semibold text-[11.5px] whitespace-nowrap">${formatDisplayDate(day.date)}</span>
                     </div>`;
 
-                // Tông kính của hai mảnh: ngày hôm nay ngả xanh dương
-                const leftBg = isToday ? 'bg-blue-500/[0.16]' : 'bg-slate-500/[0.12]';
-                const rightBg = isToday ? 'bg-blue-500/[0.09]' : 'bg-slate-500/[0.08]';
+                // Tông kính của hai mảnh
+                // Ngày hôm nay: ngả xanh dương nhạt (chữ giờ đậm như ngày thường)
+                // Ngày thường: xám đậm hơn một chút để nổi trên nền trắng
+                const leftBg = isToday ? 'bg-blue-500/[0.16]' : 'bg-slate-500/[0.18]';
+                const rightBg = isToday ? 'bg-blue-500/[0.09]' : 'bg-slate-500/[0.13]';
+                const timeCls = 'text-slate-800';
 
                 html += `
                 <div data-gt-day="${day.date}" ${isToday ? 'data-gt-today' : ''} class="mb-6 md:mb-8 relative group">
@@ -2571,13 +2602,13 @@ const deleteActivity = (actId) => {
                         ${pillHtml}
                     </div>
 
-                    <div class="space-y-2.5 relative z-10 md:px-2">
+                    <div class="space-y-3.5 relative z-10 md:px-2">
                 `;
 
                 if (day.activities.length === 0) {
                     html += `
                     <div data-gt-card>
-                        <p data-gt-panel ${hide} class="text-[13px] text-slate-500 italic font-medium p-5 ${rightBg} rounded-[1.5rem] text-center">Chưa có hoạt động nào được lên lịch.</p>
+                        <p data-gt-panel ${hide} style="box-shadow:${GT_SHADOW_LIGHT}" class="text-[13px] text-slate-500 italic font-medium p-5 ${rightBg} backdrop-blur-md rounded-[1.5rem] text-center">Chưa có hoạt động nào được lên lịch.</p>
                     </div>`;
                 } else {
                     day.activities.forEach(act => {
@@ -2612,17 +2643,17 @@ const deleteActivity = (actId) => {
                         }
 
                         html += `
-                        <!-- Hoạt động: 2 mảnh kính tách rời (trái: giờ / phải: nội dung). Đã XONG thì mờ nhẹ cả thẻ -->
-                        <div data-gt-card data-gt-card-id="${act.id}" class="flex items-stretch gap-2 touch-manipulation transition-opacity duration-300 ${act.isCompleted ? 'opacity-70' : ''}">
+                        <!-- Hoạt động: 2 mảnh kính tách rời, nổi khối (trái: giờ / phải: nội dung). Đã XONG thì mờ nhẹ cả thẻ -->
+                        <div data-gt-card data-gt-card-id="${act.id}" class="flex items-stretch gap-2.5 touch-manipulation transition-opacity duration-300 ${act.isCompleted ? 'opacity-70' : ''}">
 
                             <!-- Mảnh kính TRÁI -->
-                            <div data-gt-panel ${hide} class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] ${leftBg}">
-                                <div class="text-[13px] md:text-[15px] font-black text-slate-800 leading-none">${act.start}</div>
+                            <div data-gt-panel ${hide} style="box-shadow:${GT_SHADOW_LIGHT}" class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] backdrop-blur-md ${leftBg}">
+                                <div class="text-[13px] md:text-[15px] font-black ${timeCls} leading-none">${act.start}</div>
                                 <div data-gt-chip data-st="${status.type}" data-cc="${colorCls}" class="text-[8px] md:text-[9px] font-black uppercase ${colorCls} bg-white/70 px-1.5 py-1 rounded-md tracking-wider">${status.type === 'done' ? 'XONG' : (status.type === 'future' ? 'SẮP' : 'TRỄ')}</div>
                             </div>
 
                             <!-- Mảnh kính PHẢI -->
-                            <div data-gt-panel ${hide} class="flex-1 min-w-0 p-3.5 md:p-4 rounded-[1.4rem] ${rightBg}">
+                            <div data-gt-panel ${hide} style="box-shadow:${GT_SHADOW_LIGHT}" class="flex-1 min-w-0 p-3.5 md:p-4 rounded-[1.4rem] backdrop-blur-md ${rightBg}">
 
                                 <!-- Tên hoạt động + nút tick hoàn thành -->
                                 <div class="flex items-start justify-between gap-2">
@@ -2641,7 +2672,7 @@ const deleteActivity = (actId) => {
 
                                 <!-- Nút xem hoạt động này (nhảy sang timeline chính) -->
                                 <div class="mt-3 flex justify-end">
-                                    <button type="button" onclick="goToActivityFromGlobal('${act.id}', '${day.date}')" class="h-8 pl-1.5 pr-3.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 text-[11px] font-black tracking-wide transition-all active:scale-95 flex items-center gap-2 touch-manipulation">
+                                    <button type="button" onclick="goToActivityFromGlobal('${act.id}', '${day.date}')" style="box-shadow:${GT_SHADOW_BTN}" class="h-8 pl-1.5 pr-3.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 text-[11px] font-black tracking-wide transition-all active:scale-95 flex items-center gap-2 touch-manipulation">
                                         <span class="w-5 h-5 flex-shrink-0 rounded-full bg-white/70 flex items-center justify-center"><i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></span>
                                         <span class="truncate">Xem hoạt động này</span>
                                     </button>
@@ -2661,7 +2692,7 @@ const deleteActivity = (actId) => {
                 <div data-gt-today-wrap class="sticky bottom-3 z-40 h-0 pointer-events-none">
                     <div class="absolute bottom-0 right-2 md:right-4 pointer-events-none">
                         <!-- Nút viên thuốc gọn: blur chỉ áp lên phần thân bo tròn; chỏm nhọn là phần tử riêng -->
-                        <button type="button" data-gt-today-btn onclick="gtScrollToToday(true)" aria-label="Đến ngày hôm nay" class="relative ${animOn ? 'transition-all duration-500 ease-out' : 'transition-opacity duration-150'} h-[34px] px-4 rounded-full flex items-center justify-center text-blue-950 text-[12px] font-black tracking-wide whitespace-nowrap bg-blue-400/40 backdrop-blur-2xl backdrop-saturate-200 active:scale-95 touch-manipulation">
+                        <button type="button" data-gt-today-btn onclick="gtScrollToToday(true)" aria-label="Đến ngày hôm nay" style="box-shadow:${GT_SHADOW_TODAYBTN}" class="relative ${animOn ? 'transition-all duration-500 ease-out' : 'transition-opacity duration-150'} h-[34px] px-4 rounded-full flex items-center justify-center text-blue-950 text-[12px] font-black tracking-wide whitespace-nowrap bg-blue-400/40 backdrop-blur-2xl backdrop-saturate-200 active:scale-95 touch-manipulation">
                             <span data-gt-nub class="absolute left-1/2 -ml-3 w-6 h-[6px] bg-blue-400/40 pointer-events-none"></span>
                             <span class="absolute left-3 top-[3px] w-[30px] h-[6px] rounded-full bg-white/60 blur-[2px] pointer-events-none"></span>
                             <span class="relative">Hôm nay</span>
@@ -2737,6 +2768,19 @@ const deleteActivity = (actId) => {
         (() => {
             const content = document.getElementById('global-timeline-content');
             if (!gtModal || !content) return;
+
+            // Nền modal: trắng blur dịu dàng, không viền
+            const mc = gtModal.querySelector('.modal-content');
+            if (mc) {
+                mc.classList.remove('bg-slate-200', 'bg-white', 'md:ring-1', 'md:ring-slate-200');
+                mc.classList.add('bg-white/70', 'backdrop-blur-2xl', 'backdrop-saturate-150');
+                // Thanh header: trắng mờ nhẹ, hòa với nền
+                const hdr = mc.querySelector(':scope > div:first-child > div');
+                if (hdr) {
+                    hdr.classList.remove('bg-white/50', 'bg-slate-100');
+                    hdr.classList.add('bg-white/60', 'backdrop-blur-xl');
+                }
+            }
 
             const isActive = () => gtModal.classList.contains('active');
 
