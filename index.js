@@ -2296,7 +2296,7 @@ const deleteActivity = (actId) => {
             renderApp();
         };
 
-        // --- GLOBAL TIMELINE MODAL (Liquid Glass v11 - card nổi khối, nền trắng blur dịu) ---
+        // --- GLOBAL TIMELINE MODAL (Liquid Glass v12 - card nổi khối, check xong thì xẹp xuống) ---
         let gtObserver = null;
         let gtTodayObserver = null;
 
@@ -2308,33 +2308,55 @@ const deleteActivity = (actId) => {
         const GT_NUB_UP   = "path('M0 6 C6 6 8.5 3.2 12 0.4 C15.5 3.2 18 6 24 6 Z')";
         const GT_NUB_DOWN = "path('M0 0 C6 0 8.5 2.8 12 5.6 C15.5 2.8 18 0 24 0 Z')";
 
-        // Đổ bóng nổi khối kiểu liquid glass (không gradient, không border)
-        // Lớp ngoài: bóng tiếp xúc + bóng đổ mềm + bóng xa => cảm giác thẻ nổi lên khỏi nền
-        // Lớp trong: highlight sáng phía trên + bóng tối nhẹ phía dưới => cảm giác khối kính dày
+        // Đổ bóng nổi khối kiểu liquid glass (nhẹ, không gradient, không border)
         const GT_SHADOW_LIGHT =
-    '0 1px 2px rgba(15,23,42,0.08), ' +
-    '0 6px 12px -6px rgba(15,23,42,0.16), ' +
-    'inset 0 2px 4px -1px rgba(255,255,255,0.9), ' +
-    'inset 0 -3px 6px -2px rgba(15,23,42,0.08)';
-const GT_SHADOW_BTN =
-    '0 1px 2px rgba(15,23,42,0.06), ' +
-    '0 3px 6px -2px rgba(37,99,235,0.2), ' +
-    'inset 0 2px 3px -1px rgba(255,255,255,0.8)';
-    const GT_SHADOW_PILL_BLUE =
-    '0 1px 2px rgba(15,23,42,0.06), ' +
-    '0 4px 8px -3px rgba(37,99,235,0.3), ' +
-    'inset 0 2px 3px -1px rgba(255,255,255,0.6), ' +
-    'inset 0 -2px 4px -2px rgba(30,64,175,0.2)';
-const GT_SHADOW_PILL_INDIGO =
-    '0 1px 2px rgba(15,23,42,0.06), ' +
-    '0 4px 8px -3px rgba(79,70,229,0.28), ' +
-    'inset 0 2px 3px -1px rgba(255,255,255,0.7), ' +
-    'inset 0 -2px 4px -2px rgba(55,48,163,0.15)';
-const GT_SHADOW_TODAYBTN =
-    '0 1px 2px rgba(15,23,42,0.06), ' +
-    '0 4px 8px -3px rgba(37,99,235,0.3), ' +
-    'inset 0 2px 3px -1px rgba(255,255,255,0.7), ' +
-    'inset 0 -2px 4px -2px rgba(30,64,175,0.18)';
+            '0 1px 2px rgba(15,23,42,0.08), ' +
+            '0 6px 12px -6px rgba(15,23,42,0.16), ' +
+            'inset 0 2px 4px -1px rgba(255,255,255,0.9), ' +
+            'inset 0 -3px 6px -2px rgba(15,23,42,0.08)';
+        const GT_SHADOW_BTN =
+            '0 1px 2px rgba(15,23,42,0.06), ' +
+            '0 3px 6px -2px rgba(37,99,235,0.2), ' +
+            'inset 0 2px 3px -1px rgba(255,255,255,0.8)';
+
+        // Trạng thái XẸP (đã check xong): cùng số lớp bóng với trạng thái nổi để chuyển mượt
+        // Bóng ngoài tắt hết, chỉ còn bóng lõm rất nhẹ ở mép trên => cảm giác thẻ bị ấn xuống
+        const GT_SHADOW_LIGHT_FLAT =
+            '0 0 0 0 rgba(15,23,42,0), ' +
+            '0 0 0 0 rgba(15,23,42,0), ' +
+            'inset 0 1px 3px -1px rgba(15,23,42,0.14), ' +
+            'inset 0 0 0 0 rgba(255,255,255,0)';
+        const GT_SHADOW_BTN_FLAT =
+            '0 0 0 0 rgba(15,23,42,0), ' +
+            '0 0 0 0 rgba(37,99,235,0), ' +
+            'inset 0 1px 2px -1px rgba(37,99,235,0.18)';
+
+        // Bóng cho header ngày và nút "Hôm nay"
+        const GT_SHADOW_PILL_BLUE =
+            '0 1px 2px rgba(15,23,42,0.06), ' +
+            '0 4px 8px -3px rgba(37,99,235,0.3), ' +
+            'inset 0 2px 3px -1px rgba(255,255,255,0.6), ' +
+            'inset 0 -2px 4px -2px rgba(30,64,175,0.2)';
+        const GT_SHADOW_PILL_INDIGO =
+            '0 1px 2px rgba(15,23,42,0.06), ' +
+            '0 4px 8px -3px rgba(79,70,229,0.28), ' +
+            'inset 0 2px 3px -1px rgba(255,255,255,0.7), ' +
+            'inset 0 -2px 4px -2px rgba(55,48,163,0.15)';
+        const GT_SHADOW_TODAYBTN =
+            '0 1px 2px rgba(15,23,42,0.06), ' +
+            '0 4px 8px -3px rgba(37,99,235,0.3), ' +
+            'inset 0 2px 3px -1px rgba(255,255,255,0.7), ' +
+            'inset 0 -2px 4px -2px rgba(30,64,175,0.18)';
+
+        // Hiệu ứng nổi <-> xẹp
+        const GT_PRESS_TRANSITION = 'box-shadow 300ms ease, transform 300ms ease';
+        const GT_PRESS_SCALE = 'scale(0.985)';
+
+        // Chọn bóng theo loại phần tử (panel / btn) và trạng thái hoàn thành
+        const gtShadow = (kind, done) => {
+            if (kind === 'btn') return done ? GT_SHADOW_BTN_FLAT : GT_SHADOW_BTN;
+            return done ? GT_SHADOW_LIGHT_FLAT : GT_SHADOW_LIGHT;
+        };
 
         // Chế độ animation: full = bật | has=false = không có gsap
         // Đọc từ html[data-animation-on] (Settings). Thiếu thuộc tính thì coi như bật.
@@ -2346,6 +2368,16 @@ const GT_SHADOW_TODAYBTN =
                 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) full = false;
             } catch (e) {}
             return { has, full };
+        };
+
+        // Áp trạng thái nổi / xẹp lên các mảnh kính và nút trong một card
+        const gtApplyDone = (card, done) => {
+            const animated = gtAnimMode().full;
+            card.querySelectorAll('[data-gt-press]').forEach(el => {
+                el.style.transition = animated ? GT_PRESS_TRANSITION : 'none';
+                el.style.boxShadow = gtShadow(el.dataset.gtPress, done);
+                el.style.transform = done ? GT_PRESS_SCALE : 'scale(1)';
+            });
         };
 
         // Tìm khung cuộn thật sự chứa nội dung modal
@@ -2461,6 +2493,9 @@ const GT_SHADOW_TODAYBTN =
             // Mờ nhẹ cả thẻ khi đã hoàn thành
             card.classList.add('transition-opacity', 'duration-300');
             card.classList.toggle('opacity-70', done);
+
+            // Xong thì xẹp xuống, bỏ check thì nổi lên lại
+            gtApplyDone(card, done);
 
             // Tên hoạt động: gạch ngang + xám khi xong
             const title = card.querySelector('[data-gt-title]');
@@ -2615,6 +2650,11 @@ const GT_SHADOW_TODAYBTN =
                         const status = getActivityStatus(act, day.date);
                         const colorCls = (status.color || '').split(' ')[0];
 
+                        // Trạng thái nổi / xẹp ban đầu theo việc đã hoàn thành hay chưa
+                        const doneNow = !!act.isCompleted;
+                        const pressStyle = (kind) =>
+                            `box-shadow:${gtShadow(kind, doneNow)};transform:${doneNow ? GT_PRESS_SCALE : 'scale(1)'};transition:${animOn ? GT_PRESS_TRANSITION : 'none'}`;
+
                         // Lộ trình
                         let routeTxt = '';
                         if (act.from && act.to) routeTxt = `${act.from} ➔ ${act.to}`;
@@ -2643,17 +2683,17 @@ const GT_SHADOW_TODAYBTN =
                         }
 
                         html += `
-                        <!-- Hoạt động: 2 mảnh kính tách rời, nổi khối (trái: giờ / phải: nội dung). Đã XONG thì mờ nhẹ cả thẻ -->
+                        <!-- Hoạt động: 2 mảnh kính tách rời, nổi khối (trái: giờ / phải: nội dung). Đã XONG thì xẹp xuống + mờ nhẹ -->
                         <div data-gt-card data-gt-card-id="${act.id}" class="flex items-stretch gap-2.5 touch-manipulation transition-opacity duration-300 ${act.isCompleted ? 'opacity-70' : ''}">
 
                             <!-- Mảnh kính TRÁI -->
-                            <div data-gt-panel ${hide} style="box-shadow:${GT_SHADOW_LIGHT}" class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] backdrop-blur-md ${leftBg}">
+                            <div data-gt-panel data-gt-press="panel" ${hide} style="${pressStyle('panel')}" class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] backdrop-blur-md ${leftBg}">
                                 <div class="text-[13px] md:text-[15px] font-black ${timeCls} leading-none">${act.start}</div>
                                 <div data-gt-chip data-st="${status.type}" data-cc="${colorCls}" class="text-[8px] md:text-[9px] font-black uppercase ${colorCls} bg-white/70 px-1.5 py-1 rounded-md tracking-wider">${status.type === 'done' ? 'XONG' : (status.type === 'future' ? 'SẮP' : 'TRỄ')}</div>
                             </div>
 
                             <!-- Mảnh kính PHẢI -->
-                            <div data-gt-panel ${hide} style="box-shadow:${GT_SHADOW_LIGHT}" class="flex-1 min-w-0 p-3.5 md:p-4 rounded-[1.4rem] backdrop-blur-md ${rightBg}">
+                            <div data-gt-panel data-gt-press="panel" ${hide} style="${pressStyle('panel')}" class="flex-1 min-w-0 p-3.5 md:p-4 rounded-[1.4rem] backdrop-blur-md ${rightBg}">
 
                                 <!-- Tên hoạt động + nút tick hoàn thành -->
                                 <div class="flex items-start justify-between gap-2">
@@ -2672,7 +2712,7 @@ const GT_SHADOW_TODAYBTN =
 
                                 <!-- Nút xem hoạt động này (nhảy sang timeline chính) -->
                                 <div class="mt-3 flex justify-end">
-                                    <button type="button" onclick="goToActivityFromGlobal('${act.id}', '${day.date}')" style="box-shadow:${GT_SHADOW_BTN}" class="h-8 pl-1.5 pr-3.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 text-[11px] font-black tracking-wide transition-all active:scale-95 flex items-center gap-2 touch-manipulation">
+                                    <button type="button" data-gt-press="btn" onclick="goToActivityFromGlobal('${act.id}', '${day.date}')" style="${pressStyle('btn')}" class="h-8 pl-1.5 pr-3.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 text-[11px] font-black tracking-wide active:scale-95 flex items-center gap-2 touch-manipulation">
                                         <span class="w-5 h-5 flex-shrink-0 rounded-full bg-white/70 flex items-center justify-center"><i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></span>
                                         <span class="truncate">Xem hoạt động này</span>
                                     </button>
