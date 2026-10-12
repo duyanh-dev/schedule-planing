@@ -2347,8 +2347,7 @@ const deleteActivity = (actId) => {
         //     setTimeout(seek, 350);
         // };
 
-                // --- GLOBAL TIMELINE MODAL (Liquid Glass v4) ---
-        // --- GLOBAL TIMELINE MODAL (Liquid Glass v8) ---
+         // --- GLOBAL TIMELINE MODAL (Liquid Glass v9 - nhẹ, ít animation) ---
         let gtObserver = null;
         let gtTodayObserver = null;
 
@@ -2360,7 +2359,7 @@ const deleteActivity = (actId) => {
         const GT_NUB_UP   = "path('M0 6 C6 6 8.5 3.2 12 0.4 C15.5 3.2 18 6 24 6 Z')";
         const GT_NUB_DOWN = "path('M0 0 C6 0 8.5 2.8 12 5.6 C15.5 2.8 18 0 24 0 Z')";
 
-        // Chế độ animation: full = đầy đủ | lite = chỉ trượt nhẹ | has=false = không animation
+        // Chế độ animation: full = bật | has=false = không có gsap
         // Đọc từ html[data-animation-on] (Settings). Thiếu thuộc tính thì coi như bật.
         const gtAnimMode = () => {
             const has = !!window.gsap;
@@ -2460,20 +2459,12 @@ const deleteActivity = (actId) => {
                 const m = gtAnimMode();
                 item.scrollIntoView({ behavior: m.full ? 'smooth' : 'auto', block: 'center' });
 
+                // Chỉ MỘT hiệu ứng đơn giản: viền xanh sáng lên rồi mờ dần (không lặp, không phóng to)
                 const card = item.querySelector('.tl-card');
                 if (card && m.has) {
-                    if (m.full) {
-                        gsap.timeline({ repeat: 1, onComplete: () => gsap.set(card, { clearProps: 'boxShadow,scale' }) })
-                            .fromTo(card,
-                                { boxShadow: '0 0 0 0px rgba(0,113,227,0.55)', scale: 1 },
-                                { boxShadow: '0 0 0 6px rgba(0,113,227,0.55)', scale: 1.03, duration: 0.35, ease: 'power2.out' })
-                            .to(card, { boxShadow: '0 0 0 0px rgba(0,113,227,0)', scale: 1, duration: 0.9, ease: 'power2.inOut' });
-                    } else {
-                        // Chế độ nhẹ: chỉ một lần mờ dần, không phóng to
-                        gsap.fromTo(card,
-                            { boxShadow: '0 0 0 4px rgba(0,113,227,0.5)' },
-                            { boxShadow: '0 0 0 0px rgba(0,113,227,0)', duration: 0.7, ease: 'power1.out', clearProps: 'boxShadow' });
-                    }
+                    gsap.fromTo(card,
+                        { boxShadow: '0 0 0 4px rgba(0,113,227,0.5)' },
+                        { boxShadow: '0 0 0 0px rgba(0,113,227,0)', duration: 0.8, ease: 'power1.out', clearProps: 'boxShadow' });
                 }
             };
             setTimeout(seek, 350);
@@ -2538,12 +2529,12 @@ const deleteActivity = (actId) => {
             // Chỉ vá đúng hoạt động đó; nếu không vá được mới vẽ lại tại chỗ
             if (!gtPatchActivity(actId, dayDate)) renderGlobalTimeline({ silent: true });
 
-            // Hiệu ứng bật nhẹ cho nút vừa tick (chỉ ở chế độ animation đầy đủ)
+            // Hiệu ứng bật nhẹ, ngắn cho nút vừa tick (chỉ khi bật animation)
             if (gtAnimMode().full) {
                 const content = document.getElementById('global-timeline-content');
                 const nb = [...content.querySelectorAll('[data-gt-check]')].find(b => b.dataset.gtCheck === String(actId));
                 const ic = nb && nb.querySelector('i');
-                if (ic) gsap.fromTo(ic, { scale: 0.5 }, { scale: 1, duration: 0.5, ease: 'back.out(3)' });
+                if (ic) gsap.fromTo(ic, { scale: 0.7 }, { scale: 1, duration: 0.25, ease: 'power2.out', clearProps: 'transform' });
             }
         };
 
@@ -2568,9 +2559,9 @@ const deleteActivity = (actId) => {
             if (oldWrap) oldWrap.remove();
 
             const m = gtAnimMode();
-            const animOn = m.full;                         // animation đầy đủ
-            const intro = m.has && !silent;                // có hiệu ứng vào ở lần mở đầu (đầy đủ hoặc trượt nhẹ)
-            const hide = intro ? 'style="opacity:0"' : '';
+            const animOn = m.full;                         // animation đầy đủ (dùng cho transition nút "Hôm nay")
+            const intro = m.has && !silent;                // có hiệu ứng vào ở lần mở đầu
+            const hide = '';
             const fmtMoney = (n) => new Intl.NumberFormat('vi-VN').format(n);
 
             // Mở modal mới: nút "Hôm nay" bắt đầu ở trạng thái ẩn, chỉ cập nhật sau khi đã cuộn tới hôm nay
@@ -2594,8 +2585,7 @@ const deleteActivity = (actId) => {
                 const isToday = String(day.date).slice(0, 10) === todayStr;
                 if (isToday) hasToday = true;
 
-                // Header ngày: hôm nay nổi bật (xanh dương đặc) / ngày thường (kính indigo)
-                                // Header ngày: mỏng, tinh tế. Hôm nay = kính xanh dương / ngày thường = kính indigo nhạt
+                // Header ngày: mỏng, tinh tế. Hôm nay = kính xanh dương / ngày thường = kính indigo nhạt
                 const pillHtml = isToday ? `
                     <div data-gt-pill data-gt-today-pill ${hide} class="relative inline-flex items-center gap-2 max-w-full h-8 pl-1 pr-1.5 rounded-full bg-blue-500/75 backdrop-blur-2xl backdrop-saturate-200 pointer-events-auto">
                         <span class="absolute left-3 top-[2px] w-9 h-[4px] rounded-full bg-white/45 blur-[1.5px] pointer-events-none"></span>
@@ -2634,7 +2624,7 @@ const deleteActivity = (actId) => {
                 if (day.activities.length === 0) {
                     html += `
                     <div data-gt-card>
-                        <p data-gt-panel ${hide} class="text-[13px] text-slate-500 italic font-medium p-5 ${rightBg} backdrop-blur-xl backdrop-saturate-150 rounded-[1.5rem] text-center">Chưa có hoạt động nào được lên lịch.</p>
+                        <p data-gt-panel ${hide} class="text-[13px] text-slate-500 italic font-medium p-5 ${rightBg} rounded-[1.5rem] text-center">Chưa có hoạt động nào được lên lịch.</p>
                     </div>`;
                 } else {
                     day.activities.forEach(act => {
@@ -2673,13 +2663,13 @@ const deleteActivity = (actId) => {
                         <div data-gt-card data-gt-card-id="${act.id}" class="flex items-stretch gap-2 touch-manipulation">
 
                             <!-- Mảnh kính TRÁI -->
-                            <div data-gt-panel ${hide} class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] ${leftBg} backdrop-blur-xl backdrop-saturate-150">
+                            <div data-gt-panel ${hide} class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] ${leftBg}">
                                 <div class="text-[13px] md:text-[15px] font-black text-slate-800 leading-none">${act.start}</div>
                                 <div data-gt-chip data-st="${status.type}" data-cc="${colorCls}" class="text-[8px] md:text-[9px] font-black uppercase ${colorCls} bg-white/70 px-1.5 py-1 rounded-md tracking-wider">${status.type === 'done' ? 'XONG' : (status.type === 'future' ? 'SẮP' : 'TRỄ')}</div>
                             </div>
 
                             <!-- Mảnh kính PHẢI -->
-                            <div data-gt-panel ${hide} class="flex-1 min-w-0 p-3.5 md:p-4 rounded-[1.4rem] ${rightBg} backdrop-blur-xl backdrop-saturate-150">
+                            <div data-gt-panel ${hide} class="flex-1 min-w-0 p-3.5 md:p-4 rounded-[1.4rem] ${rightBg}">
 
                                 <!-- Tên hoạt động + nút tick hoàn thành -->
                                 <div class="flex items-start justify-between gap-2">
@@ -2749,67 +2739,19 @@ const deleteActivity = (actId) => {
                 }
             } catch (err) {}
 
-            // ====== ANIMATION (lỗi gì cũng không được làm hỏng nội dung) ======
+            // ====== ANIMATION (nhẹ: mỗi thẻ chỉ trượt + mờ 1 lần, không lặp) ======
             try {
                 if (!m.has) return;
-
-                // 1) Nhấn lún kiểu iOS trên cả hàng (chỉ ở chế độ đầy đủ)
-                if (animOn) {
-                    content.querySelectorAll('[data-gt-card]').forEach(card => {
-                        card.addEventListener('pointerenter', () => gsap.to(card, { scale: 1.01, duration: 0.5, ease: 'power3.out' }));
-                        card.addEventListener('pointerdown', () => gsap.to(card, { scale: 0.975, duration: 0.25, ease: 'power2.out' }));
-                        card.addEventListener('pointerup', () => gsap.to(card, { scale: 1.01, duration: 0.6, ease: 'elastic.out(1,0.5)' }));
-                        ['pointerleave', 'pointercancel'].forEach(ev => card.addEventListener(ev, () => gsap.to(card, { scale: 1, duration: 0.6, ease: 'elastic.out(1,0.6)' })));
-                    });
-                }
 
                 // Vẽ lại tại chỗ thì không chạy lại animation vào
                 if (!intro) return;
 
-                // 2a) Chế độ NHẸ: chỉ một cú trượt rất ngắn, không 3D, không đàn hồi, không lặp
-                const playCardsLite = (cards) => {
-                    gsap.fromTo(cards, { y: 14 }, { y: 0, duration: 0.3, ease: 'power2.out' });
+                const playCards = (cards) => {
                     const panels = [];
                     cards.forEach(c => c.querySelectorAll('[data-gt-panel]').forEach(p => panels.push(p)));
-                    gsap.fromTo(panels, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' });
-                };
-
-                // 2b) Chế độ ĐẦY ĐỦ
-                const playCardsFull = (cards) => {
-                    cards.forEach((card, i) => {
-                        const d = i * 0.08;
-
-                        // Thẻ trồi lên 3D
-                        gsap.fromTo(card,
-                            { y: 40, scale: 0.92, rotateX: -14, transformPerspective: 900, transformOrigin: '50% 100%' },
-                            { y: 0, scale: 1, rotateX: 0, duration: 1, ease: 'expo.out', delay: d });
-
-                        // Hai mảnh kính "tách giọt" ra khỏi nhau (khoảng cách 0 -> 8px, bật đàn hồi)
-                        gsap.fromTo(card, { columnGap: 0 },
-                            { columnGap: 8, duration: 1.1, ease: 'elastic.out(1,0.5)', delay: d + 0.1, clearProps: 'columnGap' });
-
-                        // Mờ -> rõ (đặt trên từng mảnh để backdrop-blur không bị mất)
-                        gsap.fromTo(card.querySelectorAll('[data-gt-panel]'), { opacity: 0 },
-                            { opacity: 1, duration: 0.8, ease: 'power2.out', delay: d });
-
-                        // Chip trạng thái bật lên, "SẮP" nhấp nháy nhẹ
-                        const chip = card.querySelector('[data-gt-chip]');
-                        if (chip) {
-                            gsap.fromTo(chip, { scale: 0 }, { scale: 1, duration: 0.6, ease: 'back.out(2.4)', delay: d + 0.2 });
-                            if (chip.dataset.st === 'future') {
-                                gsap.to(chip, { opacity: 0.55, duration: 1.4, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: d + 1 });
-                            }
-                        }
-
-                        // Ngân sách: bật lên + đồng xu lắc (chạy một lần, không lặp)
-                        const cap = card.querySelector('[data-gt-money]');
-                        if (cap) {
-                            gsap.fromTo(cap, { scale: 0.6, transformOrigin: 'left center' },
-                                { scale: 1, duration: 0.8, ease: 'back.out(2.2)', delay: d + 0.25 });
-                            const coin = cap.querySelector('[data-gt-coin]');
-                            if (coin) gsap.fromTo(coin, { rotate: -30 }, { rotate: 0, duration: 1.3, ease: 'elastic.out(1,0.35)', delay: d + 0.35 });
-                        }
-                    });
+                    // Gom thành 2 tween cho cả lô thẻ (thay vì 5-8 tween / thẻ)
+                    gsap.fromTo(cards, { y: 16 }, { y: 0, duration: 0.35, ease: 'power2.out', stagger: 0.03, clearProps: 'transform' });
+                    gsap.fromTo(panels, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out', clearProps: 'opacity' });
                 };
 
                 gtObserver = new IntersectionObserver((entries) => {
@@ -2818,18 +2760,13 @@ const deleteActivity = (actId) => {
                         if (!en.isIntersecting) return;
                         gtObserver.unobserve(en.target);
                         if (en.target.hasAttribute('data-gt-pill')) {
-                            if (animOn) {
-                                gsap.fromTo(en.target,
-                                    { opacity: 0, x: -30, scale: 0.7, transformOrigin: 'left center' },
-                                    { opacity: 1, x: 0, scale: 1, duration: 1, ease: 'elastic.out(1,0.55)' });
-                            } else {
-                                gsap.fromTo(en.target, { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' });
-                            }
+                            gsap.fromTo(en.target, { opacity: 0, x: -12 },
+                                { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out', clearProps: 'opacity,transform' });
                         } else {
                             cards.push(en.target);
                         }
                     });
-                    if (cards.length) (animOn ? playCardsFull : playCardsLite)(cards);
+                    if (cards.length) playCards(cards);
                 }, { threshold: 0.12 });
 
                 content.querySelectorAll('[data-gt-pill],[data-gt-card]').forEach(el => gtObserver.observe(el));
