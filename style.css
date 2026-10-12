@@ -8,7 +8,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-html, body { background: transparent; }
+html, body { background: transparent; overflow-x: clip; }
 
 /* Tắt tính năng double-tap to zoom trên toàn bộ UI nhưng vẫn cho phép vuốt/cuộn */
 body,

@@ -181,25 +181,28 @@
             }, 50); // Delay 50ms đợi HTML vẽ xong mới cuộn
         };
 
-        const renderSidebar = () => {
-            const list = document.getElementById('trips-list');
-            list.innerHTML = state.trips.map(trip => `
-                <div class="flex items-center gap-1 mb-2">
-                    <button onclick="switchTrip('${trip.id}')" class="flex-1 text-left p-3 rounded-2xl transition-all duration-200 flex items-center gap-3 border ${state.activeTripId === trip.id ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-transparent hover:bg-slate-100'}">
-                        <img src="${trip.coverUrl}" class="w-10 h-10 rounded-xl object-cover flex-shrink-0 shadow-sm">
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-bold text-sm truncate ${state.activeTripId === trip.id ? 'text-blue-700' : 'text-slate-800'}">${trip.title}</h4>
-                            <p class="text-[11px] text-slate-500 font-medium mt-0.5">${trip.days.length} ngày</p>
-                        </div>
-                    </button>
-                    <!-- Nút phụ Sửa / Xóa -->
-                    <div class="flex flex-col gap-1 pr-1">
-                        <button onclick="editTripFromList('${trip.id}')" class="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-blue-100 hover:text-blue-600 transition-colors" title="Sửa"><i class="fa-solid fa-pen text-[10px]"></i></button>
-                        <button onclick="deleteTripFromList('${trip.id}')" class="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors" title="Xóa"><i class="fa-solid fa-trash text-[10px]"></i></button>
+       const renderSidebar = () => {
+    const list = document.getElementById('trips-list');
+    list.innerHTML = state.trips.map(trip => {
+        const isActive = state.activeTripId === trip.id;
+        return `
+            <div class="flex items-center gap-2 mb-3">
+                <button onclick="switchTrip('${trip.id}')" class="tg-item ${isActive ? 'is-active' : ''} flex-1 min-w-0">
+                    <span class="tg-cover"><img src="${trip.coverUrl}" alt=""></span>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-sm truncate ${isActive ? 'text-blue-700' : 'text-slate-800'}">${trip.title}</h4>
+                        <p class="text-[11px] font-medium mt-0.5 ${isActive ? 'text-blue-600/70' : 'text-slate-500'}">${trip.days.length} ngày</p>
                     </div>
+                </button>
+                <!-- Nút phụ Sửa / Xóa: viên kính nổi -->
+                <div class="flex flex-col gap-1.5 pr-1">
+                    <button onclick="editTripFromList('${trip.id}')" class="tg-act edit" title="Sửa"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                    <button onclick="deleteTripFromList('${trip.id}')" class="tg-act del" title="Xóa"><i class="fa-solid fa-trash text-[10px]"></i></button>
                 </div>
-            `).join('');
-        };
+            </div>
+        `;
+    }).join('');
+};
 
         const editTripFromList = (id) => {
             editingTripId = id; // editingTripId nằm ở trip-logic.js
@@ -1354,6 +1357,15 @@ const TL_FX = (function () {
 /* ===== Helper dùng chung: góc giấy cong bằng clip-path + "mặt sau tờ giấy" =====
    Đường gập là x + y = d. Phần x + y > d bị nhấc lên, lật qua nếp gập
    (x,y) -> (d - y, d - x). q = 1: giấy phẳng.  q = 0: cong nhiều nhất (mờ hẳn). */
+/* ==========================================================
+   TỜ GIẤY UỐN GÓC (bản tối ưu) + XÓA CARD CUỐI "HÚT VÀO TÂM"
+   Thay thế: TL_PAPER và TL_DELETE_FX cũ.
+   GIỮ NGUYÊN: TL_DUP_FX, TL_FX, renderTimeline (chỉ sửa nhánh ngày trống, xem cuối file).
+   ========================================================== */
+
+/* ===== Helper dùng chung: góc giấy cong bằng clip-path + "mặt sau tờ giấy" =====
+   Đường gập là x + y = d. Phần x + y > d bị nhấc lên, lật qua nếp gập
+   (x,y) -> (d - y, d - x). q = 1: giấy phẳng.  q = 0: cong nhiều nhất (mờ hẳn). */
 const TL_PAPER = {
     LITE_BACKDROP: true, // tắt backdrop-filter của card trong lúc chạy (mượt hơn nhiều trên mobile/Safari)
     _styled: false,
@@ -1364,7 +1376,7 @@ const TL_PAPER = {
         s.textContent = '.tl-paper-run,.tl-paper-run *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}';
         document.head.appendChild(s);
     },
- 
+
     clip(poly, d, sign) { // Sutherland–Hodgman
         const out = [];
         for (let i = 0; i < poly.length; i++) {
@@ -1395,7 +1407,7 @@ const TL_PAPER = {
         if (pts.length < 3) return 'polygon(0px 0px,0px 0px,0px 0px)';
         return 'polygon(' + pts.map(p => (p.x + dx).toFixed(1) + 'px ' + (p.y + dy).toFixed(1) + 'px').join(',') + ')';
     },
- 
+
     /* reverse=false: dán (q 0->1, power3.out) | reverse=true: bóc (q 1->0, power3.in)
        Khác bản cũ:
        1) Đo kích thước lại đúng lúc tween BẮT ĐẦU (sau delay). Bản cũ đo trước delay 600ms của Duplicate,
@@ -1406,30 +1418,33 @@ const TL_PAPER = {
        5) Tắt backdrop-filter lồng nhau trong lúc chạy (nguyên nhân giật chính khi clip-path đổi mỗi frame). */
     run(item, card, { reverse = false, duration = 0.8, delay = 0, onDone } = {}) {
         if (card._tlPaper) card._tlPaper.cancel();
- 
+
         const prevTransition = card.style.transition, prevWill = card.style.willChange;
         card.style.transition = 'none';
         card.style.willChange = 'clip-path, opacity, transform';
         if (this.LITE_BACKDROP) { this.ensureStyle(); card.classList.add('tl-paper-run'); }
- 
+
         const shade = document.createElement('div');
         shade.style.cssText = 'position:absolute;pointer-events:none;z-index:20;display:none;will-change:clip-path,opacity,transform';
         const flap = document.createElement('div');
         flap.style.cssText = 'position:absolute;pointer-events:none;z-index:25;display:none;will-change:clip-path,opacity,transform';
         item.appendChild(shade);
         item.appendChild(flap);
- 
+
         let w = 0, h = 0, M = 0, rect = [], dMin = 0, dMax = 0, band = 0.012;
         const pc = v => (v * 100).toFixed(2) + '%';
         const st = { q: reverse ? 1 : 0 };
- 
+
         const measure = () => {
             card.style.transform = ''; // đo khi chưa bị dịch
             const ir = item.getBoundingClientRect(), cr = card.getBoundingClientRect();
             w = card.offsetWidth; h = card.offsetHeight;
             const ox = cr.left - ir.left, oy = cr.top - ir.top;
             M = Math.ceil(Math.max(w, h) * 0.5);
-            const W = w + 2 * M, H = h + 2 * M;
+            // Mặt sau tờ giấy chỉ lấn sang TRÁI/TRÊN card (điểm lật x' = d - y < x <= w), không bao giờ vượt
+            // mép phải/dưới => hộp chỉ cần w + M, h + M. Bản cũ w + 2M làm hộp tràn ra ngoài màn hình bên phải:
+            // clip-path KHÔNG thu nhỏ vùng cuộn, nên iOS Safari thấy trang rộng ra và tự "thu nhỏ vừa khít".
+            const W = w + M, H = h + M;
             rect = this.roundedRect(w, h, parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0);
             dMin = 0.5 * (w + h); dMax = w + h + 2;
             band = Math.max(0.012, 28 / (W + H));
@@ -1438,7 +1453,7 @@ const TL_PAPER = {
             flap.style.left = (ox - M) + 'px'; flap.style.top = (oy - M) + 'px';
             flap.style.width = W + 'px'; flap.style.height = H + 'px';
         };
- 
+
         const apply = q => {
             if (q >= 0.999) {
                 card.style.clipPath = ''; card.style.opacity = ''; card.style.transform = '';
@@ -1451,11 +1466,11 @@ const TL_PAPER = {
             const lifted = gap.map(p => ({ x: d - p.y, y: d - p.x }));
             const op = Math.min(1, q / 0.2);
             const tr = 'translateY(' + (-(1 - q) * 4).toFixed(2) + 'px)';
- 
+
             card.style.clipPath = this.css(visible, 0, 0);
             card.style.opacity = op;
             card.style.transform = tr;
- 
+
             const f2 = d / (w + h);
             shade.style.background = 'linear-gradient(135deg,transparent ' + pc(Math.max(0, f2 - 0.005)) +
                 ',rgba(15,23,42,.15) ' + pc(f2) + ',rgba(15,23,42,0) ' + pc(Math.min(1, f2 + 0.08)) + ')';
@@ -1463,8 +1478,8 @@ const TL_PAPER = {
             shade.style.opacity = op;
             shade.style.transform = tr;
             shade.style.display = gap.length >= 3 ? 'block' : 'none';
- 
-            const f = (d + 2 * M) / (w + h + 4 * M);
+
+            const f = (d + 2 * M) / (w + h + 2 * M);
             flap.style.background = 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 ' + pc(Math.max(0, f - band * 5)) +
                 ',#e2e8f0 ' + pc(Math.max(0, f - band * 2.2)) + ',#b6c2d1 ' + pc(Math.max(0, f - band * 0.6)) +
                 ',#8d9bb0 ' + pc(f) + ')';
@@ -1473,7 +1488,7 @@ const TL_PAPER = {
             flap.style.transform = tr;
             flap.style.display = lifted.length >= 3 ? 'block' : 'none';
         };
- 
+
         let done = false, tween = null, raf = 0;
         const handle = { cancel: () => finish() };
         const finish = () => {
@@ -1491,10 +1506,10 @@ const TL_PAPER = {
             if (onDone) onDone();
         };
         card._tlPaper = handle;
- 
+
         measure();
         apply(st.q);
- 
+
         if (typeof gsap !== 'undefined') {
             tween = gsap.to(st, {
                 q: reverse ? 0 : 1, duration, delay,
@@ -1522,7 +1537,7 @@ const TL_PAPER = {
         return handle;
     }
 };
- 
+
 /* ===== XÓA CARD =====
    - Còn >= 1 card sau khi xóa : tờ giấy bị bóc ra (như cũ) + khép khoảng trống.
    - Xóa card CUỐI (ngày trống) : playLast() -> card bị "hút" thành hạt vào tâm khung "Chưa có lịch trình",
@@ -1543,7 +1558,7 @@ const TL_DELETE_FX = {
             })
         };
     },
- 
+
     play(container, snap, key) {
         container.dataset.tlKey = key;
         if (!snap || !snap.same || !snap.items.length) return;
@@ -1562,13 +1577,13 @@ const TL_DELETE_FX = {
             }
             if (!ref) ref = container.querySelector('.tl-extra');
             container.insertBefore(ghost, ref);
- 
+
             const card = ghost.querySelector('.tl-card');
             const node = ghost.querySelector('.tl-node');
             const ease = 'cubic-bezier(.4,0,.2,1)';
- 
+
             if (card) TL_PAPER.run(ghost, card, { reverse: true, duration: 0.8 });
- 
+
             if (node) {
                 node.animate([
                     { transform: 'scale(1)', opacity: 1 },
@@ -1576,11 +1591,11 @@ const TL_DELETE_FX = {
                     { transform: 'scale(0)', opacity: 0 }
                 ], { duration: 500, delay: 250, easing: ease, fill: 'forwards' });
             }
- 
+
             this.collapse(container, ghost, it, snap, i, alive);
         });
     },
- 
+
     /* ===== Xóa card cuối: ngày chuyển sang khung "Chưa có lịch trình" ===== */
     playLast(container, snap, key) {
         container.dataset.tlKey = key;
@@ -1589,9 +1604,9 @@ const TL_DELETE_FX = {
         const gone = snap.items.filter(it => it.h);
         if (!gone.length || typeof Element.prototype.animate !== 'function') return;
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
- 
+
         TL_PAPER.ensureStyle();
- 
+
         // 1) Dựng lại card cũ thành "bóng ma" đè đúng vị trí cũ (position:absolute => không làm khung trống bị đẩy)
         const prevPos = container.style.position;
         if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
@@ -1604,7 +1619,7 @@ const TL_DELETE_FX = {
             });
             container.appendChild(g);
         });
- 
+
         // 2) Đo MỘT lần trước khi chạy bất kỳ animation nào
         const icon = empty.querySelector('.tl-empty-icon');
         const ir = icon.getBoundingClientRect();
@@ -1612,11 +1627,11 @@ const TL_DELETE_FX = {
         const T = 760, STAG = 70;
         const arrive = Math.round(T * 0.62) + (gone.length - 1) * STAG; // lúc card chạm tâm icon
         const jobs = [];
- 
+
         gone.forEach((it, i) => {
             const g = it.el, d = i * STAG;
             const card = g.querySelector('.tl-card');
- 
+
             // phần phụ (giờ, node, đường kẻ, thanh nút) mờ dần
             g.querySelectorAll('.tl-time,.tl-node,.tl-line,.tl-body > :not(.tl-card)').forEach(el => {
                 const end = el.classList.contains('tl-node') ? { opacity: 0, transform: 'scale(0)' }
@@ -1629,7 +1644,7 @@ const TL_DELETE_FX = {
                     duration: 320, delay: d + 60, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards'
                 }).finished);
             });
- 
+
             if (card) {
                 const cr = card.getBoundingClientRect();
                 const dx = ix - (cr.left + cr.width / 2), dy = iy - (cr.top + cr.height / 2);
@@ -1645,20 +1660,20 @@ const TL_DELETE_FX = {
                 ], { duration: T, delay: d, easing: 'cubic-bezier(.6,.02,.3,1)', fill: 'forwards' }).finished);
             }
         });
- 
+
         // 3) Khung "Chưa có lịch trình" nổi lên khi card đang bị hút vào
         empty.animate([
             { opacity: 0, transform: 'translateY(18px) scale(.94)' },
             { opacity: 1, transform: 'none' }
         ], { duration: 640, delay: Math.max(0, arrive - 340), easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' });
- 
+
         // 4) Icon bật lên đúng lúc card chạm tâm
         icon.animate([
             { transform: 'scale(.4) rotate(-20deg)', opacity: 0 },
             { transform: 'scale(1.22) rotate(6deg)', opacity: 1, offset: .55 },
             { transform: 'scale(1) rotate(0deg)', opacity: 1 }
         ], { duration: 650, delay: arrive - 80, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
- 
+
         // 5) Hai vòng sóng lan ra
         [0, 170].forEach(extra => {
             const ring = document.createElement('span');
@@ -1671,7 +1686,7 @@ const TL_DELETE_FX = {
             ], { duration: 800, delay: arrive + extra, easing: 'cubic-bezier(.2,.6,.3,1)', fill: 'backwards' });
             a.finished.then(() => ring.remove(), () => ring.remove());
         });
- 
+
         // 6) Hạt sáng bắn tỏa ra (card "tan" thành hạt)
         const COLORS = ['#60a5fa', '#93c5fd', '#38bdf8', '#a5b4fc', '#cbd5e1'];
         const N = 12;
@@ -1690,7 +1705,7 @@ const TL_DELETE_FX = {
             ], { duration: 600 + Math.random() * 250, delay: arrive, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' });
             a.finished.then(() => dot.remove(), () => dot.remove());
         }
- 
+
         // 7) Chữ + nút xuất hiện lần lượt
         empty.querySelectorAll('.tl-empty-stagger').forEach((el, k) => {
             el.animate([
@@ -1698,20 +1713,20 @@ const TL_DELETE_FX = {
                 { opacity: 1, transform: 'none' }
             ], { duration: 520, delay: arrive + 60 + k * 90, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' });
         });
- 
+
         // 8) Khung trống nằm ngoài màn hình (do trang ngắn lại) -> cuộn nhẹ tới
         const er = empty.getBoundingClientRect();
         if (er.top < 0 || er.bottom > window.innerHeight) {
             setTimeout(() => { if (empty.isConnected) empty.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120);
         }
- 
+
         // 9) Dọn dẹp
         Promise.allSettled(jobs).then(() => {
             gone.forEach(it => it.el.remove());
             container.style.position = prevPos;
         });
     },
- 
+
     scrollParent(el) {
         for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
             const o = getComputedStyle(p).overflowY;
@@ -1719,13 +1734,13 @@ const TL_DELETE_FX = {
         }
         return null;
     },
- 
+
     /* Khép khoảng trống + tự cuộn cùng một tiến độ p (giữ nguyên logic cũ).
        Sửa: nếu ghost bị gỡ khỏi DOM giữa chừng (đổi tab/ngày) thì dừng NGAY, không kéo cuộn trang mới. */
     collapse(container, ghost, it, snap, i, alive) {
         const mb = parseFloat(getComputedStyle(ghost).marginBottom) || 0;
         const full = it.h + mb;
- 
+
         if (typeof gsap === 'undefined') {
             const c = ghost.animate([
                 { height: it.h + 'px', marginBottom: mb + 'px', opacity: 1 },
@@ -1734,7 +1749,7 @@ const TL_DELETE_FX = {
             c.onfinish = () => ghost.remove();
             return;
         }
- 
+
         const sp = this.scrollParent(ghost);
         const getTop = () => sp ? sp.scrollTop : (window.pageYOffset || document.documentElement.scrollTop || 0);
         const setTop = v => sp ? sp.scrollTo({ top: v, behavior: 'instant' }) : window.scrollTo({ top: v, left: 0, behavior: 'instant' });
@@ -1743,12 +1758,12 @@ const TL_DELETE_FX = {
         const docH = sp ? sp.scrollHeight : document.documentElement.scrollHeight;
         const s0 = getTop();
         const maxAfter = Math.max(0, docH - full - vh);
- 
+
         const sel = id => container.querySelector('.tl-item[data-act-id="' + id + '"]:not([data-tl-ghost])');
         let target = null, targetBelow = false;
         for (let j = i - 1; j >= 0 && !target; j--) if (alive.has(snap.items[j].id)) target = sel(snap.items[j].id);
         for (let j = i + 1; j < snap.items.length && !target; j++) if (alive.has(snap.items[j].id)) { target = sel(snap.items[j].id); targetBelow = true; }
- 
+
         let final = Math.min(s0, maxAfter);
         if (target) {
             const r = target.getBoundingClientRect();
@@ -1761,13 +1776,13 @@ const TL_DELETE_FX = {
                 final = Math.max(0, Math.min(want, maxAfter));
             }
         }
- 
+
         let userMoved = false;
         const stop = () => { userMoved = true; };
         const evs = ['wheel', 'touchstart', 'keydown', 'mousedown'];
         evs.forEach(e => window.addEventListener(e, stop, { passive: true }));
         const cleanup = () => evs.forEach(e => window.removeEventListener(e, stop));
- 
+
         const st = { p: 0 };
         const tw = gsap.to(st, {
             p: 1, duration: 0.55, delay: 0.65, ease: 'power2.inOut',
@@ -1783,14 +1798,14 @@ const TL_DELETE_FX = {
         });
     }
 };
- 
+
 /* ===== KHUNG "CHƯA CÓ LỊCH TRÌNH" (có class để animate) ===== */
 const tlEmptyHtml = (dateStr) => `
     <div class="tl-empty text-center py-12 md:py-16 px-4 md:ml-16 relative z-10 bg-white/50 backdrop-blur-2xl border border-white/80 shadow-[0_10px_40px_rgba(0,0,0,0.03)] rounded-[2rem] mb-10">
         <div class="tl-empty-icon relative w-20 h-20 rounded-full bg-white/80 backdrop-blur-md border border-white flex items-center justify-center text-slate-300 mx-auto mb-4 text-4xl shadow-[0_8px_20px_rgba(0,0,0,0.04)]"><i class="fa-solid fa-mug-hot"></i></div>
         <h3 class="tl-empty-stagger text-xl font-black text-slate-700">Chưa có lịch trình</h3>
         <p class="tl-empty-stagger text-slate-500 text-[13px] md:text-sm mt-2 font-medium">Bấm <strong class="text-blue-600">+ Thêm</strong> để lên kế hoạch cho ngày này.</p>
- 
+
         <div class="tl-empty-stagger mt-6 flex justify-center" data-html2canvas-ignore>
             <button onclick="confirmDeleteDay('${dateStr}')" class="h-[3.25rem] px-6 bg-red-100/80 backdrop-blur-xl hover:bg-red-200/80 text-red-900 rounded-[1.25rem] font-bold text-[13px] transition-all shadow-[0_4px_12px_rgba(244,63,94,0.06),inset_0_2px_4px_rgba(255,255,255,0.8)] active:scale-95 flex items-center justify-center gap-2.5 border border-rose-200/70 touch-manipulation group">
                 <div class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center border border-rose-200 shadow-[0_2px_5px_rgba(0,0,0,0.06)] group-hover:scale-110 transition-transform flex-shrink-0">
@@ -2189,7 +2204,7 @@ const renderTimeline = () => {
   <div class="tp-stamp" id="tpStamp">
     <div class="tp-stamp__glass" id="tpStampGlass">
       <span class="tp-stamp__bead" aria-hidden="true"><i class="fa-solid fa-feather"></i></span>
-      <p class="tp-stamp__ver">TripPlanner 1.3.8</p>
+      <p class="tp-stamp__ver">TripPlanner 1.3.9</p>
       <span class="tp-stamp__sep" aria-hidden="true"></span>
       <p class="tp-stamp__credit">
         Made with <i class="fa-solid fa-heart"></i> by <strong>duyanh.dev</strong>
@@ -3641,29 +3656,27 @@ window.executeDuplicate = (actId, changeTime) => {
     const trip = state.trips.find(t => t.id === state.activeTripId);
     const day = trip.days.find(d => d.date === state.activeDayDate);
     const actIndex = day.activities.findIndex(a => a.id === actId);
-    
+
     if (actIndex > -1) {
         const actToCopy = day.activities[actIndex];
         const newAct = JSON.parse(JSON.stringify(actToCopy)); // Deep Clone
-        
-        // Cấp phát ID và đánh dấu chưa hoàn thành
+
         newAct.id = 'act_' + Date.now() + Math.random().toString(36).substr(2, 9);
         newAct.isCompleted = false;
-        
-        // Nếu chọn Đổi giờ: Lấy dữ liệu từ cả 2 ô Start & End
+
         if (changeTime) {
             const newStart = document.getElementById('dup-new-start').value;
             const newEnd = document.getElementById('dup-new-end').value;
             if (newStart) newAct.start = newStart;
             if (newEnd) newAct.end = newEnd;
         }
-        
-        // Thêm vào mảng và Sort lại theo thời gian bắt đầu
-        day.activities.push(newAct);
-        day.activities.sort((a, b) => a.start.localeCompare(b.start));
 
-        // Lưu và render
-        if(typeof saveState === 'function') saveState();
+        day.activities.push(newAct);
+        day.activities.sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')));
+
+        // Lưu NGAY sau khi đổi state, trước khi render
+        try { saveData(); } catch (e) { console.error('saveData lỗi, dữ liệu KHÔNG được lưu!', e); }
+
         renderTimeline();
         closeDupModal();
     }
