@@ -1333,9 +1333,145 @@ const TL_FX = (function () {
    renderTimeline — LOGIC GIỮ NGUYÊN 100%
    Chỉ thêm: class hook (tl-*), data-tl-check/data-done, và 2 dòng gọi TL_FX
    ========================================================== */
-/* ===== HIỆU ỨNG XÓA CARD (chỉ là lớp hiển thị, không đụng logic xóa) =====
-   Cách hoạt động: trước khi render lại, chụp lại các item cũ; sau khi render,
-   item nào biến mất sẽ được dựng lại thành "bóng ma" chạy animation rồi tự gỡ. */
+/* ==========================================================
+   HIỆU ỨNG "TỜ GIẤY UỐN GÓC" cho Timeline
+   - Duplicate: tờ giấy được dán xuống từ góc dưới-phải (góc cong dần phẳng ra), CHỈ 1 LẦN
+   - Delete   : tờ giấy được bóc ra từ góc dưới-phải (chạy NGƯỢC lại hoàn toàn với dán)
+   Thay thế 2 khối TL_DELETE_FX và TL_DUP_FX cũ. renderTimeline giữ nguyên
+   (vẫn gọi TL_DELETE_FX.snapshot/play và TL_DUP_FX.bind/play như trước).
+   ========================================================== */
+
+/* ===== Helper dùng chung: vẽ góc giấy cong bằng clip-path + 1 "mặt sau tờ giấy" =====
+   Đường gập là x + y = d. Phần x + y > d bị nhấc lên và lật qua đường gập
+   (điểm (x,y) -> (d - y, d - x)), tạo thành mặt sau tờ giấy.
+   q = 1: giấy phẳng hoàn toàn.  q = 0: giấy đang bị cong nhiều nhất (và mờ hẳn). */
+const TL_PAPER = {
+    clip(poly, d, sign) { // cắt đa giác theo nửa mặt phẳng (Sutherland–Hodgman)
+        const out = [];
+        for (let i = 0; i < poly.length; i++) {
+            const a = poly[i], b = poly[(i + 1) % poly.length];
+            const fa = sign * (a.x + a.y - d), fb = sign * (b.x + b.y - d);
+            if (fa <= 0) out.push(a);
+            if ((fa < 0 && fb > 0) || (fa > 0 && fb < 0)) {
+                const t = fa / (fa - fb);
+                out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+            }
+        }
+        return out;
+    },
+    css(pts, dx, dy) {
+        if (pts.length < 3) return 'polygon(0px 0px,0px 0px,0px 0px)';
+        return 'polygon(' + pts.map(p => (p.x + dx).toFixed(1) + 'px ' + (p.y + dy).toFixed(1) + 'px').join(',') + ')';
+    },
+
+    /* Chạy animation bằng GSAP (không có GSAP thì tự dùng requestAnimationFrame).
+       reverse=false: dán xuống (q 0->1, power3.out)
+       reverse=true : bóc ra   (q 1->0, power3.in) = đúng đảo ngược của dán.
+       LƯU Ý QUAN TRỌNG: .tl-card có class `transition-all` (Tailwind) -> làm clip-path/opacity/transform
+       bị trễ ~150ms và không nội suy được giữa các đa giác khác số đỉnh => card "không chạy theo kịp"
+       nếp gấp. Vì vậy tắt transition của card trong lúc chạy rồi trả lại sau. */
+    run(item, card, { reverse = false, duration = 0.8, delay = 0, onDone } = {}) {
+        const w = card.offsetWidth, h = card.offsetHeight;
+        const ir = item.getBoundingClientRect(), cr = card.getBoundingClientRect();
+        const ox = cr.left - ir.left, oy = cr.top - ir.top;
+        const M = Math.ceil(Math.max(w, h) * 0.5);
+        const W = w + 2 * M, H = h + 2 * M;
+
+        const prevTransition = card.style.transition, prevWill = card.style.willChange;
+        card.style.transition = 'none';
+        card.style.willChange = 'clip-path, opacity, transform';
+
+        // Bóng đổ nhẹ lên nền ngay sau nếp gập (chỉ tối dần, KHÔNG có màu trắng)
+        const shade = document.createElement('div');
+        shade.style.cssText = 'position:absolute;pointer-events:none;z-index:20;display:none;' +
+            'left:' + ox + 'px;top:' + oy + 'px;width:' + w + 'px;height:' + h + 'px;will-change:clip-path';
+        item.appendChild(shade);
+
+        // Mặt sau tờ giấy lật lên (không dùng filter/blur để mượt hơn)
+        const flap = document.createElement('div');
+        flap.style.cssText = 'position:absolute;pointer-events:none;z-index:25;display:none;will-change:clip-path,opacity;' +
+            'left:' + (ox - M) + 'px;top:' + (oy - M) + 'px;width:' + W + 'px;height:' + H + 'px';
+        item.appendChild(flap);
+
+        const rect = [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
+        const dMin = 0.5 * (w + h), dMax = w + h + 2;
+        const pc = v => (v * 100).toFixed(2) + '%';
+        const st = { q: reverse ? 1 : 0 };
+        const band = Math.max(0.012, 28 / (W + H));
+
+        const apply = q => {
+            if (q >= 0.999) { // giấy đã phẳng hoàn toàn
+                card.style.clipPath = ''; card.style.opacity = ''; card.style.transform = '';
+                flap.style.display = 'none'; shade.style.display = 'none';
+                return;
+            }
+            const d = dMin + (dMax - dMin) * q;
+            const visible = this.clip(rect, d, 1);          // phần còn dán trên nền
+            const gap = this.clip(rect, d, -1);             // phần đã bốc lên (vùng gốc)
+            const lifted = gap.map(p => ({ x: d - p.y, y: d - p.x })); // phần đó sau khi lật qua nếp gập
+            const op = Math.min(1, q / 0.2);
+
+            card.style.clipPath = this.css(visible, 0, 0);
+            card.style.opacity = op;
+            card.style.transform = 'translateY(' + (-(1 - q) * 4) + 'px)';
+
+            const f2 = d / (w + h);
+            shade.style.background = 'linear-gradient(135deg,transparent ' + pc(Math.max(0, f2 - 0.005)) +
+                ',rgba(15,23,42,.15) ' + pc(f2) + ',rgba(15,23,42,0) ' + pc(Math.min(1, f2 + 0.08)) + ')';
+            shade.style.clipPath = this.css(gap, 0, 0);
+            shade.style.opacity = op;
+            shade.style.display = gap.length >= 3 ? 'block' : 'none';
+
+            const f = (d + 2 * M) / (W + H);
+            flap.style.background = 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 ' + pc(Math.max(0, f - band * 5)) +
+                ',#e2e8f0 ' + pc(Math.max(0, f - band * 2.2)) + ',#b6c2d1 ' + pc(Math.max(0, f - band * 0.6)) +
+                ',#8d9bb0 ' + pc(f) + ')';
+            flap.style.clipPath = this.css(lifted, M, M);
+            flap.style.opacity = op;
+            flap.style.display = lifted.length >= 3 ? 'block' : 'none';
+        };
+
+        apply(st.q);
+        let done = false, tween = null, raf = 0;
+        const finish = () => {
+            if (done) return; done = true;
+            cancelAnimationFrame(raf);
+            if (tween && tween.kill) tween.kill();
+            flap.remove(); shade.remove();
+            card.style.willChange = prevWill;
+            if (!reverse) { // dán xong: trả card về nguyên trạng
+                card.style.clipPath = ''; card.style.opacity = ''; card.style.transform = '';
+                // trả transition sau 1 frame để không kích hoạt hiệu ứng chuyển ngoài ý muốn
+                requestAnimationFrame(() => { card.style.transition = prevTransition; });
+            }
+            if (onDone) onDone();
+        };
+
+        if (typeof gsap !== 'undefined') {
+            tween = gsap.to(st, {
+                q: reverse ? 0 : 1, duration, delay,
+                ease: reverse ? 'power3.in' : 'power3.out',
+                onUpdate: () => apply(st.q),
+                onComplete: finish
+            });
+        } else {
+            const t0 = performance.now() + delay * 1000;
+            const frame = now => {
+                if (done) return;
+                const t = Math.min(1, Math.max(0, (now - t0) / (duration * 1000)));
+                if (now >= t0) apply(reverse ? 1 - t * t * t : 1 - Math.pow(1 - t, 3));
+                if (now >= t0 && t >= 1) return finish();
+                raf = requestAnimationFrame(frame);
+            };
+            raf = requestAnimationFrame(frame);
+        }
+        return { cancel: finish };
+    }
+};
+
+/* ===== HIỆU ỨNG XÓA CARD: tờ giấy bị bóc ra ở góc (ngược lại với dán) =====
+   Trước khi render lại chụp các item cũ; sau khi render, item nào biến mất
+   được dựng lại thành "bóng ma" chạy animation rồi tự gỡ. */
 const TL_DELETE_FX = {
     snapshot(container, key) {
         return {
@@ -1368,62 +1504,31 @@ const TL_DELETE_FX = {
             const node = ghost.querySelector('.tl-node');
             const ease = 'cubic-bezier(.4,0,.2,1)';
 
-            // 1) Lớp đỏ nhạt lóe lên trên card
-            if (card) {
-                const flash = document.createElement('div');
-                flash.style.cssText = 'position:absolute;inset:0;border-radius:inherit;background:rgba(244,63,94,.16);pointer-events:none;opacity:0';
-                card.style.position = 'relative';
-                card.appendChild(flash);
-                flash.animate([{ opacity: 0 }, { opacity: 1, offset: .25 }, { opacity: 0 }], { duration: 650, easing: ease, fill: 'forwards' });
+            // 1) Tờ giấy bị bóc ra từ góc dưới-phải rồi mờ đi
+            if (card) TL_PAPER.run(ghost, card, { reverse: true, duration: 0.8 });
 
-                // 2) Card phồng nhẹ rồi trượt sang phải, nghiêng, mờ nhòe và tan biến
-                card.animate([
-                    { transform: 'translateX(0) scale(1) rotate(0deg)', opacity: 1, filter: 'blur(0px)' },
-                    { transform: 'translateX(-4px) scale(1.03) rotate(-1deg)', opacity: 1, filter: 'blur(0px)', offset: .22 },
-                    { transform: 'translateX(90px) scale(.8) rotate(5deg)', opacity: 0, filter: 'blur(14px)' }
-                ], { duration: 650, easing: ease, fill: 'forwards' });
-
-                // 3) Hạt nổ tung từ tâm card
-                const gr = ghost.getBoundingClientRect();
-                const cr = card.getBoundingClientRect();
-                const cx = cr.left - gr.left + cr.width / 2;
-                const cy = cr.top - gr.top + cr.height / 2;
-                const colors = ['#fb7185', '#f59e0b', '#60a5fa', '#34d399', '#a78bfa'];
-                for (let k = 0; k < 16; k++) {
-                    const p = document.createElement('div');
-                    const size = 5 + Math.random() * 7;
-                    p.style.cssText = 'position:absolute;z-index:30;pointer-events:none;border-radius:9999px;left:' + cx + 'px;top:' + cy + 'px;width:' + size + 'px;height:' + size + 'px;background:' + colors[k % colors.length];
-                    ghost.appendChild(p);
-                    const ang = (Math.PI * 2 * k) / 16 + Math.random() * .5;
-                    const dist = 70 + Math.random() * 90;
-                    p.animate([
-                        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
-                        { transform: 'translate(calc(-50% + ' + Math.cos(ang) * dist + 'px), calc(-50% + ' + Math.sin(ang) * dist + 'px)) scale(0)', opacity: 0 }
-                    ], { duration: 650 + Math.random() * 250, easing: 'cubic-bezier(.1,.7,.3,1)', fill: 'forwards' });
-                }
-            }
-
-            // 4) Node tròn trên timeline nảy lên rồi co biến mất
+            // 2) Node tròn trên timeline co lại rồi biến mất
             if (node) {
                 node.animate([
                     { transform: 'scale(1)', opacity: 1 },
-                    { transform: 'scale(1.2)', opacity: 1, offset: .25 },
+                    { transform: 'scale(1.15)', opacity: 1, offset: .2 },
                     { transform: 'scale(0)', opacity: 0 }
-                ], { duration: 500, easing: ease, fill: 'forwards' });
+                ], { duration: 500, delay: 250, easing: ease, fill: 'forwards' });
             }
 
-            // 5) Khoảng trống khép lại mượt để các card bên dưới trượt lên
+            // 3) Khoảng trống khép lại mượt để các card bên dưới trượt lên
             const collapse = ghost.animate([
                 { height: it.h + 'px', marginBottom: '32px', opacity: 1 },
                 { height: '0px', marginBottom: '0px', opacity: 0 }
-            ], { duration: 450, delay: 420, easing: ease, fill: 'forwards' });
+            ], { duration: 450, delay: 780, easing: ease, fill: 'forwards' });
             collapse.onfinish = () => ghost.remove();
         });
     }
 };
 
-/* ===== HIỆU ỨNG NHÂN BẢN (Duplicate): cuộn tới card mới + animation =====
-   Chỉ kích hoạt khi người dùng bấm nút Duplicate, không đụng tới logic duplicateActivity. */
+/* ===== HIỆU ỨNG NHÂN BẢN (Duplicate): cuộn tới card mới + tờ giấy được dán xuống =====
+   Chỉ kích hoạt khi người dùng bấm nút Duplicate, không đụng tới logic duplicateActivity.
+   Animation chỉ chạy MỘT lần. */
 const TL_DUP_FX = {
     armedAt: 0,
     knownIds: null,
@@ -1451,60 +1556,44 @@ const TL_DUP_FX = {
     play(container, snap) {
         if (!this.armedAt) return;
         if (Date.now() - this.armedAt > this.WINDOW) { this.armedAt = 0; this.knownIds = null; return; }
- 
-        // Danh sách ID trước khi nhân bản (ưu tiên toàn bộ state; dự phòng: snapshot của ngày hiện tại)
+
         let known = this.knownIds && this.knownIds.size ? this.knownIds : null;
         if (!known) {
             if (!snap || !snap.same) return;
             known = new Set(snap.items.map(i => i.id));
         }
- 
+
         const fresh = Array.from(container.querySelectorAll('.tl-item[data-act-id]')).filter(e => !known.has(String(e.dataset.actId)));
         if (!fresh.length) return; // chưa có card mới (đang chờ xác nhận) -> giữ cờ, chờ lần render sau
         this.armedAt = 0;
         this.knownIds = null;
- 
+
         const item = fresh[0];
         const card = item.querySelector('.tl-card');
         const node = item.querySelector('.tl-node');
         const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
- 
+
         // Cuộn mượt tới card mới (chờ hộp thoại đóng xong rồi mới cuộn)
         setTimeout(() => {
             if (!item.isConnected) return;
             item.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
         }, reduce ? 0 : 250);
         if (reduce || !card) return;
- 
-        const delay = 600; // chờ hộp thoại đóng + màn hình cuộn tới nơi rồi mới "bùng" lên
+
+        const delay = 600; // chờ hộp thoại đóng + màn hình cuộn tới nơi rồi mới dán
         const ease = 'cubic-bezier(.2,.8,.2,1)';
- 
-        // 1) Card bật ra từ phía dưới, vọt nhẹ rồi hạ xuống
-        card.animate([
-            { opacity: 0, transform: 'translateY(44px) scale(.85)', filter: 'blur(12px)' },
-            { opacity: 1, transform: 'translateY(-8px) scale(1.03)', filter: 'blur(0px)', offset: .6 },
-            { opacity: 1, transform: 'translateY(0) scale(1)', filter: 'blur(0px)' }
-        ], { duration: 800, delay, easing: ease, fill: 'backwards' });
- 
-        // 2) Node tròn xoay và nảy lên
+
+        // 1) Tờ giấy được dán xuống: góc cong dần phẳng ra (1 lần duy nhất)
+        TL_PAPER.run(item, card, { reverse: false, duration: 0.9, delay: delay / 1000 });
+
+        // 2) Node tròn nảy lên cùng lúc
         if (node) {
             node.animate([
-                { transform: 'scale(0) rotate(-120deg)', opacity: 0 },
-                { transform: 'scale(1.3) rotate(10deg)', opacity: 1, offset: .65 },
-                { transform: 'scale(1) rotate(0deg)', opacity: 1 }
-            ], { duration: 750, delay, easing: ease, fill: 'backwards' });
+                { transform: 'scale(0)', opacity: 0 },
+                { transform: 'scale(1.2)', opacity: 1, offset: .65 },
+                { transform: 'scale(1)', opacity: 1 }
+            ], { duration: 650, delay: delay + 100, easing: ease, fill: 'backwards' });
         }
- 
-        // 3) Vòng sáng xanh lan tỏa quanh card (2 nhịp)
-        card.style.position = 'relative';
-        const ring = document.createElement('div');
-        ring.style.cssText = 'position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:rgba(59,130,246,.10)';
-        card.appendChild(ring);
-        ring.animate([
-            { boxShadow: '0 0 0 0 rgba(59,130,246,.45)', opacity: 1 },
-            { boxShadow: '0 0 0 20px rgba(59,130,246,0)', opacity: 0 }
-        ], { duration: 900, delay: delay + 350, iterations: 2, easing: 'ease-out', fill: 'both' })
-            .onfinish = () => ring.remove();
     }
 };
 
