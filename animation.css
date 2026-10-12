@@ -683,3 +683,16 @@ html[data-animation-on="true"] #cl-confirm.active .clc-icon i { animation: clcSh
 }
 
 
+
+/* Nền mờ xung quanh modal Toàn cảnh (cùng tông #f8fafc như #sidebar-overlay) */
+#global-timeline-modal {
+    background: rgba(248, 250, 252, .55);
+    backdrop-filter: blur(10px) saturate(1.15);
+    -webkit-backdrop-filter: blur(10px) saturate(1.15);
+}
+html[data-animation-on="true"] #global-timeline-modal {
+    transition-property: opacity, visibility;
+    transition-duration: .3s;
+    transition-timing-function: cubic-bezier(.32, .72, 0, 1);
+}
+

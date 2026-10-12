@@ -2251,24 +2251,25 @@ const renderTimeline = () => {
                 if (isToday) hasToday = true;
 
                 // Header ngày: hôm nay nổi bật (xanh dương đặc) / ngày thường (kính indigo)
+                                // Header ngày: mỏng, tinh tế. Hôm nay = kính xanh dương / ngày thường = kính indigo nhạt
                 const pillHtml = isToday ? `
-                    <div data-gt-pill data-gt-today-pill ${hide} class="inline-flex items-center gap-2.5 max-w-full pl-1.5 pr-3 md:pr-4 py-2 rounded-full bg-blue-500/85 backdrop-blur-xl backdrop-saturate-150 pointer-events-auto">
-                        <span class="w-7 h-7 md:w-8 md:h-8 flex-shrink-0 rounded-full bg-white/90 flex items-center justify-center text-blue-600">
-                            <i class="fa-solid fa-calendar-day text-[12px] md:text-[13px]"></i>
+                    <div data-gt-pill data-gt-today-pill ${hide} class="relative inline-flex items-center gap-2 max-w-full h-8 pl-1 pr-1.5 rounded-full bg-blue-500/75 backdrop-blur-2xl backdrop-saturate-200 pointer-events-auto">
+                        <span class="absolute left-3 top-[2px] w-9 h-[4px] rounded-full bg-white/45 blur-[1.5px] pointer-events-none"></span>
+                        <span class="relative w-6 h-6 flex-shrink-0 rounded-full bg-white/85 flex items-center justify-center text-blue-600">
+                            <i class="fa-solid fa-calendar-day text-[11px]"></i>
                         </span>
-                        <span class="font-black text-white text-[14px] md:text-[15px] tracking-wide whitespace-nowrap">Ngày ${idx + 1}</span>
-                        <span class="text-white/85 font-semibold text-[12px] md:text-[13px] tracking-wide whitespace-nowrap">${formatDisplayDate(day.date)}</span>
-                        <span class="inline-flex items-center gap-1 flex-shrink-0 bg-white/90 text-blue-600 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full leading-none">
-                           Hôm nay
-                        </span>
+                        <span class="relative font-extrabold text-white text-[13px] tracking-wide whitespace-nowrap">Ngày ${idx + 1}</span>
+                        <span class="relative text-white/80 font-semibold text-[11.5px] whitespace-nowrap">${formatDisplayDate(day.date)}</span>
+                        <span class="relative flex-shrink-0 bg-white/85 text-blue-600 text-[9.5px] font-black uppercase tracking-wider px-2 py-[5px] rounded-full leading-none">Hôm nay</span>
                     </div>` : `
-                    <div data-gt-pill ${hide} class="inline-flex items-center gap-2.5 pl-1.5 pr-4 md:pr-5 py-1.5 rounded-full bg-indigo-300/35 backdrop-blur-xl backdrop-saturate-150 pointer-events-auto">
-                        <span class="w-7 h-7 md:w-8 md:h-8 flex-shrink-0 rounded-full bg-white/70 flex items-center justify-center text-indigo-600">
-                            <i class="fa-solid fa-calendar-day text-[12px] md:text-[13px]"></i>
+                    <div data-gt-pill ${hide} class="relative inline-flex items-center gap-2 h-8 pl-1 pr-3.5 rounded-full bg-indigo-400/20 backdrop-blur-2xl backdrop-saturate-200 pointer-events-auto">
+                        <span class="absolute left-3 top-[2px] w-9 h-[4px] rounded-full bg-white/55 blur-[1.5px] pointer-events-none"></span>
+                        <span class="relative w-6 h-6 flex-shrink-0 rounded-full bg-white/65 flex items-center justify-center text-indigo-600">
+                            <i class="fa-solid fa-calendar-day text-[11px]"></i>
                         </span>
-                        <span class="font-black text-indigo-950 text-[14px] md:text-[15px] tracking-wide">Ngày ${idx + 1}</span>
-                        <span class="w-1 h-1 rounded-full bg-indigo-500/50"></span>
-                        <span class="text-indigo-700 font-semibold text-[12px] md:text-[13px] tracking-wide">${formatDisplayDate(day.date)}</span>
+                        <span class="relative font-extrabold text-indigo-950 text-[13px] tracking-wide whitespace-nowrap">Ngày ${idx + 1}</span>
+                        <span class="relative w-[3px] h-[3px] rounded-full bg-indigo-500/40"></span>
+                        <span class="relative text-indigo-700/80 font-semibold text-[11.5px] whitespace-nowrap">${formatDisplayDate(day.date)}</span>
                     </div>`;
 
                 // Tông kính của hai mảnh: ngày hôm nay ngả xanh dương
