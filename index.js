@@ -1516,6 +1516,56 @@ const TL_DUP_FX = {
     }
 };
 
+/* ===== ĐỊNH DẠNG GIỜ: từ 24h trở lên đổi thành "+N ngày" (chỉ hiển thị, không đổi dữ liệu) ===== */
+const tlFmtTime = (t, block) => {
+    const m = /^\s*(\d+)\s*:\s*(\d{1,2})\s*$/.exec(t == null ? '' : String(t));
+    if (!m) return t == null ? '' : t;
+    const h = parseInt(m[1], 10), min = m[2].padStart(2, '0');
+    if (h < 24) return t;
+    const days = Math.floor(h / 24);
+    const hh = String(h % 24).padStart(2, '0');
+    const badge = '<span class="' + (block ? 'block ' : 'ml-1 ') + 'text-[9px] font-black text-blue-500 uppercase tracking-wider">+' + days + ' ngày</span>';
+    return hh + ':' + min + badge;
+};
+
+/* ===== Đổi cách hiển thị thời gian trong nhãn trạng thái =====
+   >= 60 phút  -> hiện theo giờ (vd: 90 phút -> 1 giờ 30 phút)
+   >= 24 giờ   -> hiện theo ngày (vd: 30 giờ -> 1 ngày 6 giờ)
+   Chỉ sửa chữ hiển thị, không đụng logic tính trạng thái hay màu sắc. */
+const formatStatusLabel = (label) => {
+    if (typeof label !== 'string') return label;
+    const chain = /(?:\d+\s*(?:ngày|giờ|tiếng|phút|min|h|m|p|d)(?![\p{L}])\s*(?:,|và)?\s*)+/iu;
+    const m = label.match(chain);
+    if (!m) return label;
+
+    let total = 0;
+    const token = /(\d+)\s*(ngày|giờ|tiếng|phút|min|h|m|p|d)(?![\p{L}])/giu;
+    let t;
+    while ((t = token.exec(m[0])) !== null) {
+        const n = parseInt(t[1], 10);
+        const u = t[2].toLowerCase();
+        if (u === 'ngày' || u === 'd') total += n * 1440;
+        else if (u === 'giờ' || u === 'tiếng' || u === 'h') total += n * 60;
+        else total += n;
+    }
+
+    const days = Math.floor(total / 1440);
+    const hours = Math.floor((total % 1440) / 60);
+    const mins = total % 60;
+    const parts = [];
+    if (days > 0) {
+        parts.push(days + ' ngày');
+        if (hours > 0) parts.push(hours + ' giờ');
+    } else if (hours > 0) {
+        parts.push(hours + ' giờ');
+        if (mins > 0) parts.push(mins + ' phút');
+    } else {
+        parts.push(mins + ' phút');
+    }
+    const trailing = /\s$/.test(m[0]) ? ' ' : '';
+    return label.replace(m[0], parts.join(' ') + trailing);
+};
+
 const renderTimeline = () => {
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const day = trip.days.find(d => d.date === state.activeDayDate);
@@ -1550,8 +1600,11 @@ const renderTimeline = () => {
             const rates = typeof exchangeRates !== 'undefined' ? exchangeRates : { VND: 1, THB: 720, JPY: 170, KRW: 18.5, USD: 25000, EUR: 27500 };
 
             day.activities.forEach((act, index) => {
-                const status = getActivityStatus(act, day.date);
+                const rawStatus = getActivityStatus(act, day.date);
+                const status = rawStatus && typeof rawStatus === 'object' ? { ...rawStatus, label: formatStatusLabel(rawStatus.label) } : rawStatus;
                 const isDone = act.isCompleted;
+                // Badge trạng thái: bỏ mọi animation (animate-pulse, animate-bounce, ...)
+                const statusColor = String(status.color || '').replace(/(^|\s)animate-\S+/g, ' ').trim();
 
                 if(act.budgetAmt && !isNaN(act.budgetAmt)) {
                     dailyTotalVND += parseFloat(act.budgetAmt) * (rates[act.budgetCur] || 1);
@@ -1626,8 +1679,8 @@ const renderTimeline = () => {
                         
                         <!-- Cột thời gian Desktop -->
                         <div class="tl-time w-16 flex-shrink-0 pt-4 text-right z-10 hidden md:block">
-                            <div class="text-lg font-black ${isDone ? 'text-slate-400' : 'text-slate-800'} tracking-tight">${act.start}</div>
-                            <div class="text-[13px] text-slate-400 font-bold">${act.end}</div>
+                            <div class="text-lg font-black ${isDone ? 'text-slate-400' : 'text-slate-800'} tracking-tight">${tlFmtTime(act.start, true)}</div>
+                            <div class="text-[13px] text-slate-400 font-bold">${tlFmtTime(act.end, true)}</div>
                         </div>
 
                         <!-- Timeline Line & Node -->
@@ -1643,8 +1696,8 @@ const renderTimeline = () => {
                             
                             <!-- Thời gian hiển thị ở Mobile -->
                             <div class="md:hidden flex items-center gap-2 mb-2">
-                                <span class="text-[15px] font-black text-slate-800 tracking-tight">${act.start} - ${act.end}</span>
-                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${status.color}">${status.label}</span>
+                                <span class="text-[15px] font-black text-slate-800 tracking-tight">${tlFmtTime(act.start)} - ${tlFmtTime(act.end)}</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${statusColor}" style="animation:none;">${status.label}</span>
                             </div>
 
                             <!-- THẺ CHÍNH: kính lỏng, không viền, không bóng -->
@@ -1654,7 +1707,7 @@ const renderTimeline = () => {
                                 <div class="px-2 pt-2 pb-1 flex justify-between items-start gap-3">
                                     <div class="flex-1 min-w-0">
                                         <div class="hidden md:flex items-center gap-2 mb-1.5">
-                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md ${status.color}">
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md ${statusColor}" style="animation:none;">
                                                 ${status.label}
                                             </span>
                                         </div>
@@ -1795,7 +1848,7 @@ const renderTimeline = () => {
   <div class="tp-stamp" id="tpStamp">
     <div class="tp-stamp__glass" id="tpStampGlass">
       <span class="tp-stamp__bead" aria-hidden="true"><i class="fa-solid fa-feather"></i></span>
-      <p class="tp-stamp__ver">TripPlanner 1.3.6</p>
+      <p class="tp-stamp__ver">TripPlanner 1.3.8</p>
       <span class="tp-stamp__sep" aria-hidden="true"></span>
       <p class="tp-stamp__credit">
         Made with <i class="fa-solid fa-heart"></i> by <strong>duyanh.dev</strong>
