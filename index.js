@@ -2296,50 +2296,7 @@ const deleteActivity = (actId) => {
             renderApp();
         };
 
-               // --- GLOBAL TIMELINE MODAL (Liquid Glass v3) ---
-        // let gtObserver = null;
-
-        // Đóng modal Toàn cảnh (ưu tiên hàm đóng có sẵn của bạn)
-        // const closeGlobalTimelineSafe = () => {
-        //     if (typeof closeGlobalTimeline === 'function') closeGlobalTimeline();
-        //     else if (typeof gtModal !== 'undefined') gtModal.classList.remove('active');
-        // };
-
-        // Nhảy từ modal Toàn cảnh sang đúng hoạt động ở timeline chính
-        // const goToActivityFromGlobal = (actId, dayDate) => {
-        //     closeGlobalTimelineSafe();
-
-        //     // Chuyển sang đúng ngày nếu đang ở ngày khác
-        //     if (state.activeDayDate !== dayDate) {
-        //         state.activeDayDate = dayDate;
-        //         // Nếu app có hàm vẽ lại thanh chọn ngày thì gọi ở đây để tab ngày sáng đúng
-        //         if (typeof renderDays === 'function') renderDays(); // <-- đổi đúng tên hàm của bạn
-        //     }
-        //     renderTimeline();
-
-        //     // Chờ modal đóng xong rồi cuộn tới item (thử lại tối đa ~1 giây)
-        //     let tries = 0;
-        //     const seek = () => {
-        //         const checkBtn = document.querySelector(`#timeline-container [data-tl-check="${actId}"]`);
-        //         const item = checkBtn ? checkBtn.closest('.tl-item') : null;
-        //         if (!item) { if (tries++ < 20) setTimeout(seek, 50); return; }
-
-        //         item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        //         const card = item.querySelector('.tl-card');
-        //         if (card && window.gsap) {
-        //             // Nháy nổi bật 2 lần để người dùng thấy ngay đó là hoạt động vừa chọn
-        //             gsap.timeline({ repeat: 1, onComplete: () => gsap.set(card, { clearProps: 'boxShadow,scale' }) })
-        //                 .fromTo(card,
-        //                     { boxShadow: '0 0 0 0px rgba(0,113,227,0.55)', scale: 1 },
-        //                     { boxShadow: '0 0 0 6px rgba(0,113,227,0.55)', scale: 1.03, duration: 0.35, ease: 'power2.out' })
-        //                 .to(card, { boxShadow: '0 0 0 0px rgba(0,113,227,0)', scale: 1, duration: 0.9, ease: 'power2.inOut' });
-        //         }
-        //     };
-        //     setTimeout(seek, 350);
-        // };
-
-         // --- GLOBAL TIMELINE MODAL (Liquid Glass v9 - nhẹ, ít animation) ---
+        // --- GLOBAL TIMELINE MODAL (Liquid Glass v9 - nhẹ, ít animation) ---
         let gtObserver = null;
         let gtTodayObserver = null;
 
@@ -2472,6 +2429,10 @@ const deleteActivity = (actId) => {
             if (!act || !card) return false;
 
             const done = !!act.isCompleted;
+
+            // Mờ nhẹ cả thẻ khi đã hoàn thành
+            card.classList.add('transition-opacity', 'duration-300');
+            card.classList.toggle('opacity-70', done);
 
             // Tên hoạt động: gạch ngang + xám khi xong
             const title = card.querySelector('[data-gt-title]');
@@ -2651,8 +2612,8 @@ const deleteActivity = (actId) => {
                         }
 
                         html += `
-                        <!-- Hoạt động: 2 mảnh kính tách rời (trái: giờ / phải: nội dung) -->
-                        <div data-gt-card data-gt-card-id="${act.id}" class="flex items-stretch gap-2 touch-manipulation">
+                        <!-- Hoạt động: 2 mảnh kính tách rời (trái: giờ / phải: nội dung). Đã XONG thì mờ nhẹ cả thẻ -->
+                        <div data-gt-card data-gt-card-id="${act.id}" class="flex items-stretch gap-2 touch-manipulation transition-opacity duration-300 ${act.isCompleted ? 'opacity-70' : ''}">
 
                             <!-- Mảnh kính TRÁI -->
                             <div data-gt-panel ${hide} class="flex-shrink-0 w-[3.9rem] md:w-[4.75rem] flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[1.4rem] ${leftBg}">
@@ -2768,8 +2729,49 @@ const deleteActivity = (actId) => {
             }
         };
         const gtModal = document.getElementById('global-timeline-modal');
-        // const openGlobalTimeline = () => { renderGlobalTimeline(); gtModal.classList.add('active'); };
         const closeGlobalTimeline = () => gtModal.classList.remove('active');
+
+        // --- CHẶN CUỘN LAN RA NỀN KHI MODAL TOÀN CẢNH ĐANG MỞ ---
+        // Safari iOS không tôn trọng overscroll-behavior hoàn toàn, nên chặn thêm bằng JS.
+        // Phải đặt SAU dòng khai báo gtModal ở trên.
+        (() => {
+            const content = document.getElementById('global-timeline-content');
+            if (!gtModal || !content) return;
+
+            const isActive = () => gtModal.classList.contains('active');
+
+            // delta > 0: định cuộn xuống, delta < 0: định cuộn lên
+            // Trả về true nếu cú cuộn này sẽ "tràn" ra ngoài nội dung modal
+            const wouldChain = (delta) => {
+                const max = content.scrollHeight - content.clientHeight;
+                if (max <= 0) return true;                                  // nội dung không đủ dài để cuộn
+                if (delta < 0 && content.scrollTop <= 0) return true;      // đang ở đỉnh mà còn kéo lên
+                if (delta > 0 && content.scrollTop >= max - 1) return true; // đang ở đáy mà còn kéo xuống
+                return false;
+            };
+
+            // Chuột / touchpad
+            gtModal.addEventListener('wheel', (e) => {
+                if (!isActive()) return;
+                if (!content.contains(e.target) || wouldChain(e.deltaY)) e.preventDefault();
+            }, { passive: false });
+
+            // Cảm ứng (iPhone / Android)
+            let lastY = 0;
+            gtModal.addEventListener('touchstart', (e) => {
+                if (e.touches.length) lastY = e.touches[0].clientY;
+            }, { passive: true });
+
+            gtModal.addEventListener('touchmove', (e) => {
+                if (!isActive() || !e.touches.length) return;
+                const y = e.touches[0].clientY;
+                const delta = lastY - y;     // ngón tay vuốt lên => delta > 0 => cuộn xuống
+                lastY = y;
+                if (!content.contains(e.target) || wouldChain(delta)) {
+                    if (e.cancelable) e.preventDefault();
+                }
+            }, { passive: false });
+        })();
 
         // --- NEW TRIP MODAL ---
         const tripModal = document.getElementById('trip-modal');
