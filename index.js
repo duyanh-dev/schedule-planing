@@ -291,14 +291,36 @@ const isDayAnimOn = () => {
 // ---------- CSS (chèn 1 lần, không phụ thuộc cấu hình Tailwind) ----------
 const ensureDaysGlassStyle = () => {
     const old = document.getElementById('days-glass-style');
-    if (old && old.dataset.v === '5') return;
+    if (old && old.dataset.v === '7') return;
     if (old) old.remove();
 
     const s = document.createElement('style');
     s.id = 'days-glass-style';
-    s.dataset.v = '5';
+    s.dataset.v = '7';
     s.textContent = `
-        /* ===== Nền xám kính lỏng (lõm xuống để viên kính nổi lên) ===== */
+        /* ===== KHUNG CỐ ĐỊNH (chỉ bật khi dùng UI Liquid Glass): xám lõm, không border ===== */
+        #days-frame.days-frame-on {
+            border-radius: 9999px;
+            overflow: hidden;
+            border: 0;
+            background: rgba(100, 116, 139, 0.2);
+            -webkit-backdrop-filter: blur(16px) saturate(140%);
+            backdrop-filter: blur(16px) saturate(140%);
+            box-shadow:
+                inset 0 1.5px 4px rgba(15, 23, 42, 0.09),
+                inset 0 -1px 1px rgba(255, 255, 255, 0.65);
+        }
+        @media (min-width: 768px) { #days-frame.days-frame-on { border-radius: 1.5rem; } }
+
+        /* Vùng cuộn trong khung: đệm 2 đầu + mờ mép nhẹ */
+        #days-frame.days-frame-on #days-tabs {
+            padding-left: 0.375rem;
+            padding-right: 0.375rem;
+            -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+        }
+
+        /* ===== Track: trong suốt, nền đã nằm ở khung ===== */
         .day-track {
             position: relative;
             display: inline-flex;
@@ -306,34 +328,26 @@ const ensureDaysGlassStyle = () => {
             gap: 4px;
             padding: 8px;
             flex-shrink: 0;
-            border-radius: 9999px;
-            background: rgba(148, 163, 184, 0.22);
-            -webkit-backdrop-filter: blur(16px) saturate(1.5);
-            backdrop-filter: blur(16px) saturate(1.5);
-            border: 1px solid rgba(255, 255, 255, 0.55);
-            box-shadow: inset 0 2px 5px rgba(15, 23, 42, 0.10), inset 0 -1px 1px rgba(255, 255, 255, 0.7);
+            background: transparent;
+            border: 0;
+            box-shadow: none;
         }
-        @media (min-width: 768px) { .day-track { gap: 6px; border-radius: 1.75rem; } }
+        @media (min-width: 768px) { .day-track { gap: 6px; } }
 
-        /* ===== Viên kính nổi khối =====
-           Không dùng backdrop-filter / drop-shadow ở phần tử đang chuyển động (rất tốn GPU);
-           độ "kính" được dựng bằng nhiều lớp gradient + viền sáng + vệt phản chiếu. */
+        /* ===== Viên chọn (ngày đang active): màu đặc, nổi khối, không border ===== */
         .day-thumb {
             position: absolute;
             z-index: 0;
             overflow: hidden;
             pointer-events: none;
             border-radius: 9999px;
-            background:
-                radial-gradient(120% 90% at 18% 0%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 55%),
-                radial-gradient(90% 70% at 90% 110%, rgba(147, 197, 253, 0.55), rgba(147, 197, 253, 0) 60%),
-                linear-gradient(160deg, rgba(96, 165, 250, 0.97), rgba(37, 99, 235, 0.97));
-            border: 1px solid rgba(255, 255, 255, 0.7);
+            background-color: #3b82f6;
+            border: 0;
             box-shadow:
-                inset 0 1px 1px rgba(255, 255, 255, 0.95),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.18),
-                inset 0 10px 16px rgba(255, 255, 255, 0.12),
-                inset 0 -3px 6px rgba(30, 64, 175, 0.35);
+                inset 0 2px 2px rgba(255, 255, 255, 0.45),
+                inset 0 -3px 4px rgba(0, 0, 0, 0.18),
+                0 4px 10px rgba(37, 99, 235, 0.40),
+                0 1px 2px rgba(15, 23, 42, 0.20);
             transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease, opacity 0.3s ease;
             will-change: transform;
         }
@@ -345,10 +359,10 @@ const ensureDaysGlassStyle = () => {
             left: 7%; right: 7%; top: 2px;
             height: 42%;
             border-radius: inherit;
-            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0));
             pointer-events: none;
         }
-        /* Viền kính sáng: chỉ hiện khi nhấn / scrub (đổi bằng opacity nên rất nhẹ) */
+        /* Viền sáng: chỉ hiện khi nhấn / scrub */
         .day-thumb::after {
             content: '';
             position: absolute;
@@ -363,8 +377,7 @@ const ensureDaysGlassStyle = () => {
         }
         .day-thumb.is-pressed { transform: scale(1.07); filter: brightness(1.06) saturate(1.15); }
         .day-thumb.is-pressed::after { opacity: 1; }
-        /* Đang scrub: "màng kính" trong hơn. Vị trí/kích thước/transform được JS cập nhật mỗi frame
-           (đã làm mượt bằng lò xo) nên KHÔNG để CSS transition xen vào. */
+        /* Đang scrub: JS cập nhật vị trí mỗi frame nên KHÔNG để CSS transition xen vào */
         .day-thumb.is-scrubbing {
             transition: filter 0.3s ease, opacity 0.25s ease;
             opacity: 0.9;
@@ -372,38 +385,42 @@ const ensureDaysGlassStyle = () => {
         }
         .day-thumb.is-scrubbing::after { opacity: 1; }
 
-        /* ===== Chip từng ngày ===== */
+        /* ===== Chip từng ngày: màu đặc, nổi khối, không border ===== */
         .day-tab {
             position: relative;
             z-index: 1;
-            border: 1px solid transparent;
+            border: 0;
+            outline: 0;
             background-color: transparent;
-            transition: background-color 0.35s ease, border-color 0.35s ease, opacity 0.35s ease,
+            transition: background-color 0.35s ease, opacity 0.35s ease,
                         box-shadow 0.35s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
         }
-        /* Ngày đang chọn: vuốt NGANG thuộc về viên kính (scrub), vuốt DỌC vẫn cuộn trang bình thường */
+        /* Ngày đang chọn: vuốt NGANG thuộc về viên kính (scrub), vuốt DỌC vẫn cuộn trang */
         .day-tab.is-active { touch-action: pan-y; }
         .day-tab .day-main { color: #475569; transition: color 0.25s ease; }
         .day-tab .day-sub  { color: #94a3b8; transition: color 0.25s ease; }
 
         .day-tab.day-chip:not(.is-active) {
-            background-color: rgba(255, 255, 255, 0.55);
-            border-color: rgba(255, 255, 255, 0.7);
-            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9), inset 0 -1px 1px rgba(15, 23, 42, 0.06);
+            background-color: #f3f5f8;
+            box-shadow:
+                inset 0 1.5px 0 rgba(255, 255, 255, 1),
+                inset 0 -2px 3px rgba(15, 23, 42, 0.10),
+                0 3px 6px rgba(15, 23, 42, 0.16),
+                0 1px 1px rgba(15, 23, 42, 0.12);
         }
-        .day-tab.day-chip:not(.is-active):hover { background-color: rgba(255, 255, 255, 0.8); }
+        .day-tab.day-chip:not(.is-active):hover { background-color: #fafbfc; }
+        .day-tab.day-chip:not(.is-active):active {
+            box-shadow:
+                inset 0 2px 4px rgba(15, 23, 42, 0.14),
+                0 1px 1px rgba(15, 23, 42, 0.08);
+        }
 
         .day-tab.day-past:not(.is-active) { opacity: 0.58; }
 
-        .day-tab.day-today:not(.is-active) {
-            background-color: rgba(219, 234, 254, 0.92);
-            border-color: transparent;
-            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 6px rgba(96, 165, 250, 0.30);
-        }
-        .day-tab.day-today:not(.is-active):hover { background-color: rgba(191, 219, 254, 0.95); }
+        /* Ngày hiện tại: cùng nền với các ngày khác, chỉ khác màu chữ + vầng sáng xanh đứng yên */
         .day-tab.day-today:not(.is-active) .day-main { color: #2563eb; }
         .day-tab.day-today:not(.is-active) .day-sub  { color: #3b82f6; }
         .day-tab.day-today::after {
@@ -416,13 +433,8 @@ const ensureDaysGlassStyle = () => {
             box-shadow: inset 0 -3px 10px rgba(59, 130, 246, 0.55), inset 0 0 14px rgba(147, 197, 253, 0.45);
         }
         .day-tab.day-today:not(.is-active)::after { opacity: 0.5; }
-        .day-tab.day-today:not(.is-active):not(.animate-jiggle)::after {
-            animation: day-today-breathe 2.8s ease-in-out infinite;
-        }
-        @keyframes day-today-breathe { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
-        @media (prefers-reduced-motion: reduce) {
-            .day-tab.day-today:not(.is-active):not(.animate-jiggle)::after { animation: none; }
-        }
+        /* Badge NAY dịch vào trong để không bị khung cắt */
+        .day-tab.day-today > div.absolute.bg-red-500\\/90 { top: -3px; }
 
         .day-tab.is-active .day-main { color: #ffffff; transition-delay: 0.08s; }
         .day-tab.is-active .day-sub  { color: #dbeafe; transition-delay: 0.08s; }
@@ -431,7 +443,6 @@ const ensureDaysGlassStyle = () => {
         .day-tab.is-hot {
             opacity: 1 !important;
             background-color: transparent !important;
-            border-color: transparent !important;
             box-shadow: none !important;
         }
         .day-tab.is-hot::after { display: none !important; }
@@ -439,6 +450,28 @@ const ensureDaysGlassStyle = () => {
         .day-tab.is-hot .day-sub  { color: #dbeafe !important; transition-delay: 0s; }
 
         .day-tab:not(.is-active):active { transform: scale(0.95); }
+
+        /* ===== Nút thêm ngày: khối nổi, dấu + đen mờ ===== */
+        .days-add-btn {
+            border: 0;
+            outline: 0;
+            background-color: #f3f5f8;
+            color: rgba(15, 23, 42, 0.45);
+            box-shadow:
+                inset 0 2px 1px rgba(255, 255, 255, 1),
+                inset 0 -3px 4px rgba(15, 23, 42, 0.12),
+                0 6px 14px rgba(15, 23, 42, 0.18),
+                0 2px 3px rgba(15, 23, 42, 0.14);
+        }
+        .days-add-btn:hover {
+            background-color: #fafbfc;
+            color: rgba(15, 23, 42, 0.65);
+        }
+        .days-add-btn:active {
+            box-shadow:
+                inset 0 3px 6px rgba(15, 23, 42, 0.18),
+                0 1px 2px rgba(15, 23, 42, 0.10);
+        }
     `;
     document.head.appendChild(s);
 };
@@ -452,28 +485,57 @@ const dayTabLook = (date, active, todayStr) => {
 
 const daysReduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-// ==========================================================
-// HIỆU ỨNG CHẤT LỎNG KHI ĐỔI NGÀY (bấm / nhả scrub)
-// ==========================================================
-// Trượt từ vị trí cũ sang mới: đầu lao tới trước, đuôi bắt kịp rồi nảy nhẹ. Không còn vệt sáng.
+
+// ----------------------------------------------------------
+// MỚI: đo lại viên kính theo tab đang active (dùng khi resize / đổi màn hình / font load)
+// ----------------------------------------------------------
+const syncDaysThumb = () => {
+    const thumb = document.getElementById('days-thumb');
+    const activeBtn = document.getElementById(`tab-${state.activeDayDate}`);
+    // Tab đang bị ẩn (width = 0) -> đợi lần đo sau
+    if (!thumb || !activeBtn || !activeBtn.offsetWidth) return;
+
+    thumb.getAnimations().forEach(a => a.cancel());
+    const to = { left: activeBtn.offsetLeft, top: activeBtn.offsetTop, width: activeBtn.offsetWidth, height: activeBtn.offsetHeight };
+    thumb.style.cssText = `left:${to.left}px;top:${to.top}px;width:${to.width}px;height:${to.height}px;opacity:1;pointer-events:none;`;
+    window._daysThumb = { tripId: state.activeTripId, date: state.activeDayDate, ...to };
+};
+
+// MỚI: tự đồng bộ viên kính khi kích thước thay đổi
+const bindDaysResizeSync = (container, track) => {
+    if (container._daysRO) { container._daysRO.disconnect(); container._daysRO = null; }
+    if (typeof ResizeObserver === 'undefined' || !track) return;
+    let raf = 0;
+    const ro = new ResizeObserver(() => {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(syncDaysThumb);
+    });
+    ro.observe(container);
+    ro.observe(track);
+    container._daysRO = ro;
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => syncDaysThumb());
+};
+
+
+// ----------------------------------------------------------
+// MỚI (thay bản cũ cùng tên): viên kính co giãn kiểu "màng nước" trượt qua
+// ----------------------------------------------------------
 const playDaysThumbMove = (thumb, from, to) => {
-    if (!thumb.animate || daysReduceMotion()) return;
-    const x1 = Math.min(from.left, to.left);
-    const x2 = Math.max(from.left + from.width, to.left + to.width);
-    const far = Math.min(1, Math.abs(to.left - from.left) / 240);
-    const dur = 420 + far * 140;
+    if (!thumb || !thumb.animate || daysReduceMotion()) return null;
+    const fromL = from.left, fromR = from.left + from.width;
+    const toL = to.left, toR = to.left + to.width;
+    const spanL = Math.min(fromL, toL);
+    const spanR = Math.max(fromR, toR);
 
-    thumb.animate([
-        { left: from.left + 'px', width: from.width + 'px', easing: 'cubic-bezier(0.3, 0, 0.15, 1)' },
-        { left: x1 + 'px', width: (x2 - x1) + 'px', offset: 0.38, easing: 'cubic-bezier(0.34, 1.4, 0.64, 1)' },
-        { left: to.left + 'px', width: to.width + 'px' }
-    ], { duration: dur });
-
-    // Dẹt nhẹ lúc giãn (không đặt keyframe đầu -> tự nối từ transform hiện tại, không bị giật)
-    thumb.animate([
-        { transform: `scale(1.02, ${(0.95 - far * 0.03).toFixed(3)})`, offset: 0.38 },
-        { transform: 'scale(1, 1)' }
-    ], { duration: dur, easing: 'ease-out' });
+    return thumb.animate([
+        { left: fromL + 'px', width: from.width + 'px', opacity: 1 },
+        // Giữa chừng: màng nước kéo giãn phủ cả tab cũ và tab mới
+        { left: spanL + 'px', width: (spanR - spanL) + 'px', opacity: 0.9, offset: 0.45 },
+        { left: toL + 'px', width: to.width + 'px', opacity: 1 }
+    ], {
+        duration: 340,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)' // mượt, không bật nảy
+    });
 };
 
 // ==========================================================
@@ -806,11 +868,15 @@ const renderDaysTabsLegacy = (trip, container, todayStr) => {
 // UI MỚI: LIQUID GLASS
 // ==========================================================
 
-// "Chữ ký" của danh sách tab: nếu không đổi thì KHÔNG cần dựng lại DOM, chỉ cập nhật class + viên kính
+// Chữ ký danh sách tab (KHÔNG ĐỔI)
 const daysTabsSignature = (trip, todayStr) =>
     [state.activeTripId, todayStr, window.isDayEditMode ? 1 : 0, trip.days.map(d => d.date).join(',')].join('|');
 
-// Đường nhanh khi đổi ngày: giữ nguyên DOM, đổi class (CSS tự transition) + trượt viên kính từ vị trí HIỆN TẠI
+
+
+// ----------------------------------------------------------
+// Đường nhanh khi đổi ngày (giữ DOM, chỉ đổi class + trượt viên kính)
+// ----------------------------------------------------------
 const patchDaysTabs = (trip, container, todayStr) => {
     const track = document.getElementById('days-track');
     const thumb = document.getElementById('days-thumb');
@@ -832,12 +898,15 @@ const patchDaysTabs = (trip, container, todayStr) => {
         b.classList.toggle('day-past', day.date < todayStr && !isActive);
     });
 
+    // Tab đang ẩn (chưa đo được) -> để ResizeObserver đo lại khi hiện, không gán width = 0
+    if (!activeBtn.offsetWidth) return true;
+
     const to = { left: activeBtn.offsetLeft, top: activeBtn.offsetTop, width: activeBtn.offsetWidth, height: activeBtn.offsetHeight };
     // Đọc vị trí đang hiển thị (kể cả giữa chừng animation / vị trí tự do lúc scrub)
     const cs = getComputedStyle(thumb);
     const from = { left: parseFloat(cs.left) || 0, width: parseFloat(cs.width) || to.width };
     thumb.getAnimations().forEach(a => a.cancel());
-    thumb.style.cssText = `left:${to.left}px;top:${to.top}px;width:${to.width}px;height:${to.height}px;opacity:1;`;
+    thumb.style.cssText = `left:${to.left}px;top:${to.top}px;width:${to.width}px;height:${to.height}px;opacity:1;pointer-events:none;`;
 
     if (Math.abs(from.left - to.left) > 1 || Math.abs(from.width - to.width) > 1) {
         playDaysThumbMove(thumb, from, to);
@@ -845,6 +914,8 @@ const patchDaysTabs = (trip, container, todayStr) => {
     window._daysThumb = { tripId: state.activeTripId, date: state.activeDayDate, ...to };
     return true;
 };
+
+
 
 const renderDaysTabsGlass = (trip, container, todayStr) => {
             ensureDaysGlassStyle();
@@ -883,7 +954,8 @@ const renderDaysTabsGlass = (trip, container, todayStr) => {
                         ontouchstart="startDayPress('${day.date}', event)" 
                         ontouchmove="moveDayPress(event)"
                         ontouchend="endDayPress()"
-                        class="day-tab day-chip flex-shrink-0 h-8 md:h-16 px-3.5 md:px-6 rounded-full md:rounded-[1.25rem] relative group flex flex-col justify-center items-center md:items-start ${stateClass} ${jiggleClass}">
+                        class="day-tab day-chip flex-shrink-0 h-7 md:h-16 px-3 md:px-6 rounded-full md:rounded-[1.25rem] relative group flex flex-col justify-center items-center md:items-start ${stateClass} ${jiggleClass}">
+
                         
                         <!-- Nếu đang Edit Mode -> Hiện nút X để xóa (Kính lỏng) | Nếu không -> Hiện badge NAY (nếu có) -->
                         ${isEditMode ? `
@@ -895,30 +967,34 @@ const renderDaysTabsGlass = (trip, container, todayStr) => {
                         ` : '')}
                         
                         <div class="day-sub hidden md:block text-[10px] font-black uppercase tracking-wider mb-1 pointer-events-none">Ngày ${idx + 1}</div>
-                        <div class="day-main font-bold text-[11px] md:text-sm pointer-events-none">${formatDisplayDate(day.date)}</div>
+                        <div class="day-main font-bold text-[10px] md:text-sm pointer-events-none">${formatDisplayDate(day.date)}</div>
                     </button>
                 `; 
             }).join('');
 
             container.innerHTML = `
                 <div id="days-track" class="day-track">
-                    <div id="days-thumb" class="day-thumb" style="opacity:0"></div>
+                    <div id="days-thumb" class="day-thumb" style="opacity:0;pointer-events:none;"></div>
                     ${tabsHTML}
                 </div>
             `;
             container._daysSig = daysTabsSignature(trip, todayStr);
 
+            // Tự đo lại viên kính khi đổi kích thước / đổi màn hình / hiện lại tab
+            bindDaysResizeSync(container, document.getElementById('days-track'));
+
             // ---------- Viên kính: định vị + trượt/co giãn sang ngày mới ----------
             const thumb = document.getElementById('days-thumb');
             const activeBtn = document.getElementById(`tab-${state.activeDayDate}`);
-            if (thumb && activeBtn) {
+            // Chưa đo được (đang ẩn) -> ResizeObserver sẽ đặt viên kính khi hiện
+            if (thumb && activeBtn && activeBtn.offsetWidth) {
                 const to = {
                     left: activeBtn.offsetLeft,
                     top: activeBtn.offsetTop,
                     width: activeBtn.offsetWidth,
                     height: activeBtn.offsetHeight
                 };
-                thumb.style.cssText = `left:${to.left}px;top:${to.top}px;width:${to.width}px;height:${to.height}px;opacity:1;`;
+                thumb.style.cssText = `left:${to.left}px;top:${to.top}px;width:${to.width}px;height:${to.height}px;opacity:1;pointer-events:none;`;
 
                 const from = window._daysThumb;
                 const sameTrip = !!from && from.tripId === state.activeTripId;
@@ -930,7 +1006,7 @@ const renderDaysTabsGlass = (trip, container, todayStr) => {
                     // Chữ + chip đổi trạng thái êm theo viên kính (tab vừa được dựng lại từ đầu)
                     const fade = (btn, a, b, delay) => {
                         if (!btn || !btn.animate) return;
-                        const opt = { duration: 300, delay, fill: 'backwards', easing: 'ease-out' };
+                        const opt = { duration: 240, delay, fill: 'backwards', easing: 'ease-out' };
                         const main = btn.querySelector('.day-main');
                         const sub = btn.querySelector('.day-sub');
                         if (main) main.animate([{ color: a.main }, { color: b.main }], opt);
@@ -941,15 +1017,15 @@ const renderDaysTabsGlass = (trip, container, todayStr) => {
                         ], opt);
                     };
                     const newDate = state.activeDayDate;
-                    fade(activeBtn, dayTabLook(newDate, false, todayStr), dayTabLook(newDate, true, todayStr), 90);
+                    fade(activeBtn, dayTabLook(newDate, false, todayStr), dayTabLook(newDate, true, todayStr), 70);
                     fade(document.getElementById(`tab-${from.date}`),
                         dayTabLook(from.date, true, todayStr), dayTabLook(from.date, false, todayStr), 0);
                 } else if (!sameTrip && thumb.animate && !daysReduceMotion()) {
-                    // Lần đầu / đổi chuyến đi / vừa bật animation: viên kính nở ra nhẹ nhàng
+                    // Lần đầu / đổi chuyến đi / vừa bật animation: viên kính hiện ra nhẹ nhàng (không bật nảy)
                     thumb.animate([
-                        { opacity: 0, transform: 'scale(0.8)' },
+                        { opacity: 0, transform: 'scale(0.94)' },
                         { opacity: 1, transform: 'scale(1)' }
-                    ], { duration: 380, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' });
+                    ], { duration: 280, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
                 }
 
                 window._daysThumb = { tripId: state.activeTripId, date: state.activeDayDate, ...to };
@@ -985,9 +1061,15 @@ const renderDaysTabs = () => {
             abortDaysScrub();
             bindDaysAnimToggle();
 
+            // MỚI: khung cố định chỉ bật khi dùng UI Liquid Glass
+            const frame = document.getElementById('days-frame');
+            if (frame) frame.classList.toggle('days-frame-on', !!isDayAnimOn());
+
             if (isDayAnimOn()) {
                 renderDaysTabsGlass(trip, container, todayStr);
             } else {
+                // Tắt UI mới -> gỡ observer của viên kính
+                if (container._daysRO) { container._daysRO.disconnect(); container._daysRO = null; }
                 window._daysThumb = null; // lần sau bật lại sẽ nở ra thay vì trượt từ vị trí cũ
                 container._daysSig = null; // buộc dựng lại đầy đủ khi bật lại UI mới
                 renderDaysTabsLegacy(trip, container, todayStr);
