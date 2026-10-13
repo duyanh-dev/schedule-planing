@@ -1970,14 +1970,17 @@ const TL_TRAIL_MASK = '-webkit-mask-image:linear-gradient(to top,#000,transparen
 
 const TL_VEHICLE_FX = (() => {
     const Y0 = -14, Y1 = 26;   // điểm xuất phát / điểm đáp, tính theo tâm node so với đầu/cuối line
-    const EASE = 0.14;         // độ mượt quán tính (dùng chung cho cả on/off): nhỏ = lười và mượt hơn
+    const EASE = 0.14;         // độ mượt quán tính (dùng chung on/off)
     const state = new WeakMap();
     let bound = false, raf = 0;
+    let vh = window.innerHeight || document.documentElement.clientHeight;
+    let vw = window.innerWidth;
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const animOn = () => document.documentElement.getAttribute('data-animation-on') === 'true';
+    // làm tròn theo pixel thiết bị: hết rung phân số pixel trên màn hình DPR cao (iPhone)
+    const snapPx = (v) => { const d = window.devicePixelRatio || 1; return Math.round(v * d) / d; };
 
-    // Trả toàn bộ phần hiệu ứng về trạng thái "trượt thường"
     const resetFx = (line, veh) => {
         const head = veh.querySelector('.tl-vhead');
         const bead = veh.querySelector('.tl-vbead');
@@ -1998,8 +2001,7 @@ const TL_VEHICLE_FX = (() => {
         raf = 0;
         let active = false;
         const fancy = animOn();
-        const vh = window.innerHeight || document.documentElement.clientHeight;
-        const readY = vh * 0.55; // đường đọc: phương tiện bám theo vị trí này khi scroll
+        const readY = vh * 0.55; // vh được giữ ổn định, không đổi theo thanh địa chỉ iOS
 
         document.querySelectorAll('#timeline-container .tl-line').forEach(line => {
             const veh = line.querySelector('.tl-vehicle');
@@ -2008,55 +2010,73 @@ const TL_VEHICLE_FX = (() => {
 
             const r = line.getBoundingClientRect();
             const span = r.height + Y1 - Y0;
-            const target = clamp((readY - (r.top + Y0)) / span, 0, 1);
+            const rawTarget = clamp((readY - (r.top + Y0)) / span, 0, 1);
 
             let st = state.get(line);
-            if (!st) { st = { cur: target, speed: 0, head: 0, dir: 1, clean: false }; state.set(line, st); }
+            if (!st) {
+                st = { cur: rawTarget, tgt: rawTarget, speed: 0, head: 0, dir: 1, pend: 1, streak: 0, clean: false };
+                state.set(line, st);
+            }
+
+            // vùng chết cho target: nhiễu < 0.5px (iOS momentum scroll) bị bỏ qua
+            if (Math.abs(rawTarget - st.tgt) * span > 0.5 || rawTarget === 0 || rawTarget === 1) st.tgt = rawTarget;
+            const target = st.tgt;
 
             // ===== QUÁN TÍNH MƯỢT: dùng chung cho cả bật và tắt animation =====
             const off = r.bottom < -150 || r.top > vh + 150;
             const prev = st.cur;
             st.cur = off ? target : st.cur + (target - st.cur) * EASE;
+            if (!off && Math.abs(target - st.cur) * span < 0.5) st.cur = target; // chạm đích thì dừng hẳn, không dao động
             const gap = Math.abs(target - st.cur) * span;
 
-            // ===== CHẾ ĐỘ TẮT: chỉ trượt (vẫn có quán tính), không hiệu ứng khác =====
+            // ===== CHẾ ĐỘ TẮT: chỉ trượt (vẫn có quán tính) =====
             if (!fancy) {
                 if (!st.clean) { resetFx(line, veh); st.clean = true; }
                 st.speed = 0; st.head = 0;
                 if (off) return;
-                if (gap > 0.15) active = true;
-                veh.style.transform = `translate3d(0,${(Y0 + st.cur * span).toFixed(1)}px,0) scale(1)`;
+                if (gap > 0.5) active = true;
+                veh.style.transform = `translate3d(0,${snapPx(Y0 + st.cur * span)}px,0) scale(1)`;
                 return;
             }
 
             // ===== CHẾ ĐỘ BẬT: bản đầy đủ =====
             st.clean = false;
-            if (off) { st.speed = 0; return; }                          // ngoài màn hình: không vẽ
+            if (off) { st.speed = 0; return; }
 
-            const dpx = (st.cur - prev) * span;                         // vận tốc (px/frame)
-            st.speed += (clamp(Math.abs(dpx) / 28, 0, 1) - st.speed) * 0.25;
-            if (Math.abs(dpx) > 0.3) st.dir = dpx > 0 ? 1 : -1;
+            const dpx = (st.cur - prev) * span;                                  // vận tốc (px/frame)
+            const raw = Math.abs(dpx) < 0.4 ? 0 : clamp(Math.abs(dpx) / 28, 0, 1); // bỏ nhiễu nhỏ
+            st.speed += (raw - st.speed) * 0.12;                                  // làm mượt mạnh hơn
+            if (st.speed < 0.02) st.speed = 0;
+
+            // đổi chiều quay đầu: cần vận tốc đủ lớn + ổn định 3 frame liên tiếp (chống bật qua bật lại)
+            if (Math.abs(dpx) > 1.2) {
+                const d = dpx > 0 ? 1 : -1;
+                if (d === st.pend) st.streak++; else { st.pend = d; st.streak = 1; }
+                if (st.streak >= 3) st.dir = d;
+            }
             const headGoal = st.dir > 0 ? 0 : 180;
-            st.head += (headGoal - st.head) * 0.2;
+            st.head += (headGoal - st.head) * 0.14;
+            if (Math.abs(headGoal - st.head) < 0.5) st.head = headGoal;
 
-            if (gap > 0.15 || st.speed > 0.02 || Math.abs(headGoal - st.head) > 0.5) active = true;
+            if (gap > 0.5 || st.speed > 0.02 || st.head !== headGoal) active = true;
 
             const p = st.cur;
             const e = Math.sin(Math.PI * p);                 // 0 → 1 → 0
             const air = veh.dataset.v === 'air';
-            const fade = clamp(e * 3, 0, 1);                 // chui ra / chui vào node bằng scale (giữ backdrop-blur)
+            const fade = clamp(e * 3, 0, 1);
             const sc = (air ? 0.7 + 0.55 * e : 1) * fade;
-            const y = Y0 + p * span;
+            const y = snapPx(Y0 + p * span);
 
-            veh.style.transform = `translate3d(0,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)})`;
+            veh.style.transform = `translate3d(0,${y}px,0) scale(${sc.toFixed(3)})`;
 
+            const q = Math.round(st.speed * 20) / 20;        // lượng tử hóa: tránh đổi scale/độ dài vệt từng chút một
+            const sway = Math.sin(p * 36) * (air ? 1 : 2.5) * q; // đứng yên thì không lắc
             const head = veh.querySelector('.tl-vhead');
             const bead = veh.querySelector('.tl-vbead');
-            const sway = Math.sin(p * 36) * (air ? 1 : 2.5);
-            if (head) head.style.transform = `rotate(${(st.head + sway).toFixed(2)}deg)`;
-            if (bead) bead.style.transform = `scale(${(1 - 0.12 * st.speed).toFixed(3)},${(1 + 0.35 * st.speed).toFixed(3)})`;
+            if (head) head.style.transform = `rotate(${(st.head + sway).toFixed(1)}deg)`;
+            if (bead) bead.style.transform = q ? `scale(${(1 - 0.12 * q).toFixed(2)},${(1 + 0.35 * q).toFixed(2)})` : '';
 
-            const trailLen = (st.speed * (air ? 36 : 20)).toFixed(1) + 'px';
+            const trailLen = Math.round(q * (air ? 36 : 20)) + 'px';
             veh.querySelectorAll('.tl-vt').forEach(t => { t.style.height = trailLen; });
 
             const sh = veh.querySelector('.tl-vshadow');
@@ -2081,18 +2101,27 @@ const TL_VEHICLE_FX = (() => {
             }
         });
 
-        if (active) raf = requestAnimationFrame(tick); // còn chuyển động thì chạy tiếp, xong tự dừng
+        if (active) raf = requestAnimationFrame(tick);
     };
 
     const request = () => { if (!raf) raf = requestAnimationFrame(tick); };
+
+    // iOS: thanh địa chỉ co/giãn làm innerHeight đổi vài chục px → chỉ coi là resize thật khi đổi chiều ngang hoặc lệch > 160px
+    const onResize = () => {
+        if (window.innerWidth !== vw || Math.abs(window.innerHeight - vh) > 160) {
+            vw = window.innerWidth;
+            vh = window.innerHeight;
+        }
+        request();
+    };
 
     return {
         refresh() {
             if (!bound) {
                 bound = true;
                 window.addEventListener('scroll', request, { passive: true, capture: true });
-                window.addEventListener('resize', request, { passive: true });
-                // đổi data-animation-on lúc đang chạy thì cập nhật ngay
+                window.addEventListener('resize', onResize, { passive: true });
+                window.addEventListener('orientationchange', () => setTimeout(onResize, 300), { passive: true });
                 new MutationObserver(request).observe(document.documentElement, {
                     attributes: true, attributeFilter: ['data-animation-on']
                 });
@@ -2219,7 +2248,7 @@ const renderTimeline = () => {
     <div class="tl-fill absolute top-0 left-0 w-full rounded-full bg-slate-400/40" style="height:0"></div>
     <span class="tl-rip-a absolute left-1/2 -ml-3 w-6 h-6 rounded-full bg-slate-300/50 blur-[2px] pointer-events-none" style="top:-26px;opacity:0"></span>
     <span class="tl-rip-b absolute left-1/2 -ml-3 w-6 h-6 rounded-full bg-slate-300/50 blur-[2px] pointer-events-none" style="top:calc(100% + 14px);opacity:0"></span>
-    <div class="tl-vehicle absolute left-1/2 top-0 -ml-3.5 -mt-3.5 w-7 h-7 pointer-events-none will-change-transform" data-v="${veh.key}" style="transform:scale(0)">
+    <div class="tl-vehicle absolute left-1/2 top-0 -ml-3.5 -mt-3.5 w-7 h-7 pointer-events-none will-change-transform" data-v="${veh.key}" style="transform:scale(0);-webkit-backface-visibility:hidden;backface-visibility:hidden">
         ${vShadow}
         <div class="tl-vhead relative w-7 h-7">
             ${vTrails}
