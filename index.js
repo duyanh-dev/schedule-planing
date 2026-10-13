@@ -2610,7 +2610,7 @@ const renderTimeline = () => {
   <div class="tp-stamp" id="tpStamp">
     <div class="tp-stamp__glass" id="tpStampGlass">
       <span class="tp-stamp__bead" aria-hidden="true"><i class="fa-solid fa-feather"></i></span>
-      <p class="tp-stamp__ver">TripPlanner 1.4.0</p>
+      <p class="tp-stamp__ver">TripPlanner 1.4.1</p>
       <span class="tp-stamp__sep" aria-hidden="true"></span>
       <p class="tp-stamp__credit">
         Made with <i class="fa-solid fa-heart"></i> by <strong>duyanh.dev</strong>
@@ -3690,6 +3690,11 @@ trapModalScroll(
        document.getElementById('trip-modal'),
        document.getElementById('trip-scroll-area')
    );
+
+   trapModalScroll(
+    document.getElementById('checklist-modal'),
+    document.getElementById('checklist-container')
+);
 
         // --- NEW TRIP MODAL ---
         const tripModal = document.getElementById('trip-modal');
