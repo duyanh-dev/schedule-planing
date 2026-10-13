@@ -3493,6 +3493,11 @@ trapModalScroll(
     document.getElementById('bulk-scroll-area')
 );
 
+   trapModalScroll(
+       document.getElementById('trip-modal'),
+       document.getElementById('trip-scroll-area')
+   );
+
         // --- NEW TRIP MODAL ---
         const tripModal = document.getElementById('trip-modal');
 
