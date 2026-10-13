@@ -874,49 +874,52 @@
     </div>
 </div>
 
-        <!-- Bulk Add Modal (Apple Liquid Glass Style & Anti-Zoom) -->
-        <div id="bulk-add-modal" class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-md p-0 md:p-4 flex flex-col justify-end md:justify-center items-center z-[6000]">
-            
-            <!-- Modal Content (Kính mờ, viền nổi) -->
-            <div class="modal-content bg-white/70 backdrop-blur-3xl rounded-t-[2rem] md:rounded-[2rem] border border-white/80 w-full max-w-3xl h-[92vh] md:max-h-[90vh] flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.15)] relative overflow-hidden mt-auto md:mt-0">
-                
-                <!-- Header (Xuyên thấu) -->
-                <div class="p-4 md:p-5 border-b border-white/60 flex justify-between items-center bg-white/40 backdrop-blur-xl z-20 sticky top-0">
-                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2 drop-shadow-sm">
-                        <div class="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center text-white shadow-sm border border-blue-400">
-                            <i class="fa-solid fa-layer-group text-sm"></i>
-                        </div>
-                        Tạo nhiều hoạt động
-                    </h2>
-                    <button onclick="closeBulkModal()" class="w-8 h-8 flex items-center justify-center bg-white/60 hover:bg-white border border-white/80 rounded-full text-slate-500 shadow-sm transition-all active:scale-95 touch-manipulation">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+        <!-- Bulk Add Modal (Liquid Glass v2) -->
+<div id="bulk-add-modal"
+    class="modal-overlay fixed inset-0 p-0 md:p-4 flex flex-col justify-end md:justify-center items-center z-[6000]">
+ 
+    <div class="modal-content bm-shell w-full max-w-3xl flex flex-col relative overflow-hidden mt-auto md:mt-0">
+ 
+        <!-- Header: viên thuốc kính nổi -->
+        <div class="bm-float bm-head">
+            <h2 class="text-base font-extrabold text-slate-800 flex items-center gap-2.5">
+                <div class="bm-title-badge">
+                    <i class="fa-solid fa-layer-group text-xs"></i>
                 </div>
-                
-                <!-- Scroll Area -->
-                <div id="bulk-scroll-area" class="p-4 md:p-5 overflow-y-auto hide-scrollbar flex-1 relative bg-slate-50/30">
-                    
-                    <!-- Nơi JS bơm các thẻ form sinh ra -->
-                    <div id="bulk-forms-container" class="space-y-5"></div>
-                    
-                    <!-- Nút thêm thẻ (Nút kính mờ viền đứt) -->
-                    <button type="button" onclick="addBulkFormItem()" class="w-full mt-5 py-4 font-bold text-blue-600 bg-white/50 backdrop-blur-md hover:bg-white/80 border-2 border-dashed border-blue-300 rounded-2xl shadow-sm transition-all text-sm flex items-center justify-center gap-2 group active:scale-95 touch-manipulation">
-                        <i class="fa-solid fa-plus group-hover:scale-125 transition-transform"></i> Thêm 1 thẻ hoạt động nữa
-                    </button>
-                    
-                </div>
-
-                <!-- Footer (Hiệu ứng kính mờ trong vắt) -->
-                <div class="p-4 border-t border-white/60 bg-white/40 backdrop-blur-2xl sticky bottom-0 z-30 flex justify-end gap-3">
-                    <button type="button" onclick="closeBulkModal()" class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white/70 hover:bg-white border border-white shadow-sm rounded-xl transition-all active:scale-95 touch-manipulation">
-                        Hủy
-                    </button>
-                    <button type="button" onclick="submitBulkAdd()" class="px-6 py-2.5 text-sm font-bold text-white bg-slate-800/90 hover:bg-slate-900 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-[0_8px_20px_rgba(15,23,42,0.2)] transition-all active:scale-95 flex items-center gap-2 touch-manipulation">
-                        <i class="fa-solid fa-check-double"></i> Lưu tất cả
-                    </button>
-                </div>
-            </div>
+                Tạo nhiều hoạt động
+            </h2>
+            <button type="button" onclick="closeBulkModal()" aria-label="Đóng" class="bm-btn bm-close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
+ 
+        <!-- Scroll Area -->
+        <div id="bulk-scroll-area" class="bm-scroll overflow-y-auto hide-scrollbar flex-1 min-h-0 relative">
+ 
+            <!-- Nơi JS bơm các thẻ form sinh ra -->
+            <div id="bulk-forms-container" class="space-y-5"></div>
+ 
+            <!-- Trạng thái rỗng (nằm NGOÀI container nên JS có xóa innerHTML cũng không mất) -->
+            <div id="bulk-empty" class="bm-empty" aria-live="polite">
+                <div class="bm-empty-icon"><i class="fa-solid fa-inbox"></i></div>
+                <p class="bm-empty-title">Chưa có hoạt động nào</p>
+                <p class="bm-empty-sub">Thêm thẻ đầu tiên để bắt đầu</p>
+            </div>
+ 
+            <button type="button" onclick="addBulkFormItem()" class="bm-btn bm-add group">
+                <i class="fa-solid fa-plus group-hover:scale-125 transition-transform"></i> Thêm 1 thẻ hoạt động nữa
+            </button>
+        </div>
+ 
+        <!-- Footer: dock kính nổi -->
+        <div class="bm-float bm-foot">
+            <button type="button" onclick="closeBulkModal()" class="bm-btn bm-ghost">Hủy</button>
+            <button type="button" onclick="submitBulkAdd()" class="bm-btn bm-primary">
+                <i class="fa-solid fa-check-double"></i> Lưu tất cả
+            </button>
+        </div>
+    </div>
+</div>
 
     </div>
 

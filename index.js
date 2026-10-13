@@ -3391,6 +3391,33 @@ const deleteActivity = (actId) => {
       modal   = lớp overlay phủ toàn màn hình (có class 'active' khi mở)
       content = vùng DUY NHẤT được phép cuộn bên trong modal
    ===================================================================== */
+
+
+   (function () {
+    var area  = document.getElementById('bulk-scroll-area');
+    var box   = document.getElementById('bulk-forms-container');
+    var empty = document.getElementById('bulk-empty');
+    if (!area || !box || !empty) return;
+
+    var timer = null;
+    function sync() {
+        clearTimeout(timer);
+        if (box.children.length > 0) {
+            empty.classList.remove('is-show');
+            area.classList.remove('is-empty');
+        } else {
+            timer = setTimeout(function () {
+                if (box.children.length === 0) {
+                    empty.classList.add('is-show');
+                    area.classList.add('is-empty');
+                }
+            }, 120);
+        }
+    }
+    new MutationObserver(sync).observe(box, { childList: true });
+})();
+
+
 function trapModalScroll(modal, content) {
     if (!modal || !content) return;
 
@@ -3459,6 +3486,11 @@ function trapModalScroll(modal, content) {
 trapModalScroll(
     document.getElementById('activity-modal'),
     document.getElementById('activity-form')
+);
+
+trapModalScroll(
+    document.getElementById('bulk-add-modal'),
+    document.getElementById('bulk-scroll-area')
 );
 
         // --- NEW TRIP MODAL ---
