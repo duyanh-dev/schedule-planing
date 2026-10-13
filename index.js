@@ -1970,38 +1970,55 @@ const TL_TRAIL_MASK = '-webkit-mask-image:linear-gradient(to top,#000,transparen
 
 const TL_VEHICLE_FX = (() => {
     const Y0 = -14, Y1 = 26;   // tâm node trên / tâm node dưới, tính theo đầu/cuối line
-    const TAU = 95;            // độ mượt quán tính (ms): nhỏ = bám sát hơn, lớn = lười và mượt hơn
+    const TAU = 85;            // độ mượt quán tính (ms): nhỏ = bám sát hơn, lớn = lười và mượt hơn
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const animOn = () => document.documentElement.getAttribute('data-animation-on') === 'true';
     const snapPx = (v) => { const d = window.devicePixelRatio || 1; return Math.round(v * d) / d; };
+    const r2 = (v) => Math.round(v * 100) / 100;
 
     let items = [], bound = false, raf = 0, last = 0;
     let vh = window.innerHeight || document.documentElement.clientHeight;
     let vw = window.innerWidth;
+    let ro = null, roEl = null, settleT = 0;
 
     // offsetTop không bị ảnh hưởng bởi transform của animation vào → vị trí đo luôn đúng
     const docTop = (el) => { let y = 0; while (el) { y += el.offsetTop || 0; el = el.offsetParent; } return y; };
 
-    // Đo vị trí các line MỘT LẦN (khi render / resize / đổi kích thước), không đo mỗi frame
+    // Promote layer GPU sẵn từ đầu → lần cuộn đầu tiên không phải tạo layer giữa chừng (nguyên nhân lag item đầu)
+    const prime = (it) => {
+        [it.veh, it.head, it.bead, it.fill, ...it.trails].forEach(el => { if (el) el.style.willChange = 'transform'; });
+    };
+
+    // Đo vị trí các line (khi render / resize / animation vào xong / font load xong), không đo mỗi frame
     const measure = () => {
         const c = document.getElementById('timeline-container');
         if (!c) { items = []; return; }
         const cBase = docTop(c);
         const prev = new Map(items.map(i => [i.line, i]));
         items = [...c.querySelectorAll('.tl-line')].map(line => {
-            const it = prev.get(line) || {
-                line,
-                veh: line.querySelector('.tl-vehicle'),
-                fill: line.querySelector('.tl-fill'),
-                head: line.querySelector('.tl-vhead'),
-                bead: line.querySelector('.tl-vbead'),
-                trails: [...line.querySelectorAll('.tl-vt')],
-                cur: null, tgt: 0, speed: 0, headDeg: 0, dir: 1, pend: 1, streak: 0, clean: false, w: {}
-            };
-            it.top = docTop(line) - cBase;
-            it.h = line.offsetHeight;
-            it.span = it.h + Y1 - Y0;
+            let it = prev.get(line);
+            const isNew = !it;
+            if (isNew) {
+                it = {
+                    line,
+                    veh: line.querySelector('.tl-vehicle'),
+                    fill: line.querySelector('.tl-fill'),
+                    head: line.querySelector('.tl-vhead'),
+                    bead: line.querySelector('.tl-vbead'),
+                    trails: [...line.querySelectorAll('.tl-vt')],
+                    cur: null, tgt: 0, speed: 0, vel: 0, headDeg: 0, dir: 1, pend: 1, streak: 0,
+                    clean: false, jump: false, w: {}, top: 0, h: 0
+                };
+                if (it.veh) prime(it);
+            }
+            const top = docTop(line) - cBase;
+            const h = line.offsetHeight;
+            // Hình học đổi (animation vào / font load) → nhảy thẳng tới vị trí mới, KHÔNG trượt chậm
+            if (!isNew && (Math.abs(top - it.top) > 0.5 || Math.abs(h - it.h) > 0.5)) it.jump = true;
+            it.top = top;
+            it.h = h;
+            it.span = h + Y1 - Y0;
             return it;
         }).filter(i => i.veh && i.h > 0);
     };
@@ -2035,37 +2052,47 @@ const TL_VEHICLE_FX = (() => {
             const off = lineTop + it.h < -150 || lineTop > vh + 150;
             const rawT = clamp((readY - (lineTop + Y0)) / it.span, 0, 1);
 
-            if (it.cur === null) { it.cur = it.tgt = rawT; }
-            // vùng chết: nhiễu < 0.4px khi iOS cuộn quán tính bị bỏ qua
-            if (Math.abs(rawT - it.tgt) * it.span > 0.4 || rawT === 0 || rawT === 1) it.tgt = rawT;
+            if (it.cur === null || it.jump) {
+                // lần đầu / hình học đổi: đặt thẳng vào đúng chỗ, không glide
+                it.cur = it.tgt = rawT; it.speed = 0; it.vel = 0; it.jump = false;
+            } else if (Math.abs(rawT - it.tgt) * it.span > 0.12 || rawT === 0 || rawT === 1) {
+                it.tgt = rawT;   // vùng chết rất nhỏ, đủ lọc nhiễu iOS mà không làm mục tiêu nhảy bậc
+            }
 
-            if (off) { it.cur = it.tgt; it.speed = 0; continue; }   // ngoài màn hình: không tính, không vẽ
+            if (off) { it.cur = it.tgt; it.speed = 0; it.vel = 0; continue; }   // ngoài màn hình: không tính, không vẽ
 
-            // ===== QUÁN TÍNH MƯỢT (dùng chung on/off), theo thời gian thực, tự nhanh lên khi đuổi xa =====
+            // ===== QUÁN TÍNH MƯỢT (theo thời gian thực, tự nhanh lên khi đuổi xa) =====
             const gap = Math.abs(it.tgt - it.cur) * it.span;
             const prev = it.cur;
-            it.cur += (it.tgt - it.cur) * (1 - Math.exp(-dt / (TAU / (1 + gap / 260))));
-            if (Math.abs(it.tgt - it.cur) * it.span < 0.4) it.cur = it.tgt;
+            it.cur += (it.tgt - it.cur) * (1 - Math.exp(-dt / (TAU / (1 + gap / 240))));
+            const settled = Math.abs(it.tgt - it.cur) * it.span < 0.4;
+            if (settled) it.cur = it.tgt;
             const dpx = (it.cur - prev) * it.span;
-            const y = snapPx(Y0 + it.cur * it.span);
 
+            // Đang chạy: toạ độ liên tục (mượt nhất). Đã dừng: snap pixel thiết bị để icon nét.
+            const yRaw = Y0 + it.cur * it.span;
+            const y = settled ? snapPx(yRaw) : r2(yRaw);
             put(it, 'veh', it.veh, `translate3d(0,${y}px,0)`);
 
-            if (Math.abs(it.tgt - it.cur) * it.span > 0.4) active = true;
+            if (!settled) active = true;
 
             // ===== TẮT ANIMATION: chỉ trượt =====
             if (!fancy) {
-                if (!it.clean) { resetFx(it); it.clean = true; it.speed = 0; it.headDeg = 0; }
+                if (!it.clean) { resetFx(it); it.clean = true; it.speed = 0; it.vel = 0; it.headDeg = 0; }
                 continue;
             }
             it.clean = false;
 
             // ===== BẬT ANIMATION: quay đầu theo chiều scroll + giọt kính co giãn + vệt khói + vệt tiến trình =====
-            const v = dpx * 16.7 / dt;                                      // px mỗi 16.7ms
+            // vận tốc đã lọc (EMA) → hết nhiễu từng frame
+            const vInst = dpx * 16.7 / dt;
+            it.vel += (vInst - it.vel) * (1 - Math.exp(-dt / 55));
+            const v = it.vel;
+
             const raw = Math.abs(v) < 0.4 ? 0 : clamp(Math.abs(v) / 28, 0, 1);
-            it.speed += (raw - it.speed) * (1 - Math.exp(-dt / 130));
-            if (it.speed < 0.02) it.speed = 0;
-            const q = Math.round(it.speed * 20) / 20;
+            it.speed += (raw - it.speed) * (1 - Math.exp(-dt / 150));
+            if (it.speed < 0.015) it.speed = 0;
+            const q = Math.round(it.speed * 100) / 100;                       // bước mịn 0.01 (trước là 0.05 → bị nấc)
 
             if (Math.abs(v) > 1.2) {                                         // đổi chiều phải ổn định 3 frame
                 const d = v > 0 ? 1 : -1;
@@ -2073,17 +2100,19 @@ const TL_VEHICLE_FX = (() => {
                 if (it.streak >= 3) it.dir = d;
             }
             const goal = it.dir > 0 ? 0 : 180;
-            it.headDeg += (goal - it.headDeg) * (1 - Math.exp(-dt / 70));
+            it.headDeg += (goal - it.headDeg) * (1 - Math.exp(-dt / 80));
             if (Math.abs(goal - it.headDeg) < 0.5) it.headDeg = goal;
 
             if (q > 0 || it.headDeg !== goal) active = true;
 
             const air = it.veh.dataset.v === 'air';
-            const sway = Math.sin(it.cur * 36) * (air ? 1 : 2.5) * q;
+            // lắc nhẹ, tần số thấp + biên độ nhỏ + nhân q² (êm lúc bắt đầu/kết thúc) → hết cảm giác rung
+            const sway = Math.sin(it.cur * 16) * (air ? 0.8 : 1.6) * q * q;
             put(it, 'head', it.head, `rotate(${(it.headDeg + sway).toFixed(1)}deg)`);
-            put(it, 'bead', it.bead, q ? `scale(${(1 - 0.12 * q).toFixed(2)},${(1 + 0.35 * q).toFixed(2)})` : '');
-            it.trails.forEach((t, i) => put(it, 't' + i, t, `scaleY(${q})`));
-            put(it, 'fill', it.fill, `scaleY(${clamp(y / it.h, 0, 1).toFixed(3)})`);
+            put(it, 'bead', it.bead, q ? `scale(${(1 - 0.12 * q).toFixed(3)},${(1 + 0.35 * q).toFixed(3)})` : '');
+            const tq = q.toFixed(2);
+            it.trails.forEach((t, i) => put(it, 't' + i, t, `scaleY(${tq})`));
+            put(it, 'fill', it.fill, `scaleY(${clamp(yRaw / it.h, 0, 1).toFixed(3)})`);
         }
 
         if (active) raf = requestAnimationFrame(tick);
@@ -2091,6 +2120,10 @@ const TL_VEHICLE_FX = (() => {
     };
 
     const request = () => { if (!raf) raf = requestAnimationFrame(tick); };
+
+    // Đo lại + vẽ lại (gom nhiều sự kiện vào 1 lần)
+    const remeasure = () => { measure(); request(); };
+    const settle = () => { clearTimeout(settleT); settleT = setTimeout(remeasure, 60); };
 
     // iOS: thanh địa chỉ co/giãn làm innerHeight đổi vài chục px → chỉ coi là resize thật khi đổi chiều ngang hoặc lệch > 160px
     const onResize = () => {
@@ -2103,7 +2136,8 @@ const TL_VEHICLE_FX = (() => {
 
     return {
         refresh() {
-            measure();
+            const c = document.getElementById('timeline-container');
+
             if (!bound) {
                 bound = true;
                 window.addEventListener('scroll', request, { passive: true, capture: true });
@@ -2112,11 +2146,30 @@ const TL_VEHICLE_FX = (() => {
                 new MutationObserver(request).observe(document.documentElement, {
                     attributes: true, attributeFilter: ['data-animation-on']
                 });
-                const c = document.getElementById('timeline-container');
-                if (c && window.ResizeObserver) new ResizeObserver(() => { measure(); request(); }).observe(c);
+                // icon font load xong có thể làm đổi chiều cao → đo lại
+                if (document.fonts && document.fonts.ready) document.fonts.ready.then(remeasure).catch(() => {});
             }
-            request();
-            setTimeout(() => { measure(); request(); }, 450);   // sau khi animation vào ổn định
+
+            // gắn listener cho container hiện tại (an toàn nếu container bị thay)
+            if (c && c !== roEl) {
+                roEl = c;
+                if (ro) ro.disconnect();
+                if (window.ResizeObserver) { ro = new ResizeObserver(remeasure); ro.observe(c); }
+                // animation vào kết thúc → đo lại một lần cho chuẩn
+                c.addEventListener('animationend', settle, true);
+                c.addEventListener('transitionend', (e) => {
+                    if (e.target && e.target.classList && e.target.classList.contains('tl-item')) settle();
+                }, true);
+            }
+
+            // Đo + đặt xe vào đúng vị trí NGAY trong lần đầu (đồng bộ) → không còn cảnh xe "trượt chậm" vào chỗ
+            measure();
+            tick(performance.now());
+
+            // Đo lại sau khi layout ổn định; nếu lệch thì snap thẳng chứ không glide
+            requestAnimationFrame(() => requestAnimationFrame(remeasure));
+            clearTimeout(settleT);
+            settleT = setTimeout(remeasure, 600);   // lưới an toàn cuối
         }
     };
 })();
