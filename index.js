@@ -1969,25 +1969,35 @@ const tlVehicleFor = (act, next) => {
 const TL_TRAIL_MASK = '-webkit-mask-image:linear-gradient(to top,#000,transparent);mask-image:linear-gradient(to top,#000,transparent);';
 
 const TL_VEHICLE_FX = (() => {
-    const Y0 = -14, Y1 = 26;   // tâm node trên / tâm node dưới, tính theo đầu/cuối line
-    const TAU = 85;            // độ mượt quán tính (ms): nhỏ = bám sát hơn, lớn = lười và mượt hơn
+    const Y0 = -14, Y1 = 26;        // tâm node trên / tâm node dưới, tính theo đầu/cuối line
+
+    // ===== TINH CHỈNH =====
+    const OMEGA   = 20;             // độ cứng lò xo (rad/s): nhỏ = trôi và mượt hơn, lớn = bám tay hơn
+    const TV_TAU  = 45;             // ms lọc vận tốc cuộn (feed-forward): lớn = mượt hơn nhưng phản hồi chậm hơn
+    const EDGE_ZONE        = 46;    // px: khoảng cách tới node bắt đầu mờ/nhỏ
+    const EDGE_MIN_SCALE   = 0.35;  // kích thước tại node (1 = không nhỏ đi)
+    const EDGE_MIN_OPACITY = 0;     // độ mờ tại node (1 = không mờ)
+    const EDGE_ALWAYS      = true;  // true: hiệu ứng mờ/nhỏ chạy cả khi tắt animation; false: chỉ khi data-animation-on="true"
+
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const animOn = () => document.documentElement.getAttribute('data-animation-on') === 'true';
     const snapPx = (v) => { const d = window.devicePixelRatio || 1; return Math.round(v * d) / d; };
     const r2 = (v) => Math.round(v * 100) / 100;
 
-    let items = [], bound = false, raf = 0, last = 0;
+    let items = [], bound = false, raf = 0, last = 0, idle = true;
     let vh = window.innerHeight || document.documentElement.clientHeight;
     let vw = window.innerWidth;
     let ro = null, roEl = null, settleT = 0;
+    let lastCTop = null, moveAt = 0;
 
     // offsetTop không bị ảnh hưởng bởi transform của animation vào → vị trí đo luôn đúng
     const docTop = (el) => { let y = 0; while (el) { y += el.offsetTop || 0; el = el.offsetParent; } return y; };
 
-    // Promote layer GPU sẵn từ đầu → lần cuộn đầu tiên không phải tạo layer giữa chừng (nguyên nhân lag item đầu)
+    // Promote layer GPU sẵn từ đầu → lần cuộn đầu tiên không phải tạo layer giữa chừng
     const prime = (it) => {
         [it.veh, it.head, it.bead, it.fill, ...it.trails].forEach(el => { if (el) el.style.willChange = 'transform'; });
+        if (it.veh) it.veh.style.willChange = 'transform, opacity';
     };
 
     // Đo vị trí các line (khi render / resize / animation vào xong / font load xong), không đo mỗi frame
@@ -2007,8 +2017,9 @@ const TL_VEHICLE_FX = (() => {
                     head: line.querySelector('.tl-vhead'),
                     bead: line.querySelector('.tl-vbead'),
                     trails: [...line.querySelectorAll('.tl-vt')],
-                    cur: null, tgt: 0, speed: 0, vel: 0, headDeg: 0, dir: 1, pend: 1, streak: 0,
-                    clean: false, jump: false, w: {}, top: 0, h: 0
+                    x: null, tx: 0, v: 0, tv: 0,          // vị trí (px dọc line), vị trí mục tiêu, vận tốc xe, vận tốc mục tiêu
+                    speed: 0, headDeg: 0, dir: 1, pend: 1, streak: 0,
+                    clean: false, jump: false, w: {}, top: 0, h: 0, span: 1
                 };
                 if (it.veh) prime(it);
             }
@@ -2018,13 +2029,14 @@ const TL_VEHICLE_FX = (() => {
             if (!isNew && (Math.abs(top - it.top) > 0.5 || Math.abs(h - it.h) > 0.5)) it.jump = true;
             it.top = top;
             it.h = h;
-            it.span = h + Y1 - Y0;
+            it.span = Math.max(1, h + Y1 - Y0);
             return it;
         }).filter(i => i.veh && i.h > 0);
     };
 
     // chỉ ghi khi giá trị đổi
     const put = (it, key, el, val) => { if (el && it.w[key] !== val) { it.w[key] = val; el.style.transform = val; } };
+    const putOp = (it, el, val) => { if (el && it.w.o !== val) { it.w.o = val; el.style.opacity = val; } };
 
     const resetFx = (it) => {
         put(it, 'head', it.head, '');
@@ -2035,13 +2047,22 @@ const TL_VEHICLE_FX = (() => {
 
     const tick = (now) => {
         raf = 0;
-        const dt = last ? clamp(now - last, 1, 64) : 16;
+        const fresh = idle;                         // frame đầu của một đợt chạy → chưa có vận tốc đáng tin
+        idle = false;
+        const dtMs = last ? clamp(now - last, 1, 50) : 16.7;
+        const dt = dtMs / 1000;
         last = now;
         let active = false;
 
         const c = document.getElementById('timeline-container');
-        if (!c) { last = 0; return; }
+        if (!c) { last = 0; idle = true; return; }
         const cTop = c.getBoundingClientRect().top;     // DUY NHẤT một lần đọc layout mỗi frame
+        // phát hiện đang cuộn bằng chính vị trí (không phụ thuộc tần suất sự kiện scroll, nhất là iOS quán tính)
+        if (lastCTop === null || Math.abs(cTop - lastCTop) > 0.01) moveAt = now;
+        lastCTop = cTop;
+        const moving = now - moveAt < 140;
+        if (moving) active = true;
+
         const fancy = animOn();
         const readY = vh * 0.55;
 
@@ -2050,64 +2071,81 @@ const TL_VEHICLE_FX = (() => {
 
             const lineTop = cTop + it.top;
             const off = lineTop + it.h < -150 || lineTop > vh + 150;
-            const rawT = clamp((readY - (lineTop + Y0)) / it.span, 0, 1);
+            const tx = clamp(readY - (lineTop + Y0), 0, it.span);       // vị trí mục tiêu (px dọc line)
 
-            if (it.cur === null || it.jump) {
+            if (it.x === null || it.jump) {
                 // lần đầu / hình học đổi: đặt thẳng vào đúng chỗ, không glide
-                it.cur = it.tgt = rawT; it.speed = 0; it.vel = 0; it.jump = false;
-            } else if (Math.abs(rawT - it.tgt) * it.span > 0.12 || rawT === 0 || rawT === 1) {
-                it.tgt = rawT;   // vùng chết rất nhỏ, đủ lọc nhiễu iOS mà không làm mục tiêu nhảy bậc
+                it.x = it.tx = tx; it.v = it.tv = 0; it.speed = 0; it.jump = false;
             }
+            if (off) { it.x = it.tx = tx; it.v = it.tv = 0; it.speed = 0; continue; }   // ngoài màn hình: không tính, không vẽ
 
-            if (off) { it.cur = it.tgt; it.speed = 0; it.vel = 0; continue; }   // ngoài màn hình: không tính, không vẽ
+            // ===== VẬN TỐC MỤC TIÊU (lọc) =====
+            if (fresh || !moving) it.tv = 0;
+            else {
+                const inst = clamp((tx - it.tx) / dt, -6000, 6000);
+                it.tv += (inst - it.tv) * (1 - Math.exp(-dtMs / TV_TAU));
+            }
+            it.tx = tx;
 
-            // ===== QUÁN TÍNH MƯỢT (theo thời gian thực, tự nhanh lên khi đuổi xa) =====
-            const gap = Math.abs(it.tgt - it.cur) * it.span;
-            const prev = it.cur;
-            it.cur += (it.tgt - it.cur) * (1 - Math.exp(-dt / (TAU / (1 + gap / 240))));
-            const settled = Math.abs(it.tgt - it.cur) * it.span < 0.4;
-            if (settled) it.cur = it.tgt;
-            const dpx = (it.cur - prev) * it.span;
+            // ===== LÒ XO GIẢM CHẤN TỚI HẠN (nghiệm chính xác, ổn định với mọi dt) =====
+            // làm việc trên sai số so với mục tiêu đang chuyển động → cuộn đều thì không bị tụt lại
+            const d0 = it.x - tx;
+            const vr0 = it.v - it.tv;
+            const w = OMEGA * (1 + Math.abs(d0) / 320);                  // đuổi xa thì tự cứng hơn
+            const e = Math.exp(-w * dt);
+            const c2 = vr0 + w * d0;
+            const d1 = (d0 + c2 * dt) * e;
+            const vr1 = (vr0 - w * c2 * dt) * e;
+            it.x = clamp(tx + d1, 0, it.span);
+            it.v = vr1 + it.tv;
+
+            const settled = !moving && Math.abs(it.x - tx) < 0.25 && Math.abs(it.v) < 8;
+            if (settled) { it.x = tx; it.v = 0; it.tv = 0; }
+            else active = true;
 
             // Đang chạy: toạ độ liên tục (mượt nhất). Đã dừng: snap pixel thiết bị để icon nét.
-            const yRaw = Y0 + it.cur * it.span;
+            const yRaw = Y0 + it.x;
             const y = settled ? snapPx(yRaw) : r2(yRaw);
-            put(it, 'veh', it.veh, `translate3d(0,${y}px,0)`);
 
-            if (!settled) active = true;
+            // ===== GẦN NODE: nhỏ lại + mờ đi · RỜI NODE: lớn lên + rõ dần =====
+            let sc = 1, op = 1;
+            if (EDGE_ALWAYS || fancy) {
+                const z = Math.min(EDGE_ZONE, it.span * 0.35);
+                const f0 = clamp(Math.min(it.x, it.span - it.x) / z, 0, 1);
+                const f = f0 * f0 * (3 - 2 * f0);                        // smoothstep
+                sc = EDGE_MIN_SCALE + (1 - EDGE_MIN_SCALE) * f;
+                op = EDGE_MIN_OPACITY + (1 - EDGE_MIN_OPACITY) * f;
+            }
+            put(it, 'veh', it.veh, `translate3d(0,${y}px,0) scale(${sc.toFixed(3)})`);
+            putOp(it, it.veh, op.toFixed(3));
 
             // ===== TẮT ANIMATION: chỉ trượt =====
             if (!fancy) {
-                if (!it.clean) { resetFx(it); it.clean = true; it.speed = 0; it.vel = 0; it.headDeg = 0; }
+                if (!it.clean) { resetFx(it); it.clean = true; it.speed = 0; it.headDeg = 0; }
                 continue;
             }
             it.clean = false;
 
             // ===== BẬT ANIMATION: quay đầu theo chiều scroll + giọt kính co giãn + vệt khói + vệt tiến trình =====
-            // vận tốc đã lọc (EMA) → hết nhiễu từng frame
-            const vInst = dpx * 16.7 / dt;
-            it.vel += (vInst - it.vel) * (1 - Math.exp(-dt / 55));
-            const v = it.vel;
-
-            const raw = Math.abs(v) < 0.4 ? 0 : clamp(Math.abs(v) / 28, 0, 1);
-            it.speed += (raw - it.speed) * (1 - Math.exp(-dt / 150));
+            const av = Math.abs(it.v);
+            const raw = av < 24 ? 0 : clamp(av / 1600, 0, 1);
+            it.speed += (raw - it.speed) * (1 - Math.exp(-dtMs / 150));
             if (it.speed < 0.015) it.speed = 0;
-            const q = Math.round(it.speed * 100) / 100;                       // bước mịn 0.01 (trước là 0.05 → bị nấc)
+            const q = Math.round(it.speed * 100) / 100;
 
-            if (Math.abs(v) > 1.2) {                                         // đổi chiều phải ổn định 3 frame
-                const d = v > 0 ? 1 : -1;
-                if (d === it.pend) it.streak++; else { it.pend = d; it.streak = 1; }
-                if (it.streak >= 3) it.dir = d;
+            if (av > 72) {                                                // đổi chiều phải ổn định 3 frame
+                const dd = it.v > 0 ? 1 : -1;
+                if (dd === it.pend) it.streak++; else { it.pend = dd; it.streak = 1; }
+                if (it.streak >= 3) it.dir = dd;
             }
             const goal = it.dir > 0 ? 0 : 180;
-            it.headDeg += (goal - it.headDeg) * (1 - Math.exp(-dt / 80));
+            it.headDeg += (goal - it.headDeg) * (1 - Math.exp(-dtMs / 80));
             if (Math.abs(goal - it.headDeg) < 0.5) it.headDeg = goal;
 
             if (q > 0 || it.headDeg !== goal) active = true;
 
             const air = it.veh.dataset.v === 'air';
-            // lắc nhẹ, tần số thấp + biên độ nhỏ + nhân q² (êm lúc bắt đầu/kết thúc) → hết cảm giác rung
-            const sway = Math.sin(it.cur * 16) * (air ? 0.8 : 1.6) * q * q;
+            const sway = Math.sin((it.x / it.span) * 16) * (air ? 0.8 : 1.6) * q * q;   // lắc rất nhẹ, êm đầu/cuối
             put(it, 'head', it.head, `rotate(${(it.headDeg + sway).toFixed(1)}deg)`);
             put(it, 'bead', it.bead, q ? `scale(${(1 - 0.12 * q).toFixed(3)},${(1 + 0.35 * q).toFixed(3)})` : '');
             const tq = q.toFixed(2);
@@ -2116,10 +2154,17 @@ const TL_VEHICLE_FX = (() => {
         }
 
         if (active) raf = requestAnimationFrame(tick);
-        else last = 0;
+        else { last = 0; idle = true; }
     };
 
     const request = () => { if (!raf) raf = requestAnimationFrame(tick); };
+
+    // Chạy 1 frame đồng bộ mà KHÔNG để lại vòng rAF thứ hai (nguyên nhân dt ~1ms → giật)
+    const flush = () => {
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        tick(performance.now());
+        last = 0;   // frame kế tiếp dùng dt chuẩn, tránh lệch gốc thời gian giữa rAF và performance.now
+    };
 
     // Đo lại + vẽ lại (gom nhiều sự kiện vào 1 lần)
     const remeasure = () => { measure(); request(); };
@@ -2155,16 +2200,16 @@ const TL_VEHICLE_FX = (() => {
                 roEl = c;
                 if (ro) ro.disconnect();
                 if (window.ResizeObserver) { ro = new ResizeObserver(remeasure); ro.observe(c); }
-                // animation vào kết thúc → đo lại một lần cho chuẩn
                 c.addEventListener('animationend', settle, true);
                 c.addEventListener('transitionend', (e) => {
                     if (e.target && e.target.classList && e.target.classList.contains('tl-item')) settle();
                 }, true);
             }
 
-            // Đo + đặt xe vào đúng vị trí NGAY trong lần đầu (đồng bộ) → không còn cảnh xe "trượt chậm" vào chỗ
+            // Đo + đặt xe vào đúng vị trí NGAY trong lần đầu (đồng bộ)
+            lastCTop = null;
             measure();
-            tick(performance.now());
+            flush();
 
             // Đo lại sau khi layout ổn định; nếu lệch thì snap thẳng chứ không glide
             requestAnimationFrame(() => requestAnimationFrame(remeasure));
