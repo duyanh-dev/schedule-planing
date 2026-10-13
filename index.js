@@ -3351,60 +3351,86 @@ const deleteActivity = (actId) => {
         const gtModal = document.getElementById('global-timeline-modal');
         const closeGlobalTimeline = () => gtModal.classList.remove('active');
 
+
+        
+
         // --- CHẶN CUỘN LAN RA NỀN KHI MODAL TOÀN CẢNH ĐANG MỞ ---
         // Safari iOS không tôn trọng overscroll-behavior hoàn toàn, nên chặn thêm bằng JS.
         // Phải đặt SAU dòng khai báo gtModal ở trên.
-        (() => {
-            const content = document.getElementById('global-timeline-content');
-            if (!gtModal || !content) return;
+        /* =====================================================================
+   1) Hàm dùng chung: chặn cuộn lọt ra nền cho bất kỳ modal nào
+      modal   = lớp overlay phủ toàn màn hình (có class 'active' khi mở)
+      content = vùng DUY NHẤT được phép cuộn bên trong modal
+   ===================================================================== */
+function trapModalScroll(modal, content) {
+    if (!modal || !content) return;
 
-            // Nền modal: trắng blur dịu dàng, không viền
-            const mc = gtModal.querySelector('.modal-content');
-            if (mc) {
-                mc.classList.remove('bg-slate-200', 'bg-white', 'md:ring-1', 'md:ring-slate-200');
-                mc.classList.add('bg-white/70', 'backdrop-blur-2xl', 'backdrop-saturate-150');
-                // Thanh header: trắng mờ nhẹ, hòa với nền
-                const hdr = mc.querySelector(':scope > div:first-child > div');
-                if (hdr) {
-                    hdr.classList.remove('bg-white/50', 'bg-slate-100');
-                    hdr.classList.add('bg-white/60', 'backdrop-blur-xl');
-                }
-            }
+    const isActive = () => modal.classList.contains('active');
 
-            const isActive = () => gtModal.classList.contains('active');
+    // delta > 0: định cuộn xuống, delta < 0: định cuộn lên
+    // Trả về true nếu cú cuộn này sẽ "tràn" ra ngoài nội dung modal
+    const wouldChain = (delta) => {
+        const max = content.scrollHeight - content.clientHeight;
+        if (max <= 0) return true;                                  // nội dung không đủ dài để cuộn
+        if (delta < 0 && content.scrollTop <= 0) return true;      // đang ở đỉnh mà còn kéo lên
+        if (delta > 0 && content.scrollTop >= max - 1) return true; // đang ở đáy mà còn kéo xuống
+        return false;
+    };
 
-            // delta > 0: định cuộn xuống, delta < 0: định cuộn lên
-            // Trả về true nếu cú cuộn này sẽ "tràn" ra ngoài nội dung modal
-            const wouldChain = (delta) => {
-                const max = content.scrollHeight - content.clientHeight;
-                if (max <= 0) return true;                                  // nội dung không đủ dài để cuộn
-                if (delta < 0 && content.scrollTop <= 0) return true;      // đang ở đỉnh mà còn kéo lên
-                if (delta > 0 && content.scrollTop >= max - 1) return true; // đang ở đáy mà còn kéo xuống
-                return false;
-            };
+    // Chuột / touchpad
+    modal.addEventListener('wheel', (e) => {
+        if (!isActive()) return;
+        if (!content.contains(e.target) || wouldChain(e.deltaY)) e.preventDefault();
+    }, { passive: false });
 
-            // Chuột / touchpad
-            gtModal.addEventListener('wheel', (e) => {
-                if (!isActive()) return;
-                if (!content.contains(e.target) || wouldChain(e.deltaY)) e.preventDefault();
-            }, { passive: false });
+    // Cảm ứng (iPhone / Android)
+    let lastY = 0;
+    modal.addEventListener('touchstart', (e) => {
+        if (e.touches.length) lastY = e.touches[0].clientY;
+    }, { passive: true });
 
-            // Cảm ứng (iPhone / Android)
-            let lastY = 0;
-            gtModal.addEventListener('touchstart', (e) => {
-                if (e.touches.length) lastY = e.touches[0].clientY;
-            }, { passive: true });
+    modal.addEventListener('touchmove', (e) => {
+        if (!isActive() || !e.touches.length) return;
+        const y = e.touches[0].clientY;
+        const delta = lastY - y;     // ngón tay vuốt lên => delta > 0 => cuộn xuống
+        lastY = y;
+        if (!content.contains(e.target) || wouldChain(delta)) {
+            if (e.cancelable) e.preventDefault();
+        }
+    }, { passive: false });
+}
 
-            gtModal.addEventListener('touchmove', (e) => {
-                if (!isActive() || !e.touches.length) return;
-                const y = e.touches[0].clientY;
-                const delta = lastY - y;     // ngón tay vuốt lên => delta > 0 => cuộn xuống
-                lastY = y;
-                if (!content.contains(e.target) || wouldChain(delta)) {
-                    if (e.cancelable) e.preventDefault();
-                }
-            }, { passive: false });
-        })();
+/* =====================================================================
+   2) Modal Toàn cảnh: giữ nguyên phần đổi style cũ, chỉ thay đoạn
+      chặn cuộn bằng một dòng gọi hàm dùng chung
+   ===================================================================== */
+(() => {
+    const content = document.getElementById('global-timeline-content');
+    if (!gtModal || !content) return;
+
+    // Nền modal: trắng blur dịu dàng, không viền
+    const mc = gtModal.querySelector('.modal-content');
+    if (mc) {
+        mc.classList.remove('bg-slate-200', 'bg-white', 'md:ring-1', 'md:ring-slate-200');
+        mc.classList.add('bg-white/70', 'backdrop-blur-2xl', 'backdrop-saturate-150');
+        // Thanh header: trắng mờ nhẹ, hòa với nền
+        const hdr = mc.querySelector(':scope > div:first-child > div');
+        if (hdr) {
+            hdr.classList.remove('bg-white/50', 'bg-slate-100');
+            hdr.classList.add('bg-white/60', 'backdrop-blur-xl');
+        }
+    }
+
+    trapModalScroll(gtModal, content);
+})();
+
+/* =====================================================================
+   3) Modal Hoạt động: dùng lại đúng hàm trên
+   ===================================================================== */
+trapModalScroll(
+    document.getElementById('activity-modal'),
+    document.getElementById('activity-form')
+);
 
         // --- NEW TRIP MODAL ---
         const tripModal = document.getElementById('trip-modal');

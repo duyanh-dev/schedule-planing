@@ -419,184 +419,152 @@
         </div>   
 </div>
 
-       <!-- Activity Modal (Liquid Glass Style & Fullscreen Mobile) -->
-        <div id="activity-modal"
-            class="modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-md p-0 md:p-4 flex justify-center items-center z-[8000]">
-        
-            <!-- Cửa sổ Modal (Tràn viền 100% Mobile, Bo tròn trên PC) -->
-            <div
-                class="modal-content bg-white/70 backdrop-blur-3xl rounded-none md:rounded-[2rem] border-0 md:border md:border-white/80 w-full h-full md:h-auto md:max-h-[90vh] md:max-w-lg mx-auto shadow-[0_20px_60px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden relative">
-                
-                <!-- Header (Kính mờ xuyên thấu) -->
-                <div
-                    class="p-4 md:p-5 border-b border-white/60 flex justify-between items-center bg-white/40 backdrop-blur-xl sticky top-0 z-20">
-                    <h2 id="act-modal-title" class="text-lg font-black text-slate-800 flex items-center gap-2 drop-shadow-sm">
-                        <div class="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center text-white shadow-sm border border-blue-400">
-                            <i class="fa-solid fa-plus text-sm"></i>
-                        </div> 
-                        Thêm hoạt động
-                    </h2>
-                    <!-- Thêm touch-manipulation để chống double-tap zoom trên Mobile -->
-                    <button type="button" onclick="closeActivityModal()"
-                        class="w-8 h-8 flex items-center justify-center bg-white/60 hover:bg-white border border-white/80 rounded-full text-slate-500 shadow-sm transition-all active:scale-95 touch-manipulation">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+       <!-- Activity Modal (Liquid Glass v2) -->
+<div id="activity-modal"
+    class="modal-overlay fixed inset-0 p-0 md:p-4 flex justify-center items-center z-[8000]">
+ 
+    <!-- Cửa sổ Modal: tràn màn hình ở mobile, kính dày nổi khối ở PC -->
+    <div class="modal-content am-shell w-full md:h-auto md:max-h-[90vh] md:max-w-lg mx-auto flex flex-col overflow-hidden relative">
+ 
+        <!-- Header: viên thuốc kính nổi -->
+        <div class="am-float am-head">
+            <h2 id="act-modal-title" class="text-base font-extrabold text-slate-800 flex items-center gap-2.5">
+                <div class="am-title-badge">
+                    <i class="fa-solid fa-plus text-xs"></i>
                 </div>
-        
-                <form id="activity-form" class="p-4 md:p-5 overflow-y-auto hide-scrollbar space-y-5 flex-1 bg-slate-50/30"
-                    onsubmit="submitActivityForm(event)">
-                    <input type="hidden" id="act-id">
-        
-                    <!-- Card 1: Thông tin & Thời gian -->
-                    <div class="bg-white/60 backdrop-blur-xl p-4 md:p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 space-y-4">
-                        <div class="space-y-1.5">
-                            <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm">Tên hoạt động <span class="text-red-500">*</span></label>
-                            <!-- Ép text-base trên mobile (chống zoom), md:text-sm trên PC -->
-                            <input placeholder="Tên hoạt động" type="text" id="act-details" required
-                                class="w-full p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800 text-base md:text-sm transition-all">
-                        </div>
-                        <div class="flex flex-col sm:flex-row gap-3">
-                            <div class="flex-1 min-w-0 space-y-1.5">
-                                <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm">Từ giờ <span class="text-red-500">*</span></label>
-                                <input type="time" id="act-start" required placeholder="08:00"
-                                    class="w-full p-3 md:p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-black text-slate-800 text-center text-base focus:border-blue-400 transition-all">
-                            </div>
-                            <div class="flex-1 min-w-0 space-y-1.5">
-                                <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider drop-shadow-sm">Đến giờ <span class="text-red-500">*</span></label>
-                                <input type="time" id="act-end" required placeholder="10:00"
-                                    class="w-full p-3 md:p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-black text-slate-800 text-center text-base focus:border-blue-400 transition-all">
-                            </div>
-                        </div>
-                        <div class="flex gap-2 pt-1">
-                            <select id="act-icon"
-                                class="w-20 p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none text-center text-xl focus:border-blue-400 transition-all">
-                                <option value="fa-location-crosshairs">📍</option>
-                                <option value="fa-plane">✈️</option>
-                                <option value="fa-car">🚗</option>
-                                <option value="fa-train">🚆</option>
-                                <option value="fa-utensils">🍽</option>
-                                <option value="fa-camera">📸</option>
-                                <option value="fa-bag-shopping">🛍️</option>
-                                <option value="fa-bed">🛏</option>
-                            </select>
-                            <select id="act-type"
-                                class="flex-1 p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-bold text-slate-700 text-base md:text-sm focus:border-blue-400 transition-all">
-                                <option value="Tham quan">Tham quan</option>
-                                <option value="Di chuyển">Di chuyển</option>
-                                <option value="Ăn uống">Ăn uống</option>
-                                <option value="Mua sắm">Mua sắm</option>
-                                <option value="Khách sạn">Khách sạn</option>
-                                <option value="Khác">Khác</option>
-                            </select>
-                        </div>
+                Thêm hoạt động
+            </h2>
+            <button type="button" onclick="closeActivityModal()" aria-label="Đóng" class="am-btn am-close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+ 
+        <form id="activity-form" class="am-scroll hide-scrollbar overflow-y-auto space-y-4 flex-1 min-h-0"
+            onsubmit="submitActivityForm(event)">
+            <input type="hidden" id="act-id">
+ 
+            <!-- Card 1: Thông tin & Thời gian -->
+            <div class="am-card am-card-a space-y-4">
+                <div>
+                    <label class="am-label">Tên hoạt động <span class="text-red-500">*</span></label>
+                    <input placeholder="Tên hoạt động" type="text" id="act-details" required
+                        class="am-field font-bold">
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="flex-1 min-w-0">
+                        <label class="am-label">Từ giờ <span class="text-red-500">*</span></label>
+                        <input type="time" id="act-start" required placeholder="08:00" class="am-field">
                     </div>
-        
-                    <!-- Card 2: Lịch trình & Di chuyển -->
-                    <div class="bg-white/60 backdrop-blur-xl p-4 md:p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 space-y-4">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-2 drop-shadow-sm"><i
-                                class="fa-solid fa-map-location-dot mr-1"></i> Di chuyển & Lịch trình</label>
-                        <div class="flex flex-col gap-3 relative">
-                            <div class="absolute left-4 top-8 bottom-8 w-0.5 bg-slate-300/50 z-0"></div>
-                            
-                            <div class="flex items-center gap-3 relative z-10">
-                                <div class="w-8 h-8 rounded-full bg-white/80 backdrop-blur-md shadow-sm text-slate-500 flex items-center justify-center text-[10px] font-black border border-white">TỪ</div>
-                                <div class="flex-1 relative">
-                                    <input placeholder="Điểm đi" type="text" id="act-from"
-                                        class="w-full p-3.5 pr-12 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-medium text-base md:text-sm text-slate-700 focus:border-blue-400 transition-all">
-                                    <button type="button" onclick="openMapPicker('act-from')"
-                                        class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-blue-500 bg-white hover:bg-blue-50 rounded-lg shadow-sm border border-slate-100 transition-colors touch-manipulation"><i
-                                            class="fa-solid fa-location-crosshairs"></i></button>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center gap-3 relative z-10">
-                                <div class="w-8 h-8 rounded-full bg-white/80 backdrop-blur-md shadow-sm text-slate-500 flex items-center justify-center text-[10px] font-black border border-white">ĐẾN</div>
-                                <div class="flex-1 relative">
-                                    <input placeholder="Điểm đến" type="text" id="act-to"
-                                        class="w-full p-3.5 pr-12 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-medium text-base md:text-sm text-slate-700 focus:border-blue-400 transition-all">
-                                    <button type="button" onclick="openMapPicker('act-to')"
-                                        class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-blue-500 bg-white hover:bg-blue-50 rounded-lg shadow-sm border border-slate-100 transition-colors touch-manipulation"><i
-                                            class="fa-solid fa-location-crosshairs"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="pt-2">
-                            <select id="act-transport-select" onchange="handleTransportChange()"
-                                class="w-full p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-bold text-slate-700 text-base md:text-sm focus:border-blue-400 transition-all">
-                                <option value="">Phương tiện: Không có</option>
-                                <option value="Đi bộ">🚶 Đi bộ</option>
-                                <option value="Taxi / Grab">🚗 Taxi / Grab</option>
-                                <option value="Tàu hỏa / MRT">🚆 Tàu hỏa / MRT</option>
-                                <option value="Máy bay">✈️ Máy bay</option>
-                                <option value="other">✏️ Khác (Nhập tay)...</option>
-                            </select>
-                            <input type="text" id="act-transport-input"
-                                class="hidden w-full mt-2 p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-medium text-base md:text-sm text-slate-700 focus:border-blue-400 transition-all">
-                        </div>
+                    <div class="flex-1 min-w-0">
+                        <label class="am-label">Đến giờ <span class="text-red-500">*</span></label>
+                        <input type="time" id="act-end" required placeholder="10:00" class="am-field">
                     </div>
-        
-                    <!-- Card 3: Chi tiết, Hướng dẫn & Đánh giá -->
-                    <div class="bg-white/60 backdrop-blur-xl p-4 md:p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 space-y-4">
-                        <div>
-                            <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1.5 drop-shadow-sm"><i
-                                    class="fa-solid fa-align-left mr-1"></i> Chi tiết hoạt động</label>
-                            <textarea placeholder="Nhập chi tiết..." id="act-desc" rows="2"
-                                class="w-full p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-medium text-base md:text-sm text-slate-700 resize-none focus:border-blue-400 transition-all"></textarea>
-                        </div>
-                        <div>
-                            <label class="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1.5 drop-shadow-sm"><i
-                                    class="fa-solid fa-route mr-1"></i> Hướng dẫn di chuyển</label>
-                            <textarea placeholder="Nhập hướng dẫn..." id="act-guide" rows="2"
-                                class="w-full p-3.5 bg-white/80 backdrop-blur-sm border border-white shadow-inner rounded-xl outline-none font-medium text-base md:text-sm text-slate-700 resize-none focus:border-blue-400 transition-all"></textarea>
-                        </div>
-                        <div>
-                            <label class="text-[11px] font-black text-amber-600 uppercase tracking-wider block mb-1.5 drop-shadow-sm"><i
-                                    class="fa-solid fa-star mr-1"></i> Ghi chú & Đánh giá</label>
-                            <textarea placeholder="Nhập ghi chú..." id="act-note" rows="2"
-                                class="w-full p-3.5 bg-amber-50/60 backdrop-blur-md border border-amber-200/50 shadow-inner rounded-xl outline-none font-medium text-base md:text-sm text-amber-900 resize-none focus:border-amber-400 transition-all"></textarea>
-                        </div>
-                    </div>
-        
-                    <!-- Card 4: Ngân sách Item (Dark Glass) -->
-                    <div class="bg-slate-900/80 backdrop-blur-2xl p-4 md:p-5 rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.2)] border border-slate-700/50 space-y-3">
-                        <div class="flex justify-between items-center">
-                            <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider drop-shadow-sm"><i
-                                    class="fa-solid fa-sack-dollar text-emerald-400 mr-1"></i> Ngân sách Item này</label>
-                        </div>
-                        <div class="flex gap-2">
-                            <div class="flex-1 bg-slate-800/60 backdrop-blur-sm rounded-xl border border-slate-600/50 shadow-inner flex items-center px-3 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/20 transition-all">
-                                <input placeholder="Nhập số tiền..." type="text" inputmode="numeric" id="act-budget-amount" oninput="calculateItemExchange()"
-                                    class="currency-input w-full p-3 outline-none font-black text-white text-base md:text-sm bg-transparent">
-                            </div>
-                            <select id="act-budget-cur" onchange="calculateItemExchange()"
-                                class="w-24 p-3 bg-slate-800/60 backdrop-blur-sm border border-slate-600/50 shadow-inner rounded-xl font-black text-white text-base md:text-sm outline-none focus:border-emerald-400 transition-all">
-                                <option value="VND">VND</option>
-                                <option value="THB">THB</option>
-                                <option value="JPY">JPY</option>
-                                <option value="KRW">KRW</option>
-                                <option value="USD">USD</option>
-                                <option value="EUR">EUR</option>
-                            </select>
-                        </div>
-                        <div class="text-right text-[11px] font-bold text-emerald-400/80 drop-shadow-sm" id="act-budget-converted">~ 0 VND</div>
-                    </div>
-        
-                </form>
-        
-                <!-- Footer (Hiệu ứng kính mờ trong vắt) -->
-                <div
-                    class="p-4 md:p-5 border-t border-white/60 bg-white/40 backdrop-blur-2xl sticky bottom-0 z-20 flex justify-end gap-3">
-                    <button type="button" onclick="closeActivityModal()"
-                        class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white/70 hover:bg-white border border-white shadow-sm rounded-xl transition-all active:scale-95 touch-manipulation">
-                        Hủy
-                    </button>
-                    <button type="button" id="act-btn-text" onclick="submitActivityForm(event)"
-                        class="px-6 py-2.5 text-sm font-bold text-white bg-blue-600/90 hover:bg-blue-600 backdrop-blur-md rounded-xl shadow-[0_8px_20px_rgba(37,99,235,0.3)] border border-blue-400/50 transition-all active:scale-95 flex items-center gap-2 touch-manipulation">
-                        <i class="fa-solid fa-check"></i> Lưu
-                    </button>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <select id="act-icon" class="am-field">
+                        <option value="fa-location-crosshairs">📍</option>
+                        <option value="fa-plane">✈️</option>
+                        <option value="fa-car">🚗</option>
+                        <option value="fa-train">🚆</option>
+                        <option value="fa-utensils">🍽</option>
+                        <option value="fa-camera">📸</option>
+                        <option value="fa-bag-shopping">🛍️</option>
+                        <option value="fa-bed">🛏</option>
+                    </select>
+                    <select id="act-type" class="am-field flex-1 font-bold">
+                        <option value="Tham quan">Tham quan</option>
+                        <option value="Di chuyển">Di chuyển</option>
+                        <option value="Ăn uống">Ăn uống</option>
+                        <option value="Mua sắm">Mua sắm</option>
+                        <option value="Khách sạn">Khách sạn</option>
+                        <option value="Khác">Khác</option>
+                    </select>
                 </div>
             </div>
+ 
+            <!-- Card 2: Lịch trình & Di chuyển -->
+            <div class="am-card am-card-b space-y-4">
+                <label class="am-label !mb-0"><i class="fa-solid fa-map-location-dot mr-1"></i> Di chuyển & Lịch trình</label>
+                <div class="flex flex-col gap-3 relative">
+                    <div class="absolute left-[17px] top-8 bottom-8 w-0.5 rounded-full bg-slate-300/60 z-0"></div>
+ 
+                    <div class="flex items-center gap-3 relative z-10">
+                        <div class="am-dot">TỪ</div>
+                        <div class="flex-1 relative min-w-0">
+                            <input placeholder="Điểm đi" type="text" id="act-from" class="am-field !pr-14">
+                            <button type="button" onclick="openMapPicker('act-from')" aria-label="Chọn trên bản đồ"
+                                class="am-btn am-pick"><i class="fa-solid fa-location-crosshairs"></i></button>
+                        </div>
+                    </div>
+ 
+                    <div class="flex items-center gap-3 relative z-10">
+                        <div class="am-dot">ĐẾN</div>
+                        <div class="flex-1 relative min-w-0">
+                            <input placeholder="Điểm đến" type="text" id="act-to" class="am-field !pr-14">
+                            <button type="button" onclick="openMapPicker('act-to')" aria-label="Chọn trên bản đồ"
+                                class="am-btn am-pick"><i class="fa-solid fa-location-crosshairs"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <select id="act-transport-select" onchange="handleTransportChange()" class="am-field font-bold">
+                        <option value="">Phương tiện: Không có</option>
+                        <option value="Đi bộ">🚶 Đi bộ</option>
+                        <option value="Taxi / Grab">🚗 Taxi / Grab</option>
+                        <option value="Tàu hỏa / MRT">🚆 Tàu hỏa / MRT</option>
+                        <option value="Máy bay">✈️ Máy bay</option>
+                        <option value="other">✏️ Khác (Nhập tay)...</option>
+                    </select>
+                    <input type="text" id="act-transport-input" class="hidden am-field mt-2">
+                </div>
+            </div>
+ 
+            <!-- Card 3: Chi tiết, Hướng dẫn & Đánh giá -->
+            <div class="am-card am-card-c space-y-4">
+                <div>
+                    <label class="am-label"><i class="fa-solid fa-align-left mr-1"></i> Chi tiết hoạt động</label>
+                    <textarea placeholder="Nhập chi tiết..." id="act-desc" rows="2" class="am-field"></textarea>
+                </div>
+                <div>
+                    <label class="am-label"><i class="fa-solid fa-route mr-1"></i> Hướng dẫn di chuyển</label>
+                    <textarea placeholder="Nhập hướng dẫn..." id="act-guide" rows="2" class="am-field"></textarea>
+                </div>
+                <div>
+                    <label class="am-label !text-amber-600"><i class="fa-solid fa-star mr-1"></i> Ghi chú & Đánh giá</label>
+                    <textarea placeholder="Nhập ghi chú..." id="act-note" rows="2" class="am-field am-note"></textarea>
+                </div>
+            </div>
+ 
+            <!-- Card 4: Ngân sách Item (kính tối) -->
+            <div class="am-card am-card-dark am-card-a space-y-3">
+                <label class="am-label !text-slate-400 !mb-0"><i class="fa-solid fa-sack-dollar text-emerald-400 mr-1"></i> Ngân sách Item này</label>
+                <div class="flex gap-2.5">
+                    <div class="am-dark-wrap flex-1 min-w-0">
+                        <input placeholder="Nhập số tiền..." type="text" inputmode="numeric" id="act-budget-amount"
+                            oninput="calculateItemExchange()" class="currency-input">
+                    </div>
+                    <select id="act-budget-cur" onchange="calculateItemExchange()" class="am-field am-dark-select !w-28 flex-none">
+                        <option value="VND">VND</option>
+                        <option value="THB">THB</option>
+                        <option value="JPY">JPY</option>
+                        <option value="KRW">KRW</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+                <div class="text-right pr-2 text-[11px] font-bold text-emerald-400/90" id="act-budget-converted">~ 0 VND</div>
+            </div>
+        </form>
+ 
+        <!-- Footer: dock kính nổi -->
+        <div class="am-float am-foot">
+            <button type="button" onclick="closeActivityModal()" class="am-btn am-ghost">Hủy</button>
+            <button type="button" id="act-btn-text" onclick="submitActivityForm(event)" class="am-btn am-primary">
+                <i class="fa-solid fa-check"></i> Lưu
+            </button>
         </div>
+    </div>
+</div>
 
         <!-- Map Picker Modal (Tràn viền 100% Mobile, Apple Liquid Glass Style) -->
         <div id="map-picker-modal" class="modal-overlay fixed inset-0 bg-slate-900/40 backdrop-blur-md flex justify-center items-end md:items-center z-[10000] p-0 md:p-6 opacity-0 pointer-events-none transition-all duration-300">

@@ -841,3 +841,277 @@ html[data-animation-on="true"] #global-timeline-modal {
 }
 .tg-item:active { transform: scale(0.97); }
 .tg-act:active  { transform: scale(0.88); }
+
+
+/* ---------- Nền mờ quanh modal (cùng tông #f8fafc) ---------- */
+#activity-modal {
+    background: rgba(248, 250, 252, .55);
+    backdrop-filter: blur(10px) saturate(1.15);
+    -webkit-backdrop-filter: blur(10px) saturate(1.15);
+    overscroll-behavior: contain;
+}
+ 
+/* ---------- Vỏ modal: tấm kính dày, nổi khối bằng shadow nhiều tầng ---------- */
+#activity-modal .am-shell {
+    background: rgba(255, 255, 255, .72);
+    /* backdrop-filter: blur(34px) saturate(1.7);
+    -webkit-backdrop-filter: blur(34px) saturate(1.7); */
+    box-shadow:
+        0 2px 4px rgba(15, 23, 42, .04),
+        0 14px 34px -10px rgba(15, 23, 42, .14),
+        0 44px 90px -28px rgba(15, 23, 42, .26),
+        inset 0 1px 1px rgba(255, 255, 255, .95),
+        inset 0 -3px 10px rgba(148, 163, 184, .14);
+    height: 100%;
+    border-radius: 0;
+}
+@media (min-width: 768px) {
+    /* Không phải chữ nhật bo đều: góc dưới-trái "cắt" nhỏ lại tạo cá tính */
+    #activity-modal .am-shell {
+        height: auto;
+        border-radius: 3rem 3rem 3rem 1.1rem;
+    }
+}
+ 
+/* ---------- Header & Footer: viên thuốc kính nổi (floating pill) ---------- */
+#activity-modal .am-float {
+    position: absolute;
+    z-index: 20;
+    left: .75rem;
+    right: .75rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, .66);
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, .05),
+        0 12px 26px -10px rgba(15, 23, 42, .2),
+        inset 0 1px 1px rgba(255, 255, 255, .95),
+        inset 0 -2px 5px rgba(148, 163, 184, .12);
+}
+#activity-modal .am-head {
+    top: calc(env(safe-area-inset-top, 0px) + .75rem);
+    padding: .5rem .5rem .5rem 1rem;
+    display: flex; align-items: center; justify-content: space-between;
+}
+#activity-modal .am-foot {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + .75rem);
+    padding: .5rem;
+    display: flex; align-items: center; gap: .5rem;
+}
+@media (min-width: 768px) {
+    #activity-modal .am-float { left: 1rem; right: 1rem; }
+    #activity-modal .am-head { top: 1rem; }
+    #activity-modal .am-foot { bottom: 1rem; }
+}
+ 
+/* ---------- Vùng cuộn: chừa chỗ cho header/footer nổi + chống cuộn lọt ra nền ---------- */
+#activity-modal .am-scroll {
+    padding:
+        calc(env(safe-area-inset-top, 0px) + 5.25rem)
+        1rem
+        calc(env(safe-area-inset-bottom, 0px) + 5.75rem);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+@media (min-width: 768px) {
+    #activity-modal .am-scroll { padding: 5.5rem 1.25rem 5.75rem; }
+}
+ 
+/* ---------- Card: không chữ nhật bo đều – mỗi card một góc "nhỏ" khác nhau ---------- */
+#activity-modal .am-card {
+    background: rgba(255, 255, 255, .62);
+/* 
+    backdrop-filter: blur(18px) saturate(1.5);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5); */
+    padding: 1.1rem;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, .04),
+        0 12px 28px -12px rgba(15, 23, 42, .16),
+        0 2px 10px -4px rgba(15, 23, 42, .06),
+        inset 0 1px 1px rgba(255, 255, 255, .95),
+        inset 0 -2px 6px rgba(148, 163, 184, .1);
+}
+@media (min-width: 768px) { #activity-modal .am-card { padding: 1.35rem; } }
+#activity-modal .am-card-a { border-radius: 2.25rem 2.25rem 2.25rem 2.25rem; }
+#activity-modal .am-card-b { border-radius: 2.25rem .6rem 2.25rem 2.25rem; }
+#activity-modal .am-card-c { border-radius: .6rem 2.25rem 2.25rem 2.25rem; }
+ 
+/* Card tối (ngân sách) */
+#activity-modal .am-card-dark {
+    background: rgba(15, 23, 42, .88);
+/* 
+    backdrop-filter: blur(26px) saturate(1.4);
+    -webkit-backdrop-filter: blur(26px) saturate(1.4); */
+    box-shadow:
+        0 2px 4px rgba(15, 23, 42, .1),
+        0 18px 36px -12px rgba(15, 23, 42, .45),
+        inset 0 1px 1px rgba(255, 255, 255, .14),
+        inset 0 -3px 8px rgba(0, 0, 0, .25);
+}
+ 
+/* ---------- Ô nhập: viên thuốc "lõm" xuống mặt kính ---------- */
+#activity-modal .am-field {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    border-radius: 9999px;
+    padding: .9rem 1.25rem;
+    background: rgba(255, 255, 255, .78);
+    color: #1e293b;
+    font-size: 16px; /* chống iOS tự zoom */
+    -webkit-appearance: none;
+    appearance: none;
+    box-shadow:
+        inset 0 2px 5px rgba(15, 23, 42, .08),
+        inset 0 -1px 1px rgba(255, 255, 255, .9),
+        0 1px 0 rgba(255, 255, 255, .6);
+    transition: background-color .2s, box-shadow .2s;
+}
+@media (min-width: 768px) { #activity-modal .am-field { font-size: 14px; } }
+#activity-modal .am-field::placeholder { color: #94a3b8; font-weight: 500; }
+#activity-modal .am-field:focus {
+    background: #fff;
+    box-shadow:
+        inset 0 2px 4px rgba(15, 23, 42, .05),
+        0 0 0 4px rgba(59, 130, 246, .2);
+}
+/* Time input: căn giữa, cao đều trên iOS */
+#activity-modal input[type="time"].am-field {
+    min-height: 3.1rem;
+    text-align: center;
+    font-weight: 800;
+    display: block;
+}
+#activity-modal input[type="time"].am-field::-webkit-date-and-time-value { text-align: center; }
+ 
+/* Textarea: góc dưới-trái nhỏ lại cho khác hình chữ nhật thường */
+#activity-modal textarea.am-field {
+    border-radius: 1.6rem 1.6rem 1.6rem .5rem;
+    padding: .9rem 1.25rem;
+    resize: none;
+}
+#activity-modal .am-note { background: rgba(255, 251, 235, .85); color: #78350f; }
+#activity-modal .am-note::placeholder { color: #b45309; opacity: .55; }
+#activity-modal .am-note:focus { background: #fffbeb; box-shadow: inset 0 2px 4px rgba(120, 53, 15, .05), 0 0 0 4px rgba(245, 158, 11, .22); }
+ 
+/* Select: viên thuốc + mũi tên tự vẽ */
+#activity-modal select.am-field {
+    padding-right: 2.6rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1.05rem center;
+}
+/* Select icon: hình tròn */
+#activity-modal select#act-icon {
+    flex: none;
+    width: 3.4rem; height: 3.4rem;
+    padding: 0;
+    border-radius: 9999px;
+    text-align: center; text-align-last: center;
+    font-size: 1.35rem;
+    background-image: none;
+    cursor: pointer;
+}
+ 
+/* Ô nhập trong card tối */
+#activity-modal .am-dark-wrap {
+    border-radius: 9999px;
+    background: rgba(51, 65, 85, .55);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, .35), inset 0 -1px 1px rgba(255, 255, 255, .06);
+    transition: box-shadow .2s;
+}
+#activity-modal .am-dark-wrap:focus-within {
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, .3), 0 0 0 3px rgba(52, 211, 153, .28);
+}
+#activity-modal .am-dark-wrap input {
+    background: transparent; border: 0; outline: none; box-shadow: none;
+    color: #fff; font-weight: 800; width: 100%;
+    padding: .85rem 1.25rem; font-size: 16px;
+}
+@media (min-width: 768px) { #activity-modal .am-dark-wrap input { font-size: 14px; } }
+#activity-modal .am-dark-wrap input::placeholder { color: #64748b; font-weight: 600; }
+#activity-modal select.am-dark-select {
+    background-color: rgba(51, 65, 85, .55);
+    color: #fff; font-weight: 800;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, .35), inset 0 -1px 1px rgba(255, 255, 255, .06);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+#activity-modal select.am-dark-select:focus { background-color: rgba(51, 65, 85, .75); box-shadow: inset 0 2px 6px rgba(0, 0, 0, .3), 0 0 0 3px rgba(52, 211, 153, .28); }
+#activity-modal select.am-dark-select option { color: #0f172a; }
+ 
+/* ---------- Nút ---------- */
+#activity-modal .am-btn {
+    border: 0; cursor: pointer;
+    border-radius: 9999px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: transform .15s, box-shadow .2s, background-color .2s;
+}
+#activity-modal .am-btn:active { transform: scale(.95); }
+#activity-modal .am-close {
+    width: 2.5rem; height: 2.5rem;
+    display: flex; align-items: center; justify-content: center;
+    color: #64748b;
+    background: rgba(255, 255, 255, .8);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .08), 0 6px 12px -4px rgba(15, 23, 42, .18), inset 0 1px 1px #fff;
+}
+#activity-modal .am-close:hover { background: #fff; color: #0f172a; }
+#activity-modal .am-ghost {
+    padding: .8rem 1.4rem; font-size: .875rem; font-weight: 700; color: #475569;
+    background: rgba(255, 255, 255, .75);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 6px 14px -6px rgba(15, 23, 42, .16), inset 0 1px 1px #fff;
+}
+#activity-modal .am-ghost:hover { background: #fff; }
+#activity-modal .am-primary {
+    flex: 1;
+    padding: .8rem 1.5rem; font-size: .875rem; font-weight: 800; color: #fff;
+    display: flex; align-items: center; justify-content: center; gap: .5rem;
+    background: #2563eb;
+    box-shadow:
+        0 12px 24px -8px rgba(37, 99, 235, .6),
+        inset 0 1px 1px rgba(255, 255, 255, .4),
+        inset 0 -3px 6px rgba(30, 64, 175, .35);
+}
+#activity-modal .am-primary:hover { background: #1d4ed8; }
+#activity-modal .am-pick {
+    position: absolute; right: .4rem; top: 50%; transform: translateY(-50%);
+    width: 2.2rem; height: 2.2rem; color: #3b82f6;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, .95);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .08), 0 5px 10px -3px rgba(59, 130, 246, .35), inset 0 1px 1px #fff;
+}
+#activity-modal .am-pick:active { transform: translateY(-50%) scale(.92); }
+ 
+/* ---------- Nhãn & điểm đầu/cuối ---------- */
+#activity-modal .am-label {
+    display: block;
+    padding-left: 1rem; margin-bottom: .4rem;
+    font-size: 12px; font-weight: 700; letter-spacing: .01em; color: #64748b;
+}
+#activity-modal .am-dot {
+    flex: none;
+    width: 2.25rem; height: 2.25rem; border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 900; color: #64748b;
+    background: rgba(255, 255, 255, .9);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .08), 0 5px 10px -4px rgba(15, 23, 42, .2), inset 0 1px 1px #fff;
+}
+#activity-modal .am-title-badge {
+    width: 2.1rem; height: 2.1rem; border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; background: #3b82f6;
+    box-shadow: 0 6px 12px -4px rgba(37, 99, 235, .55), inset 0 1px 1px rgba(255, 255, 255, .45), inset 0 -2px 4px rgba(30, 64, 175, .3);
+}
+ 
+/* Fallback nếu trình duyệt không hỗ trợ backdrop-filter */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    #activity-modal .am-shell { background: rgba(255, 255, 255, .92); }
+    #activity-modal .am-float, #activity-modal .am-card { background: rgba(255, 255, 255, .88); }
+    #activity-modal .am-card-dark { background: rgb(15, 23, 42); }
+}
+@media (prefers-reduced-motion: reduce) {
+    #activity-modal .am-btn, #activity-modal .am-field { transition: none; }
+}
