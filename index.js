@@ -1970,14 +1970,16 @@ const TL_TRAIL_MASK = '-webkit-mask-image:linear-gradient(to top,#000,transparen
 
 const TL_VEHICLE_FX = (() => {
     const Y0 = -14, Y1 = 26;        // tâm node trên / tâm node dưới, tính theo đầu/cuối line
+    const READ = 0.55;              // xe ghim ở 55% chiều cao màn hình
 
     // ===== TINH CHỈNH =====
-    const OMEGA   = 20;             // độ cứng lò xo (rad/s): nhỏ = trôi và mượt hơn, lớn = bám tay hơn
-    const TV_TAU  = 45;             // ms lọc vận tốc cuộn (feed-forward): lớn = mượt hơn nhưng phản hồi chậm hơn
+    const USE_STICKY = true;        // false: ép dùng chế độ JS (để so sánh)
+    const OMEGA    = 22;            // chế độ JS: độ cứng lò xo (nhỏ = trôi hơn, lớn = bám tay hơn)
+    const OMEGA_FX = 36;            // chế độ sticky: độ nhạy của hiệu ứng mờ/nhỏ/vệt (lớn = ít trễ)
     const EDGE_ZONE        = 46;    // px: khoảng cách tới node bắt đầu mờ/nhỏ
     const EDGE_MIN_SCALE   = 0.35;  // kích thước tại node (1 = không nhỏ đi)
     const EDGE_MIN_OPACITY = 0;     // độ mờ tại node (1 = không mờ)
-    const EDGE_ALWAYS      = true;  // true: hiệu ứng mờ/nhỏ chạy cả khi tắt animation; false: chỉ khi data-animation-on="true"
+    const EDGE_ALWAYS      = true;  // true: mờ/nhỏ cả khi tắt animation; false: chỉ khi data-animation-on="true"
 
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1985,18 +1987,61 @@ const TL_VEHICLE_FX = (() => {
     const snapPx = (v) => { const d = window.devicePixelRatio || 1; return Math.round(v * d) / d; };
     const r2 = (v) => Math.round(v * 100) / 100;
 
-    let items = [], bound = false, raf = 0, last = 0, idle = true;
+    let items = [], bound = false, raf = 0, last = 0;
     let vh = window.innerHeight || document.documentElement.clientHeight;
     let vw = window.innerWidth;
     let ro = null, roEl = null, settleT = 0;
     let lastCTop = null, moveAt = 0;
 
+    // 0 = chưa kiểm tra, 1 = sticky chạy tốt, -1 = sticky không dùng được → chế độ JS
+    let stickyState = USE_STICKY ? 0 : -1;
+    let readCal = null;     // toạ độ Y thật của xe khi đang ghim (đo từ DOM)
+    let readEst = vh * READ; // ước lượng ban đầu
+    let calAt = 0;
+
+    const setMode = () => {
+        document.documentElement.setAttribute('data-tl-veh', stickyState > 0 ? 'sticky' : stickyState === 0 ? 'checking' : 'js');
+    };
+
     // offsetTop không bị ảnh hưởng bởi transform của animation vào → vị trí đo luôn đúng
     const docTop = (el) => { let y = 0; while (el) { y += el.offsetTop || 0; el = el.offsetParent; } return y; };
 
+    const findScroller = (c) => {
+        let a = c.parentElement;
+        while (a && a !== document.body && a !== document.documentElement) {
+            const oy = getComputedStyle(a).overflowY;
+            if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && a.scrollHeight > a.clientHeight + 1) return a;
+            a = a.parentElement;
+        }
+        return null;
+    };
+    const estimateReadY = (c) => {
+        const sc = findScroller(c);
+        if (sc) { const r = sc.getBoundingClientRect(); return r.top + r.height * READ; }
+        return (document.documentElement.clientHeight || vh) * READ;
+    };
+
+    // Bọc xe vào "đường ray" + sticky → compositor ghim xe, không còn phụ thuộc JS kịp frame hay không
+    const adopt = (it) => {
+        let rail = it.line.querySelector(':scope > .tl-vrail');
+        if (!rail) {
+            rail = document.createElement('div');
+            rail.className = 'tl-vrail';
+            // ray kéo dài từ (đầu line + Y0 - 14) tới (cuối line + Y1 + 14): tâm xe chạy đúng từ Y0 tới h + Y1
+            rail.style.cssText = 'position:absolute;left:50%;top:' + (Y0 - 14) + 'px;bottom:-' + (Y1 + 14) +
+                'px;width:28px;margin-left:-14px;pointer-events:none;';
+            it.line.appendChild(rail);
+        }
+        rail.appendChild(it.veh);
+        it.veh.style.cssText = 'position:-webkit-sticky;position:sticky;top:calc(' + (READ * 100) + '% - 14px);' +
+            'left:auto;margin:0;width:28px;height:28px;pointer-events:none;' +
+            'backface-visibility:hidden;-webkit-backface-visibility:hidden;will-change:transform,opacity;';
+        it.base = 0;
+    };
+
     // Promote layer GPU sẵn từ đầu → lần cuộn đầu tiên không phải tạo layer giữa chừng
     const prime = (it) => {
-        [it.veh, it.head, it.bead, it.fill, ...it.trails].forEach(el => { if (el) el.style.willChange = 'transform'; });
+        [it.head, it.bead, it.fill, ...it.trails].forEach(el => { if (el) el.style.willChange = 'transform'; });
         if (it.veh) it.veh.style.willChange = 'transform, opacity';
     };
 
@@ -2004,6 +2049,7 @@ const TL_VEHICLE_FX = (() => {
     const measure = () => {
         const c = document.getElementById('timeline-container');
         if (!c) { items = []; return; }
+        if (readCal === null) readEst = estimateReadY(c);
         const cBase = docTop(c);
         const prev = new Map(items.map(i => [i.line, i]));
         items = [...c.querySelectorAll('.tl-line')].map(line => {
@@ -2017,11 +2063,15 @@ const TL_VEHICLE_FX = (() => {
                     head: line.querySelector('.tl-vhead'),
                     bead: line.querySelector('.tl-vbead'),
                     trails: [...line.querySelectorAll('.tl-vt')],
-                    x: null, tx: 0, v: 0, tv: 0,          // vị trí (px dọc line), vị trí mục tiêu, vận tốc xe, vận tốc mục tiêu
+                    x: null, v: 0,                       // tiến trình đã làm mượt (px dọc line) + vận tốc
                     speed: 0, headDeg: 0, dir: 1, pend: 1, streak: 0,
-                    clean: false, jump: false, w: {}, top: 0, h: 0, span: 1
+                    clean: false, jump: false, chk: null, base: Y0,
+                    w: {}, top: 0, h: 0, span: 1
                 };
-                if (it.veh) prime(it);
+                if (it.veh) {
+                    prime(it);
+                    if (stickyState >= 0) adopt(it);
+                }
             }
             const top = docTop(line) - cBase;
             const h = line.offsetHeight;
@@ -2045,18 +2095,21 @@ const TL_VEHICLE_FX = (() => {
         it.trails.forEach((t, i) => put(it, 't' + i, t, 'scaleY(0)'));
     };
 
+    const stickyFailed = () => {
+        stickyState = -1; readCal = null; setMode();
+        items.forEach(i => { i.w.veh = null; i.chk = null; });
+    };
+
     const tick = (now) => {
         raf = 0;
-        const fresh = idle;                         // frame đầu của một đợt chạy → chưa có vận tốc đáng tin
-        idle = false;
         const dtMs = last ? clamp(now - last, 1, 50) : 16.7;
         const dt = dtMs / 1000;
         last = now;
         let active = false;
 
         const c = document.getElementById('timeline-container');
-        if (!c) { last = 0; idle = true; return; }
-        const cTop = c.getBoundingClientRect().top;     // DUY NHẤT một lần đọc layout mỗi frame
+        if (!c) { last = 0; return; }
+        const cTop = c.getBoundingClientRect().top;     // một lần đọc layout mỗi frame
         // phát hiện đang cuộn bằng chính vị trí (không phụ thuộc tần suất sự kiện scroll, nhất là iOS quán tính)
         if (lastCTop === null || Math.abs(cTop - lastCTop) > 0.01) moveAt = now;
         lastCTop = cTop;
@@ -2064,59 +2117,76 @@ const TL_VEHICLE_FX = (() => {
         if (moving) active = true;
 
         const fancy = animOn();
-        const readY = vh * 0.55;
+        const sticky = stickyState >= 0;
+        const ry = readCal !== null ? readCal : readEst;
+        const w0 = sticky ? OMEGA_FX : OMEGA;
 
         for (const it of items) {
             if (reduce) { put(it, 'veh', it.veh, 'scale(0)'); continue; }
 
             const lineTop = cTop + it.top;
             const off = lineTop + it.h < -150 || lineTop > vh + 150;
-            const tx = clamp(readY - (lineTop + Y0), 0, it.span);       // vị trí mục tiêu (px dọc line)
+            const tx = clamp(ry - (lineTop + Y0), 0, it.span);          // tiến trình thật (px dọc line)
 
             if (it.x === null || it.jump) {
                 // lần đầu / hình học đổi: đặt thẳng vào đúng chỗ, không glide
-                it.x = it.tx = tx; it.v = it.tv = 0; it.speed = 0; it.jump = false;
+                it.x = tx; it.v = 0; it.speed = 0; it.jump = false; it.chk = null;
             }
-            if (off) { it.x = it.tx = tx; it.v = it.tv = 0; it.speed = 0; continue; }   // ngoài màn hình: không tính, không vẽ
+            if (off) { it.x = tx; it.v = 0; it.speed = 0; continue; }     // ngoài màn hình: không tính, không vẽ
 
-            // ===== VẬN TỐC MỤC TIÊU (lọc) =====
-            if (fresh || !moving) it.tv = 0;
-            else {
-                const inst = clamp((tx - it.tx) / dt, -6000, 6000);
-                it.tv += (inst - it.tv) * (1 - Math.exp(-dtMs / TV_TAU));
+            // ===== KIỂM TRA STICKY CÓ THỰC SỰ GHIM XE KHÔNG + hiệu chỉnh vị trí ghim =====
+            if (stickyState >= 0 && moving && it.span > 120) {
+                const m = Math.min(80, it.span * 0.3);
+                const inside = tx > m && tx < it.span - m;
+                if (stickyState === 0) {
+                    if (!inside) it.chk = null;
+                    else {
+                        const r = it.veh.getBoundingClientRect();
+                        const cy = r.top + r.height / 2;
+                        if (!it.chk) it.chk = { top: lineTop, cy };
+                        else if (Math.abs(lineTop - it.chk.top) > 24) {
+                            // line đã trôi > 24px: nếu xe đứng yên trên màn hình → sticky OK
+                            if (Math.abs(cy - it.chk.cy) < Math.abs(lineTop - it.chk.top) * 0.4) {
+                                stickyState = 1; readCal = cy; calAt = now; setMode();
+                            } else stickyFailed();
+                        }
+                    }
+                } else if (inside && now - calAt > 250) {
+                    // thanh địa chỉ Safari co/giãn có thể làm điểm ghim dịch → đo lại định kỳ (rất rẻ)
+                    const r = it.veh.getBoundingClientRect();
+                    readCal = r.top + r.height / 2; calAt = now;
+                }
             }
-            it.tx = tx;
 
-            // ===== LÒ XO GIẢM CHẤN TỚI HẠN (nghiệm chính xác, ổn định với mọi dt) =====
-            // làm việc trên sai số so với mục tiêu đang chuyển động → cuộn đều thì không bị tụt lại
+            // ===== LÒ XO GIẢM CHẤN TỚI HẠN (nghiệm chính xác, đơn điệu: không vọt qua, không bị kéo ngược) =====
             const d0 = it.x - tx;
-            const vr0 = it.v - it.tv;
-            const w = OMEGA * (1 + Math.abs(d0) / 320);                  // đuổi xa thì tự cứng hơn
+            const w = w0 * (1 + Math.abs(d0) / 320);                      // đuổi xa thì tự cứng hơn
             const e = Math.exp(-w * dt);
-            const c2 = vr0 + w * d0;
+            const c2 = it.v + w * d0;
             const d1 = (d0 + c2 * dt) * e;
-            const vr1 = (vr0 - w * c2 * dt) * e;
+            it.v = (it.v - w * c2 * dt) * e;
             it.x = clamp(tx + d1, 0, it.span);
-            it.v = vr1 + it.tv;
 
             const settled = !moving && Math.abs(it.x - tx) < 0.25 && Math.abs(it.v) < 8;
-            if (settled) { it.x = tx; it.v = 0; it.tv = 0; }
+            if (settled) { it.x = tx; it.v = 0; }
             else active = true;
-
-            // Đang chạy: toạ độ liên tục (mượt nhất). Đã dừng: snap pixel thiết bị để icon nét.
-            const yRaw = Y0 + it.x;
-            const y = settled ? snapPx(yRaw) : r2(yRaw);
 
             // ===== GẦN NODE: nhỏ lại + mờ đi · RỜI NODE: lớn lên + rõ dần =====
             let sc = 1, op = 1;
             if (EDGE_ALWAYS || fancy) {
                 const z = Math.min(EDGE_ZONE, it.span * 0.35);
                 const f0 = clamp(Math.min(it.x, it.span - it.x) / z, 0, 1);
-                const f = f0 * f0 * (3 - 2 * f0);                        // smoothstep
+                const f = f0 * f0 * (3 - 2 * f0);                          // smoothstep
                 sc = EDGE_MIN_SCALE + (1 - EDGE_MIN_SCALE) * f;
                 op = EDGE_MIN_OPACITY + (1 - EDGE_MIN_OPACITY) * f;
             }
-            put(it, 'veh', it.veh, `translate3d(0,${y}px,0) scale(${sc.toFixed(3)})`);
+            const scs = `scale(${sc.toFixed(3)})`;
+            if (stickyState >= 0) {
+                put(it, 'veh', it.veh, scs);                               // vị trí do compositor lo, JS không đụng
+            } else {
+                const ty = it.base + (settled ? snapPx(it.x) : r2(it.x));  // chế độ JS
+                put(it, 'veh', it.veh, `translate3d(0,${ty}px,0) ${scs}`);
+            }
             putOp(it, it.veh, op.toFixed(3));
 
             // ===== TẮT ANIMATION: chỉ trượt =====
@@ -2133,7 +2203,7 @@ const TL_VEHICLE_FX = (() => {
             if (it.speed < 0.015) it.speed = 0;
             const q = Math.round(it.speed * 100) / 100;
 
-            if (av > 72) {                                                // đổi chiều phải ổn định 3 frame
+            if (av > 72) {                                                 // đổi chiều phải ổn định 3 frame
                 const dd = it.v > 0 ? 1 : -1;
                 if (dd === it.pend) it.streak++; else { it.pend = dd; it.streak = 1; }
                 if (it.streak >= 3) it.dir = dd;
@@ -2150,11 +2220,13 @@ const TL_VEHICLE_FX = (() => {
             put(it, 'bead', it.bead, q ? `scale(${(1 - 0.12 * q).toFixed(3)},${(1 + 0.35 * q).toFixed(3)})` : '');
             const tq = q.toFixed(2);
             it.trails.forEach((t, i) => put(it, 't' + i, t, `scaleY(${tq})`));
-            put(it, 'fill', it.fill, `scaleY(${clamp(yRaw / it.h, 0, 1).toFixed(3)})`);
+            // vệt tiến trình: sticky → bám tiến trình thật (ngọn vệt khớp xe); chế độ JS → theo xe đã làm mượt
+            const fx = stickyState >= 0 ? tx : it.x;
+            put(it, 'fill', it.fill, `scaleY(${clamp((Y0 + fx) / it.h, 0, 1).toFixed(3)})`);
         }
 
         if (active) raf = requestAnimationFrame(tick);
-        else { last = 0; idle = true; }
+        else last = 0;
     };
 
     const request = () => { if (!raf) raf = requestAnimationFrame(tick); };
@@ -2163,7 +2235,7 @@ const TL_VEHICLE_FX = (() => {
     const flush = () => {
         if (raf) { cancelAnimationFrame(raf); raf = 0; }
         tick(performance.now());
-        last = 0;   // frame kế tiếp dùng dt chuẩn, tránh lệch gốc thời gian giữa rAF và performance.now
+        last = 0;
     };
 
     // Đo lại + vẽ lại (gom nhiều sự kiện vào 1 lần)
@@ -2174,17 +2246,22 @@ const TL_VEHICLE_FX = (() => {
     const onResize = () => {
         if (window.innerWidth !== vw || Math.abs(window.innerHeight - vh) > 160) {
             vw = window.innerWidth; vh = window.innerHeight;
+            readCal = null;
+            if (stickyState > 0) stickyState = 0;      // kiểm tra + hiệu chỉnh lại sau khi đổi kích thước
+            items.forEach(i => { i.chk = null; });
             measure();
         }
         request();
     };
 
     return {
+        mode() { return stickyState > 0 ? 'sticky' : stickyState === 0 ? 'checking' : 'js'; },
         refresh() {
             const c = document.getElementById('timeline-container');
 
             if (!bound) {
                 bound = true;
+                setMode();
                 window.addEventListener('scroll', request, { passive: true, capture: true });
                 window.addEventListener('resize', onResize, { passive: true });
                 window.addEventListener('orientationchange', () => setTimeout(onResize, 300), { passive: true });
@@ -2501,7 +2578,7 @@ const renderTimeline = () => {
   <div class="tp-stamp" id="tpStamp">
     <div class="tp-stamp__glass" id="tpStampGlass">
       <span class="tp-stamp__bead" aria-hidden="true"><i class="fa-solid fa-feather"></i></span>
-      <p class="tp-stamp__ver">TripPlanner 1.4.0</p>
+      <p class="tp-stamp__ver">TripPlanner 1.4.1</p>
       <span class="tp-stamp__sep" aria-hidden="true"></span>
       <p class="tp-stamp__credit">
         Made with <i class="fa-solid fa-heart"></i> by <strong>duyanh.dev</strong>
