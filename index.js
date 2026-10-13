@@ -1937,6 +1937,172 @@ const formatStatusLabel = (label) => {
     return label.replace(m[0], parts.join(' ') + trailing);
 };
 
+// ===== PHƯƠNG TIỆN CHẠY THEO SCROLL TRÊN ĐƯỜNG LINE TIMELINE =====
+// rot: góc xoay icon để "đầu xe" hướng xuống dưới. Nếu thấy icon bị ngược, đổi rot (±90, 180) ở đây.
+const TL_VEHICLES = {
+    air:   { icon: 'fa-plane-up',       rot: 180 },
+    bus:   { icon: 'fa-bus-simple',     rot: 0   },
+    train: { icon: 'fa-train-subway',   rot: 0   },
+    ship:  { icon: 'fa-ship',           rot: 90  },
+    bike:  { icon: 'fa-motorcycle',     rot: 90  },
+    walk:  { icon: 'fa-person-walking', rot: 0   },
+    car:   { icon: 'fa-car-side',       rot: 90  }
+};
+
+const tlVehicleFor = (act, next) => {
+    const pick = (txt) => {
+        const s = String(txt || '').toLowerCase();
+        if (!s.trim()) return null;
+        if (/máy bay|flight|plane|airline|\bbay\b/.test(s)) return 'air';
+        if (/thuyền|phà|ferry|boat|cano|tàu thủy|du thuyền/.test(s)) return 'ship';
+        if (/tàu|train|metro|subway|mrt|bts/.test(s)) return 'train';
+        if (/bus|buýt|buyt|xe khách/.test(s)) return 'bus';
+        if (/xe máy|motor|scooter|moto/.test(s)) return 'bike';
+        if (/đi bộ|walk/.test(s)) return 'walk';
+        if (/grab|taxi|ô tô|oto|car|xe hơi|xe/.test(s)) return 'car';
+        return null;
+    };
+    const key = pick(act && act.transport) || pick(next && next.transport) || 'car';
+    return { key, ...TL_VEHICLES[key] };
+};
+
+const TL_TRAIL_MASK = '-webkit-mask-image:linear-gradient(to top,#000,transparent);mask-image:linear-gradient(to top,#000,transparent);';
+
+const TL_VEHICLE_FX = (() => {
+    const Y0 = -14, Y1 = 26;   // điểm xuất phát / điểm đáp, tính theo tâm node so với đầu/cuối line
+    const EASE = 0.14;         // độ mượt quán tính (dùng chung cho cả on/off): nhỏ = lười và mượt hơn
+    const state = new WeakMap();
+    let bound = false, raf = 0;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const animOn = () => document.documentElement.getAttribute('data-animation-on') === 'true';
+
+    // Trả toàn bộ phần hiệu ứng về trạng thái "trượt thường"
+    const resetFx = (line, veh) => {
+        const head = veh.querySelector('.tl-vhead');
+        const bead = veh.querySelector('.tl-vbead');
+        if (head) head.style.transform = '';
+        if (bead) bead.style.transform = '';
+        veh.querySelectorAll('.tl-vt').forEach(t => { t.style.height = '0px'; });
+        const sh = veh.querySelector('.tl-vshadow');
+        if (sh) { sh.style.transform = ''; sh.style.opacity = '0'; }
+        const fill = line.querySelector('.tl-fill');
+        if (fill) fill.style.height = '0px';
+        ['.tl-rip-a', '.tl-rip-b'].forEach(s => {
+            const el = line.querySelector(s);
+            if (el) { el.style.opacity = '0'; el.style.transform = ''; }
+        });
+    };
+
+    const tick = () => {
+        raf = 0;
+        let active = false;
+        const fancy = animOn();
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const readY = vh * 0.55; // đường đọc: phương tiện bám theo vị trí này khi scroll
+
+        document.querySelectorAll('#timeline-container .tl-line').forEach(line => {
+            const veh = line.querySelector('.tl-vehicle');
+            if (!veh) return;
+            if (reduce) { veh.style.transform = 'scale(0)'; return; }
+
+            const r = line.getBoundingClientRect();
+            const span = r.height + Y1 - Y0;
+            const target = clamp((readY - (r.top + Y0)) / span, 0, 1);
+
+            let st = state.get(line);
+            if (!st) { st = { cur: target, speed: 0, head: 0, dir: 1, clean: false }; state.set(line, st); }
+
+            // ===== QUÁN TÍNH MƯỢT: dùng chung cho cả bật và tắt animation =====
+            const off = r.bottom < -150 || r.top > vh + 150;
+            const prev = st.cur;
+            st.cur = off ? target : st.cur + (target - st.cur) * EASE;
+            const gap = Math.abs(target - st.cur) * span;
+
+            // ===== CHẾ ĐỘ TẮT: chỉ trượt (vẫn có quán tính), không hiệu ứng khác =====
+            if (!fancy) {
+                if (!st.clean) { resetFx(line, veh); st.clean = true; }
+                st.speed = 0; st.head = 0;
+                if (off) return;
+                if (gap > 0.15) active = true;
+                veh.style.transform = `translate3d(0,${(Y0 + st.cur * span).toFixed(1)}px,0) scale(1)`;
+                return;
+            }
+
+            // ===== CHẾ ĐỘ BẬT: bản đầy đủ =====
+            st.clean = false;
+            if (off) { st.speed = 0; return; }                          // ngoài màn hình: không vẽ
+
+            const dpx = (st.cur - prev) * span;                         // vận tốc (px/frame)
+            st.speed += (clamp(Math.abs(dpx) / 28, 0, 1) - st.speed) * 0.25;
+            if (Math.abs(dpx) > 0.3) st.dir = dpx > 0 ? 1 : -1;
+            const headGoal = st.dir > 0 ? 0 : 180;
+            st.head += (headGoal - st.head) * 0.2;
+
+            if (gap > 0.15 || st.speed > 0.02 || Math.abs(headGoal - st.head) > 0.5) active = true;
+
+            const p = st.cur;
+            const e = Math.sin(Math.PI * p);                 // 0 → 1 → 0
+            const air = veh.dataset.v === 'air';
+            const fade = clamp(e * 3, 0, 1);                 // chui ra / chui vào node bằng scale (giữ backdrop-blur)
+            const sc = (air ? 0.7 + 0.55 * e : 1) * fade;
+            const y = Y0 + p * span;
+
+            veh.style.transform = `translate3d(0,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)})`;
+
+            const head = veh.querySelector('.tl-vhead');
+            const bead = veh.querySelector('.tl-vbead');
+            const sway = Math.sin(p * 36) * (air ? 1 : 2.5);
+            if (head) head.style.transform = `rotate(${(st.head + sway).toFixed(2)}deg)`;
+            if (bead) bead.style.transform = `scale(${(1 - 0.12 * st.speed).toFixed(3)},${(1 + 0.35 * st.speed).toFixed(3)})`;
+
+            const trailLen = (st.speed * (air ? 36 : 20)).toFixed(1) + 'px';
+            veh.querySelectorAll('.tl-vt').forEach(t => { t.style.height = trailLen; });
+
+            const sh = veh.querySelector('.tl-vshadow');
+            if (sh) {
+                sh.style.transform = `translate(${(3 + 14 * e).toFixed(1)}px,${(4 + 10 * e).toFixed(1)}px) scale(${(1 - 0.35 * e).toFixed(3)})`;
+                sh.style.opacity = (0.9 - 0.5 * e).toFixed(2);
+            }
+
+            const fill = line.querySelector('.tl-fill');
+            if (fill) fill.style.height = clamp(y, 0, r.height).toFixed(1) + 'px';
+
+            const ra = line.querySelector('.tl-rip-a'), rb = line.querySelector('.tl-rip-b');
+            if (ra) {
+                const t = clamp(p / 0.18, 0, 1);
+                ra.style.transform = `scale(${(0.8 + 2.4 * t).toFixed(3)})`;
+                ra.style.opacity = (Math.sin(Math.PI * t) * 0.7).toFixed(2);
+            }
+            if (rb) {
+                const t = clamp((p - 0.82) / 0.18, 0, 1);
+                rb.style.transform = `scale(${(0.8 + 2.4 * t).toFixed(3)})`;
+                rb.style.opacity = (Math.sin(Math.PI * t) * 0.7).toFixed(2);
+            }
+        });
+
+        if (active) raf = requestAnimationFrame(tick); // còn chuyển động thì chạy tiếp, xong tự dừng
+    };
+
+    const request = () => { if (!raf) raf = requestAnimationFrame(tick); };
+
+    return {
+        refresh() {
+            if (!bound) {
+                bound = true;
+                window.addEventListener('scroll', request, { passive: true, capture: true });
+                window.addEventListener('resize', request, { passive: true });
+                // đổi data-animation-on lúc đang chạy thì cập nhật ngay
+                new MutationObserver(request).observe(document.documentElement, {
+                    attributes: true, attributeFilter: ['data-animation-on']
+                });
+            }
+            request();
+            setTimeout(request, 450);
+        }
+    };
+})();
+
 const renderTimeline = () => {
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const day = trip.days.find(d => d.date === state.activeDayDate);
@@ -1967,7 +2133,11 @@ const renderTimeline = () => {
                 }
 
                 const iconClass = act.icon && act.icon.startsWith('fa-') ? act.icon : 'fa-location-crosshairs';
-
+                const veh = tlVehicleFor(act, day.activities[index + 1]);
+                const vTrails = (veh.key === 'air' ? ['left-[28%]', 'left-[68%]'] : ['left-[48%]'])
+                    .map(pos => `<span class="tl-vt absolute bottom-1/2 ${pos} w-[2px] rounded-full bg-slate-400/45 origin-bottom" style="height:0;${TL_TRAIL_MASK}"></span>`).join('');
+                const vShadow = veh.key === 'air'
+                    ? `<span class="tl-vshadow absolute left-1/2 top-1/2 -ml-2.5 -mt-1 w-5 h-2.5 rounded-full bg-slate-900/25 blur-[3px]"></span>` : '';
                 // ===== LỘ TRÌNH: khối kính nổi, không viền, không bóng =====
                 let routeHtml = '';
                 if (act.from && act.to) {
@@ -2044,7 +2214,21 @@ const renderTimeline = () => {
                             <div class="tl-node w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${isDone ? 'bg-white/60 backdrop-blur-md border border-white/80 text-slate-400' : 'bg-gradient-to-br from-blue-50 to-white border border-white text-blue-600'} z-10 relative ring-4 ring-slate-50/50">
                                 <i class="fa-solid ${iconClass} ${isDone ? '' : 'scale-110'}"></i>
                             </div>
-                            ${index < day.activities.length - 1 ? `<div class="tl-line absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200/60 -translate-x-1/2 z-0 rounded-full"></div>` : ''}
+                            ${index < day.activities.length - 1 ? `
+<div class="tl-line absolute top-10 bottom-[-32px] left-1/2 w-[2px] bg-slate-200/60 -translate-x-1/2 z-0 rounded-full">
+    <div class="tl-fill absolute top-0 left-0 w-full rounded-full bg-slate-400/40" style="height:0"></div>
+    <span class="tl-rip-a absolute left-1/2 -ml-3 w-6 h-6 rounded-full bg-slate-300/50 blur-[2px] pointer-events-none" style="top:-26px;opacity:0"></span>
+    <span class="tl-rip-b absolute left-1/2 -ml-3 w-6 h-6 rounded-full bg-slate-300/50 blur-[2px] pointer-events-none" style="top:calc(100% + 14px);opacity:0"></span>
+    <div class="tl-vehicle absolute left-1/2 top-0 -ml-3.5 -mt-3.5 w-7 h-7 pointer-events-none will-change-transform" data-v="${veh.key}" style="transform:scale(0)">
+        ${vShadow}
+        <div class="tl-vhead relative w-7 h-7">
+            ${vTrails}
+            <span class="tl-vbead absolute inset-0 rounded-full bg-white/60 backdrop-blur-xl flex items-center justify-center text-slate-600">
+                <i class="fa-solid ${veh.icon} text-[12px]" style="transform:rotate(${veh.rot}deg)"></i>
+            </span>
+        </div>
+    </div>
+</div>` : ''}
                         </div>
 
                         <!-- NỘI DUNG CỘT PHẢI -->
@@ -2221,6 +2405,7 @@ const renderTimeline = () => {
             TL_FX.enter(container, trip.id + '|' + state.activeDayDate);
             TL_DELETE_FX.play(container, tlSnap, tlKey);
             TL_DUP_FX.play(container, tlSnap);
+            TL_VEHICLE_FX.refresh();
         };
 
 
