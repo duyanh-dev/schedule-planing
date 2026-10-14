@@ -1215,8 +1215,9 @@ function handleIslandClick() {
     islandOffset: 68,
     smooth: 0.55,
     smoothExpand: 0.75,
-    homeExpand: 0.28,       // bung ở vùng info mặc định sau khi bấm mũi tên (nhanh)
-    homeScroll: 0.45,       // thời gian trượt về top
+    lookAheadMs: 90,        // cuộn lên nhanh thì bung sớm tối đa ngần này ms (tối đa 40px)
+    popMs: 140,             // hiệu ứng hiện info ở vùng mặc định (ms), chỉ dùng transform
+    homeScroll: 0.35,       // thời gian trượt về top (info bung đồng thời)
     onDayChange: 'timeline' // 'timeline' | 'top' | 'keep'
   };
 
@@ -1269,7 +1270,6 @@ function handleIslandClick() {
   let driveKey = '';
   let scrolls = false;
   let autoScrolling = false;
-  let fastExpand = false;
   let covered = false;
   let collapsedOn = false;
   let addHidden = false;
@@ -1291,11 +1291,26 @@ function handleIslandClick() {
   const readDist = () => scTop() + CFG.top - sentinel.getBoundingClientRect().top;
   const islandCollapsed = () => !!hdr && hdr.classList.contains('island-collapsed');
 
+  let lastDist = 0;
+  let lastT = 0;
+  let vUp = 0;                 // tốc độ cuộn lên (px/ms), >= 0
+
   function snapP() {
     if (homing) return snapState;
+
     const dist = readDist();
+    const now = performance.now();
+    const dt = now - lastT;
+    if (dt >= 8) {                              // bỏ qua các lần gọi sát nhau (nhiễu)
+      vUp = dt < 200 ? Math.min(3, Math.max(0, (lastDist - dist) / dt)) : 0;
+      lastDist = dist;
+      lastT = now;
+    }
+    // Cuộn lên nhanh: bung sớm một chút để tới top là info đã hiện sẵn, không phải chờ
+    const ahead = Math.min(40, vUp * CFG.lookAheadMs);
+
     const prev = snapState;
-    if (EXPAND_AT_TOP && dist <= SNAP_OFF_PX) snapState = 0;
+    if (EXPAND_AT_TOP && dist - ahead <= SNAP_OFF_PX) snapState = 0;
     else if (dist >= SNAP_ON_PX) snapState = 1;
     if (prev === 1 && snapState === 0) instantTop = true;
     return snapState;
@@ -1485,6 +1500,19 @@ function handleIslandClick() {
     updateCover();
   }
 
+  /* ---------- Hiệu ứng hiện info ở vùng mặc định (nhẹ, không reflow) ---------- */
+  function popIn() {
+    if (reduce || !card.animate) return;
+    // Chỉ transform: KHÔNG đụng opacity/filter vì chúng làm backdrop-filter bên trong áp trễ
+    card.animate(
+      [
+        { transformOrigin: '50% 0', transform: 'translateY(-10px) scale(0.985)' },
+        { transformOrigin: '50% 0', transform: 'none' }
+      ],
+      { duration: CFG.popMs, easing: 'cubic-bezier(.2,.8,.2,1)' }
+    );
+  }
+
   /* ---------- Điều khiển tiến độ ---------- */
   function drive() {
     if (!active) return;
@@ -1502,6 +1530,7 @@ function handleIslandClick() {
         S.p = 0; S.q = 0; S.m = 0;
         driveKey = '0|0|0';
         apply();
+        popIn();
         return;
       }
     }
@@ -1512,8 +1541,7 @@ function handleIslandClick() {
     if (same && Math.abs(S.p - tgt) < 0.0005 && Math.abs(S.q - q) < 0.0005 && Math.abs(S.m - p) < 0.0005) return;
     driveKey = key;
 
-    let dur = reduce ? 0 : (tgt < S.p ? CFG.smoothExpand : CFG.smooth);
-    if (fastExpand) { dur = reduce ? 0 : CFG.homeExpand; fastExpand = false; }
+    const dur = reduce ? 0 : (tgt < S.p ? CFG.smoothExpand : CFG.smooth);
 
     driveTw = gsap.to(S, {
       p: tgt, q, m: p,
@@ -1565,17 +1593,38 @@ function handleIslandClick() {
     drive();
   }
 
-  // Bấm mũi tên khi viên thuốc nằm trong vùng info mặc định: trượt lên top rồi bung nhanh tại chỗ
+  // Bấm mũi tên khi viên thuốc nằm trong vùng info mặc định:
+  // info bung NGAY và trượt lên top ĐỒNG THỜI (không chờ nhau)
   function goHome() {
     log('GO-HOME');
     homing = true;
+    snapState = 0;
+    targetP = 0;
+    if (driveTw) driveTw.kill();
+
+    // Mở ngay (chỉ đổi layout một lần), chưa chừa island để còn trượt dần
+    S.p = 0; S.q = 0;
+    driveKey = '0|0|0';
+    apply();
+    updateCover();
+    popIn();
+
     const finish = () => {
       autoScrolling = false;
       homing = false;
-      snapState = 0;          // đặt trước để không bị coi là "cuộn về đỉnh" (instant)
-      fastExpand = true;
       drive();
     };
+
+    // Chừa island thu dần về 0 cùng nhịp trượt (chỉ đổi margin phải, rẻ)
+    driveTw = gsap.to(S, {
+      m: 0,
+      duration: reduce ? 0 : CFG.homeScroll,
+      ease: 'power3.out',
+      overwrite: 'auto',
+      onUpdate: apply,
+      onComplete: apply
+    });
+
     const y = getY();
     if (y <= 2) { finish(); return; }
     autoScrolling = true;
