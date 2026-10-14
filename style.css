@@ -679,13 +679,26 @@ html[data-animation-on="true"] #gt-modal {
   translate: 0 -14px;
 }
 
+/* Bóng của info ở vùng mặc định: nằm ngoài card nên reveal không cắt được.
+   Mờ nhanh khi thu để không còn bóng to quanh viên thuốc. */
+#info-dock-slot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--r0, 24px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05);
+  opacity: clamp(0, calc(1 - var(--e, 0) * 3), 1);
+}
+
 /* ---------- Card ---------- */
 #info-dock-slot > .info-dock-card {
   pointer-events: auto;
   position: relative;
   isolation: isolate;
   will-change: transform;          /* giữ layer cố định -> không bị demote làm blur raster lại */
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05);
+  box-shadow: none
 }
 
 /* Lớp "da" viên thuốc: hiện dần theo --e (chỉ đổi opacity nên rẻ) */
@@ -822,4 +835,15 @@ html[data-animation-on="true"] #gt-modal {
     rgba(255,255,255,.55) 50%,
     rgba(255,255,255,0) 80%, transparent 100%);
   transform: translateX(-130%) skewX(-18deg);   /* nằm ngoài khi nghỉ */
+}
+
+.idock-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .95),
+    inset 0 0 28px rgba(255, 255, 255, .6);
 }

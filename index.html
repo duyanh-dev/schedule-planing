@@ -196,7 +196,7 @@
             
             <!-- Phiên bản & Bản quyền (Đã bỏ dấu chấm tròn) -->
             <div class="flex items-center gap-2 text-[9px] md:text-[10px] text-slate-500">
-                <span class="font-bold tracking-wider text-slate-600">1.4.2</span>
+                <span class="font-bold tracking-wider text-slate-600">1.4.3</span>
                 <span class="font-medium">© <strong class="font-black text-slate-700">duyanh.dev</strong></span>
             </div>
 
@@ -1223,8 +1223,9 @@ function handleIslandClick() {
     smooth: 0.55,
     smoothExpand: 0.75,
     lookAheadMs: 90,        // cuộn lên nhanh thì bung sớm tối đa ngần này ms (tối đa 40px)
-    revealMs: 420,          // thời lượng hiệu ứng reveal ở vùng mặc định (ms)
-    stagger: 34,            // ms giữa các nút khi bật lên
+    revealMs: 440,
+stagger: 30,
+tilt: 6,           // độ nghiêng 3D lúc bung (0 = tắt; nếu Safari bị lỗi blur thì đặt 0)         // ms giữa các nút khi bật lên
     homeScroll: 0.35,       // thời gian trượt về top (info bung đồng thời)
     onDayChange: 'timeline' // 'timeline' | 'top' | 'keep'
   };
@@ -1260,11 +1261,14 @@ function handleIslandClick() {
   handle.setAttribute('data-html2canvas-ignore', '');
   handle.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
 
-  const sheen = document.createElement('div');
-  sheen.className = 'idock-sheen';
-  sheen.setAttribute('data-html2canvas-ignore', '');
-  const sheenBar = document.createElement('i');
-  sheen.appendChild(sheenBar);
+ const sheen = document.createElement('div');
+sheen.className = 'idock-sheen';
+sheen.setAttribute('data-html2canvas-ignore', '');
+const sheenBar = document.createElement('i');
+const glow = document.createElement('b');
+glow.className = 'idock-glow';
+sheen.appendChild(glow);
+sheen.appendChild(sheenBar);
 
   /* ---------- Trạng thái ---------- */
   const S  = { p: 0, q: 0, m: 0 };  // p: thu (có tính peek) | q: hiện mũi tên | m: thu theo cuộn (cho chừa island)
@@ -1290,6 +1294,8 @@ function handleIslandClick() {
   let handleOn = false;
   let lastFrameLog = 0;
   let btnSig = '';
+  let revealH = 0;     // chiều cao "tấm rèm" lúc bắt đầu mở
+let revealR = 16;    // bo góc gốc của card
   const sigNow = () => btns.map((b) => b.offsetWidth + 'x' + b.offsetHeight).join('|');
 
   /* ---------- Chốt trạng thái ---------- */
@@ -1456,6 +1462,8 @@ const isHome = () => {
     st.setProperty('--gpt', num(csG.paddingTop) + 'px');
     st.setProperty('--gbt', num(csG.borderTopWidth) + 'px');
     btnSig = sigNow();
+    revealH = Math.round(num(csC.paddingTop) + rowH + 10);
+revealR = num(csC.borderTopLeftRadius);
 
     if (addBtn) {
       const csA = getComputedStyle(addBtn);
@@ -1532,6 +1540,24 @@ const isHome = () => {
     updateCover();
   }
 
+  /* Spring thật qua CSS linear(); trình duyệt cũ tự rơi về cubic-bezier */
+const springEase = (() => {
+  const ok = !!(window.CSS && CSS.supports && CSS.supports('animation-timing-function', 'linear(0, 1)'));
+  const cache = {};
+  return (a, b, fb) => {
+    if (!ok) return fb || 'cubic-bezier(.22,1,.36,1)';
+    const key = a + '|' + b;
+    if (cache[key]) return cache[key];
+    const N = 48, pts = [];
+    for (let i = 0; i <= N; i++) {
+      const u = i / N;
+      const v = 1 - Math.exp(-a * u) * (Math.cos(b * u) + (a / b) * Math.sin(b * u));
+      pts.push(i === N ? 1 : +v.toFixed(4));
+    }
+    return (cache[key] = 'linear(' + pts.join(',') + ')');
+  };
+})();
+
   /* ---------- Hiệu ứng reveal ở vùng mặc định (chỉ transform + vệt sáng) ---------- */
   let revealAnims = [];
   function cancelReveal() {
@@ -1541,40 +1567,81 @@ const isHome = () => {
   }
 
   // KHÔNG opacity/filter lên card: chúng làm backdrop-filter bên trong áp trễ
-  function reveal() {
-    cancelReveal();
-    if (reduce || !card.animate) return;
-    const run = (el, frames, o) => {
-      const a = el.animate(frames, Object.assign({ fill: 'backwards' }, o));
-      revealAnims.push(a);
-      return a;
-    };
-    const O = '50% 0';
+  function reveal(strength) {
+  cancelReveal();
+  if (reduce || !card.animate) return;
 
+  const k = Math.min(1.2, Math.max(0.8, 0.8 + (strength || 0) * 0.45)); // vuốt nhanh -> mạnh hơn
+  const run = (el, frames, o) => {
+    if (!el) return;
+    revealAnims.push(el.animate(frames, Object.assign({ fill: 'backwards' }, o)));
+  };
+  const springCard = springEase(6.5, 10);
+  const springBtn  = springEase(7, 12);
+  const out = 'cubic-bezier(.22,1,.36,1)';
+  const O = '50% 0';
+
+  // 1. Rèm: layout đã full, clip-path mở dần từ chiều cao viên thuốc xuống
+    // 1. Rèm: layout đã full, clip-path mở dần từ chiều cao viên thuốc xuống
+  //    (bóng nằm ở slot::after nên không bị cắt, hiện đồng loạt cùng info)
+  const X = Math.round(fullHc - revealH);
+  if (X > 4) {
+    const rc = CFG.compactH / 2;
+    const R = revealR;
     run(card, [
-      { transformOrigin: O, transform: 'translateY(-14px) scale(.965)' },
-      { transformOrigin: O, transform: 'translateY(1.5px) scale(1.004)', offset: 0.6 },
-      { transformOrigin: O, transform: 'none' }
-    ], { duration: CFG.revealMs, easing: 'cubic-bezier(.2,.9,.25,1)' });
-
-    run(row, [
-      { transform: 'translateY(-8px)' },
-      { transform: 'none' }
-    ], { duration: CFG.revealMs - 60, delay: 25, easing: 'cubic-bezier(.22,1,.36,1)' });
-
-    btns.forEach((b, i) => {
-      run(b, [
-        { transform: 'translateY(16px) scale(.86)' },
-        { transform: 'translateY(-2px) scale(1.03)', offset: 0.6 },
-        { transform: 'none' }
-      ], { duration: CFG.revealMs + 40, delay: 50 + i * CFG.stagger, easing: 'cubic-bezier(.22,1,.36,1)' });
-    });
-
-    run(sheenBar, [
-      { transform: 'translateX(-130%) skewX(-18deg)' },
-      { transform: 'translateX(420%) skewX(-18deg)' }
-    ], { duration: 650, delay: 80, easing: 'cubic-bezier(.35,.1,.25,1)' });
+      { clipPath: `inset(0px 0px ${X}px 0px round ${R}px ${R}px ${rc}px ${rc}px)` },
+      { clipPath: `inset(0px 0px 0px 0px round ${R}px ${R}px ${R}px ${R}px)` }
+    ], { duration: Math.round(CFG.revealMs * 0.9), easing: out });
   }
+
+  // 2. Card: nghiêng + nảy spring (chỉ transform)
+  const tilt = CFG.tilt * k;
+  run(card, [
+    { transformOrigin: O, transform: `perspective(700px) translateY(${-14 * k}px) rotateX(${-tilt}deg) scale(${1 - 0.035 * k})` },
+    { transformOrigin: O, transform: 'perspective(700px) translateY(0px) rotateX(0deg) scale(1)' }
+  ], { duration: CFG.revealMs + 160, easing: springCard });
+
+  // 3. Hàng tab trượt xuống, từng tab vào lần lượt
+  run(row, [
+    { transform: `translateY(${-8 * k}px)` },
+    { transform: 'none' }
+  ], { duration: CFG.revealMs, delay: 20, easing: springCard });
+
+  if (daysTabs) {
+    Array.from(daysTabs.children).slice(0, 8).forEach((t, i) => {
+      run(t, [
+        { transform: `translateX(${-14 * k}px) scale(${1 - 0.06 * k})` },
+        { transform: 'none' }
+      ], { duration: CFG.revealMs, delay: 40 + i * 22, easing: springBtn });
+    });
+  }
+  if (addBtn) {
+    run(addBtn, [
+      { transform: `scale(${1 - 0.5 * k})` },
+      { transform: 'none' }
+    ], { duration: CFG.revealMs, delay: 120, easing: springBtn });
+  }
+
+  // 4. Nút grid nảy lên lần lượt
+  btns.forEach((b, i) => {
+    run(b, [
+      { transform: `translateY(${18 * k}px) scale(${1 - 0.16 * k})` },
+      { transform: 'none' }
+    ], { duration: CFG.revealMs + 120, delay: 70 + i * CFG.stagger, easing: springBtn });
+  });
+
+  // 5. Viền sáng nhấp một nhịp + vệt sáng quét qua sau khi rèm mở
+  run(glow, [
+    { opacity: 0 },
+    { opacity: 0.9, offset: 0.35 },
+    { opacity: 0 }
+  ], { duration: 760, delay: 60, easing: 'ease-out' });
+
+  run(sheenBar, [
+    { transform: 'translateX(-130%) skewX(-18deg)' },
+    { transform: 'translateX(420%) skewX(-18deg)' }
+  ], { duration: 700, delay: 140, easing: 'cubic-bezier(.35,.1,.25,1)' });
+}
 
   /* ---------- Điều khiển tiến độ ---------- */
   function drive() {
