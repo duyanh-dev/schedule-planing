@@ -1431,20 +1431,53 @@ function handleIslandClick() {
   }
 
     /* ---------- Chốt trạng thái (bật/tắt, theo hướng cuộn) ---------- */
-  /* ---------- Chốt trạng thái (bật/tắt, theo hướng cuộn) ---------- */
-  const SNAP_ON_PX  = 18;   // cuộn xuống quá ngần này thì thu
-  const SNAP_OFF_PX = 4;    // sát đỉnh trang thì mở
-  const EXPAND_AT_TOP = true; // false = không bao giờ tự mở, chỉ mở bằng mũi tên
+    /* ---------- Chốt trạng thái (bật/tắt, theo hướng cuộn) ---------- */
+  const SNAP_ON_PX  = 18;      // cuộn xuống quá ngần này thì thu
+  const SNAP_OFF_PX = 4;       // sát đỉnh trang thì mở
+  const EXPAND_AT_TOP = true;  // false = không bao giờ tự mở, chỉ mở bằng mũi tên
   let snapState = 0;
+  let instantTop = false;      // lần mở này do cuộn về đỉnh -> hiện luôn, không animation
+  let homing = false;          // đang tự trượt về đỉnh sau khi bấm mũi tên
 
   function snapP() {
-    // khoảng cách (px) đã cuộn qua điểm dính
+    if (homing) return snapState;
+
     const dist = scTop() + CFG.top - sentinel.getBoundingClientRect().top;
+    const prev = snapState;
 
     if (EXPAND_AT_TOP && dist <= SNAP_OFF_PX) snapState = 0;
     else if (dist >= SNAP_ON_PX) snapState = 1;
-    // cuộn lên giữa trang: giữ nguyên viên thuốc, KHÔNG bung
+
+    if (prev === 1 && snapState === 0) instantTop = true;
     return snapState;
+  }
+
+    // Viên thuốc đang nằm trong vùng info mặc định (vùng slot còn phủ tới đáy viên thuốc)?
+  function inHome() {
+    const dist = scTop() + CFG.top - sentinel.getBoundingClientRect().top;
+    return dist < fullHc - compactH();
+  }
+
+  // Bấm mũi tên khi đang ở vùng info mặc định: trượt lên top rồi mở ngay tại chỗ mặc định
+  function goHome() {
+    log('GO-HOME');
+    homing = true;
+    const finish = () => {
+      homing = false;
+      snapState = 0;
+      drive(scrollP());
+    };
+    const y = getY();
+    if (y <= 2) { finish(); return; }
+    SY.v = y;
+    gsap.to(SY, {
+      v: 0,
+      duration: reduce ? 0 : 0.55,
+      ease: 'power3.out',
+      overwrite: true,
+      onUpdate: () => scrollToY(SY.v),
+      onComplete: finish
+    });
   }
 
   /* ---------- Điều khiển tiến độ ---------- */
@@ -1455,7 +1488,20 @@ function handleIslandClick() {
     const q = peek ? 1 : p;
     updateCover();
 
+    // Cuộn lên chạm vị trí gốc: info mặc định hiện luôn tại chỗ, không tween
+    if (instantTop) {
+      instantTop = false;
+      if (!peek && tgt === 0) {
+        if (driveTw) driveTw.kill();
+        S.p = 0; S.q = 0;
+        driveKey = '0|0';
+        apply();
+        return;
+      }
+    }
+
     const key = tgt + '|' + q;
+
     const same = key === driveKey;
     if (same && driveTw && driveTw.isActive()) return;
     if (same && Math.abs(S.p - tgt) < 0.0005 && Math.abs(S.q - q) < 0.0005) return;
@@ -1515,8 +1561,12 @@ function handleIslandClick() {
     drive(scrollP());
   }
 
-  handle.addEventListener('click', () => (peek ? closePeek() : openPeek()));
-  document.addEventListener('pointerdown', (e) => {
+  handle.addEventListener('click', () => {
+    if (peek) closePeek();
+    else if (targetP >= 0.9 && inHome()) goHome();
+    else openPeek();
+  });
+    document.addEventListener('pointerdown', (e) => {
     if (peek && !card.contains(e.target)) closePeek();
   }, { passive: true });
   card.addEventListener('click', (e) => {
@@ -1558,8 +1608,8 @@ function handleIslandClick() {
     }));
   }
 
-  const stopAutoScroll = () => gsap.killTweensOf(SY);
-  window.addEventListener('wheel', stopAutoScroll, { passive: true });
+  const stopAutoScroll = () => { gsap.killTweensOf(SY); homing = false; };
+    window.addEventListener('wheel', stopAutoScroll, { passive: true });
   window.addEventListener('touchstart', stopAutoScroll, { passive: true });
 
   if (daysTabs) {
