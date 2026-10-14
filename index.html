@@ -1331,6 +1331,8 @@ function handleIslandClick() {
     if (prev === 1 && snapState === 0) instantTop = true;
     return snapState;
   }
+  const inHome = () => readDist() < fullHc - CFG.compactH;
+
 
   // Viên thuốc đang nằm trong vùng info mặc định?
 // Viên thuốc đã về vị trí mặc định (bung)? Cùng điều kiện với snapP nhưng không đổi trạng thái.
