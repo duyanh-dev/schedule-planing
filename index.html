@@ -1160,31 +1160,42 @@ function handleIslandClick() {
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const islandHeader = document.getElementById('dynamic-island-header');
-            if (!islandHeader) return;
+    const islandHeader = document.getElementById('dynamic-island-header');
+    if (!islandHeader) return;
 
-            let lastScrollY = window.scrollY;
+    /* ---- Cấu hình độ nhạy ---- */
+    const TOP_PX          = 50;   // sát đỉnh trang thì luôn bung
+    const COLLAPSE_DOWN_PX = 14;  // phải vuốt xuống liên tục ngần này mới thu
+    const EXPAND_UP_PX     = 100; // phải vuốt lên liên tục ngần này mới bung (tăng = đỡ nhạy)
 
-            window.addEventListener('scroll', () => {
-                const currentScrollY = window.scrollY;
-                
-                // --- LOGIC 1: Đổi màu Xám khi rời khỏi đỉnh (> 20px) ---
-                if (currentScrollY > 20) {
-                    islandHeader.classList.add('island-scrolled');
-                } else {
-                    islandHeader.classList.remove('island-scrolled');
-                }
+    let lastScrollY = window.scrollY;
+    let dir = 0;      // 1 = đang xuống, -1 = đang lên
+    let run = 0;      // quãng cuộn liên tục theo hướng hiện tại (px)
 
-                // --- LOGIC 2: Thu gọn / Bung ra theo hướng vuốt ngón tay ---
-                if (currentScrollY > 50 && currentScrollY > lastScrollY) {
-                    islandHeader.classList.add('island-collapsed');
-                } else if (currentScrollY < lastScrollY || currentScrollY <= 50) {
-                    islandHeader.classList.remove('island-collapsed');
-                }
-                
-                lastScrollY = currentScrollY;
-            }, { passive: true });
-        });
+    window.addEventListener('scroll', () => {
+        const y = window.scrollY;
+        const dy = y - lastScrollY;
+        lastScrollY = y;
+
+        // --- LOGIC 1: Đổi màu Xám khi rời khỏi đỉnh (> 20px) ---
+        islandHeader.classList.toggle('island-scrolled', y > 20);
+
+        if (dy === 0) return;
+
+        // --- LOGIC 2: Thu gọn / Bung ra có ngưỡng ---
+        const d = dy > 0 ? 1 : -1;
+        if (d !== dir) { dir = d; run = 0; }   // đổi hướng -> đếm lại từ đầu
+        run += Math.abs(dy);
+
+        if (y <= TOP_PX) {
+            islandHeader.classList.remove('island-collapsed');
+        } else if (dir === 1 && run >= COLLAPSE_DOWN_PX) {
+            islandHeader.classList.add('island-collapsed');
+        } else if (dir === -1 && run >= EXPAND_UP_PX) {
+            islandHeader.classList.remove('island-collapsed');
+        }
+    }, { passive: true });
+});
 
         
 (function InfoDock() {
