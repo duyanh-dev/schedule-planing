@@ -653,3 +653,98 @@ html[data-animation-on="true"] #gt-modal {
     -webkit-backdrop-filter: blur(6px);
     transition: opacity .3s ease;
 }
+
+
+* INFO TIMELINE CONTROL */
+
+#info-dock-slot {
+  position: sticky;
+  top: 12px;                 /* khớp CFG.top bên JS */
+  z-index: 45;               /* dưới island (50) và modal */
+  pointer-events: none;
+}
+#info-dock-slot > .info-dock-card { pointer-events: auto; }
+
+/* Tailwind "transition-all" sẽ cãi nhau với GSAP (làm trễ, giật khi co).
+   Chỉ giữ transition cho màu/bóng để hover vẫn mượt. */
+.info-dock-card .days-add-btn,
+.info-dock-card [data-html2canvas-ignore] > button {
+  transition-property: background-color, border-color, color, box-shadow !important;
+}
+
+#info-dock-handle {
+  position: absolute;
+  left: calc(50% - 26px);
+  bottom: -13px;
+  width: 52px;
+  height: 26px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+  color: #475569;
+  font-size: 11px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: auto;
+  touch-action: manipulation;
+  cursor: pointer;
+  z-index: 2;
+  transform: translateZ(0);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+}
+#info-dock-handle:active { background: #fff; }#info-dock-slot {
+  position: sticky;
+  top: 12px;                 /* khớp CFG.top bên JS */
+  z-index: 45;               /* dưới island (50) và modal */
+  pointer-events: none;
+}
+.info-dock-card { will-change: padding, margin, border-radius; }
+
+/* Khi thu gọn: card dạng viên thuốc, tab trượt trong khung bo và mờ dần ở 2 mép */
+.info-dock-card #days-frame {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--edge, 0px), #000 calc(100% - var(--edge, 0px)), transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0, #000 var(--edge, 0px), #000 calc(100% - var(--edge, 0px)), transparent 100%);
+}
+
+/* Viền card thu gọn khớp với island */
+.info-dock-card {
+  will-change: padding, margin, border-radius;
+}
+
+
+/* Tailwind "transition-all" sẽ cãi nhau với GSAP (làm trễ, giật khi co).
+   Chỉ giữ transition cho màu/bóng để hover vẫn mượt. */
+.info-dock-card .days-add-btn,
+.info-dock-card [data-html2canvas-ignore] > button {
+  transition-property: background-color, border-color, color, box-shadow !important;
+}
+
+#info-dock-handle {
+  position: absolute;
+  left: calc(50% - 26px);
+  bottom: -13px;
+  width: 52px;
+  height: 26px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+  color: #475569;
+  font-size: 11px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: auto;
+  touch-action: manipulation;
+  cursor: pointer;
+  z-index: 2;
+}
+#info-dock-handle:active { background: #fff; }
