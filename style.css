@@ -654,24 +654,111 @@ html[data-animation-on="true"] #gt-modal {
     transition: opacity .3s ease;
 }
 
+/* =====================================================================
+   INFO DOCK — thay TOÀN BỘ khối CSS cũ ("INFO TIMELINE CONTROL" + phần lặp)
+   bằng khối này. Mọi selector đều gắn với #info-dock-slot / .info-dock-card,
+   là những phần tử chỉ tồn tại khi ở SP -> PC không bị ảnh hưởng gì.
+   JS chỉ ghi các biến: --t --e --e7 --es --edge --ha (và đo sẵn các biến gốc).
+   ===================================================================== */
 
-* INFO TIMELINE CONTROL */
-
+/* ---------- Slot sticky ---------- */
 #info-dock-slot {
   position: sticky;
-  top: 12px;                 /* khớp CFG.top bên JS */
-  z-index: 45;               /* dưới island (50) và modal */
+  top: 12px;                       /* khớp CFG.top bên JS */
+  z-index: 45;                     /* dưới island (50) và modal */
   pointer-events: none;
+  contain: layout;                 /* reflow khi co/giãn không lan ra ngoài slot */
+  /* chừa chỗ cho island: giữ nguyên cả khi peek -> nút thêm ngày không bị hamburger che */
+  margin-right: calc(var(--mr, 0px) * var(--es, 0));
+  transition: opacity .3s ease, translate .3s ease, visibility .3s;
 }
-#info-dock-slot > .info-dock-card { pointer-events: auto; }
+/* né island đang mở rộng */
+#info-dock-slot[data-covered] {
+  opacity: 0;
+  visibility: hidden;
+  translate: 0 -14px;
+}
 
-/* Tailwind "transition-all" sẽ cãi nhau với GSAP (làm trễ, giật khi co).
+/* ---------- Card ---------- */
+#info-dock-slot > .info-dock-card {
+  pointer-events: auto;
+  position: relative;
+  isolation: isolate;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05);
+}
+
+/* Lớp "da" viên thuốc: hiện dần theo --e (chỉ đổi opacity nên rẻ) */
+#info-dock-slot > .info-dock-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: calc(var(--bw0, 0px) * -1);
+  border: var(--bw0, 0px) solid rgba(203, 213, 225, 0.7);
+  border-radius: inherit;
+  background: rgba(241, 245, 249, 0.92);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16), inset 0 2px 4px rgba(255, 255, 255, 0.85);
+  opacity: 0;
+}
+
+/* Chỉ áp khi đã bắt đầu thu (p > 0.001); ở p = 0 card dùng đúng style gốc */
+#info-dock-slot[data-collapsed] > .info-dock-card {
+  padding-top:    calc(var(--pt0) + (var(--cp) - var(--pt0)) * var(--e));
+  padding-bottom: calc(var(--pb0) + (var(--cp) - var(--pb0)) * var(--e));
+  row-gap: calc(var(--rg0) * (1 - var(--e)));
+  border-radius: calc(var(--r0) + (var(--rad) - var(--r0)) * var(--e));
+  background-color: color-mix(in srgb, var(--bg0) calc((1 - var(--e)) * 100%), transparent);
+}
+#info-dock-slot[data-collapsed] > .info-dock-card::before { opacity: var(--e); }
+
+/* Tab trượt trong khung bo, mờ dần ở 2 mép khi thu */
+.info-dock-card #days-frame {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--edge, 0px), #000 calc(100% - var(--edge, 0px)), transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0, #000 var(--edge, 0px), #000 calc(100% - var(--edge, 0px)), transparent 100%);
+}
+
+/* ---------- Grid nút (thu lại + mờ dần) ---------- */
+#info-dock-slot[data-collapsed] .idock-grid {
+  overflow: hidden;
+  height: calc(var(--gh) * (1 - var(--e)));
+  padding-top: calc(var(--gpt) * (1 - var(--e)));
+  border-top-width: calc(var(--gbt) * (1 - var(--e)));
+  opacity: calc(1 - var(--e));
+}
+
+/* Từng nút: nút cuối biến mất trước (stagger), dùng translate/scale riêng
+   để không đè lên transform của Tailwind (active:scale-...) */
+#info-dock-slot[data-collapsed] .idock-btn {
+  --bi: clamp(0, calc((var(--t) - var(--bs)) / 0.4), 1);
+  --bq: calc(var(--bi) * var(--bi));                 /* power2.in */
+  translate: 0 calc(-14px * var(--bq));
+  scale: calc(1 - 0.5 * var(--bq));
+  opacity: calc(1 - var(--bq));
+}
+
+/* ---------- Hàng tab + nút thêm ngày ---------- */
+/* Padding ngang của card giữ nguyên (không làm grid nút bị dàn lại -> hết giật khi bung).
+   Hàng tab được kéo sát ra mép bằng margin âm: nhìn như padding = --px (2px). */
+#info-dock-slot[data-collapsed] .idock-row {
+  column-gap: calc(var(--cg) * (1 - var(--e7)));
+  margin-left:  calc((var(--px) - var(--pl0)) * var(--e));
+  margin-right: calc((var(--px) - var(--pr0)) * var(--e));
+}
+#info-dock-slot[data-collapsed] .days-add-btn {
+  width: calc(var(--aw) * (1 - var(--e7)));
+  margin-right: calc(var(--amr) * (1 - var(--e7)));
+  scale: calc(1 - 0.8 * var(--e7));
+  opacity: calc(1 - var(--e7));
+}
+
+/* Tailwind "transition-all" cãi nhau với việc điều khiển theo cuộn.
    Chỉ giữ transition cho màu/bóng để hover vẫn mượt. */
 .info-dock-card .days-add-btn,
 .info-dock-card [data-html2canvas-ignore] > button {
   transition-property: background-color, border-color, color, box-shadow !important;
 }
 
+/* ---------- Tay nắm ---------- */
 #info-dock-handle {
   position: absolute;
   left: calc(50% - 26px);
@@ -696,55 +783,12 @@ html[data-animation-on="true"] #gt-modal {
   transform: translateZ(0);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-
-}
-#info-dock-handle:active { background: #fff; }#info-dock-slot {
-  position: sticky;
-  top: 12px;                 /* khớp CFG.top bên JS */
-  z-index: 45;               /* dưới island (50) và modal */
-  pointer-events: none;
-}
-.info-dock-card { will-change: padding, margin, border-radius; }
-
-/* Khi thu gọn: card dạng viên thuốc, tab trượt trong khung bo và mờ dần ở 2 mép */
-.info-dock-card #days-frame {
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--edge, 0px), #000 calc(100% - var(--edge, 0px)), transparent 100%);
-          mask-image: linear-gradient(to right, transparent 0, #000 var(--edge, 0px), #000 calc(100% - var(--edge, 0px)), transparent 100%);
-}
-
-/* Viền card thu gọn khớp với island */
-.info-dock-card {
-  will-change: padding, margin, border-radius;
-}
-
-
-/* Tailwind "transition-all" sẽ cãi nhau với GSAP (làm trễ, giật khi co).
-   Chỉ giữ transition cho màu/bóng để hover vẫn mượt. */
-.info-dock-card .days-add-btn,
-.info-dock-card [data-html2canvas-ignore] > button {
-  transition-property: background-color, border-color, color, box-shadow !important;
-}
-
-#info-dock-handle {
-  position: absolute;
-  left: calc(50% - 26px);
-  bottom: -13px;
-  width: 52px;
-  height: 26px;
-  border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
-  color: #475569;
-  font-size: 11px;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: auto;
-  touch-action: manipulation;
-  cursor: pointer;
-  z-index: 2;
 }
 #info-dock-handle:active { background: #fff; }
+#info-dock-slot[data-handle] #info-dock-handle {
+  visibility: visible;
+  opacity: var(--ha, 0);
+}
+/* Xoay mũi tên bằng CSS (trước đây dùng GSAP) */
+#info-dock-handle i { transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); }
+#info-dock-handle[aria-expanded="true"] i { transform: rotate(180deg); }

@@ -1187,37 +1187,37 @@ function handleIslandClick() {
         });
 
         
- (function InfoDock() {
+(function InfoDock() {
   'use strict';
   if (!window.gsap) { console.warn('[InfoDock] Chưa có GSAP'); return; }
 
   const daysFrame = document.getElementById('days-frame');
   if (!daysFrame) return;
 
-  /* ---------- DEBUG ---------- */
-  const DEBUG = true;
+  /* ---------- DEBUG (mặc định tắt vì log tốn máy) ---------- */
+  const DEBUG = false;
   const LOG = [];
   const T0 = performance.now();
   function log(tag, data) {
     if (!DEBUG) return;
     const e = Object.assign({ t: Math.round(performance.now() - T0), tag }, data || {});
     LOG.push(e);
-    if (LOG.length > 3000) LOG.shift();
+    if (LOG.length > 2000) LOG.shift();
     if (tag !== 'frame') console.log('%c[InfoDock]%c ' + tag, 'color:#2563eb;font-weight:bold', '', data || '');
   }
 
-  /* ---------- Cấu hình ---------- */
+  /* ---------- Cấu hình (chỉ dùng cho SP, PC không chạy gì) ---------- */
   const CFG = {
     top: 12,
-    rangeMobile: 150,
-    rangeDesktop: 210,
-    compactHMobile: 56,
-    compactHDesktop: 64,
-    deskInset: 28,
+    range: 150,
+    compactH: 56,
+    edgePad: 2,             // khoảng cách hàng tab tới mép viên thuốc (px)
     islandOffset: 68,
     smooth: 0.55,
     smoothExpand: 0.75,
-    onDayChange: 'timeline'  // 'timeline' | 'top' | 'keep'
+    homeExpand: 0.28,       // bung ở vùng info mặc định sau khi bấm mũi tên (nhanh)
+    homeScroll: 0.45,       // thời gian trượt về top
+    onDayChange: 'timeline' // 'timeline' | 'top' | 'keep'
   };
 
   /* ---------- Phần tử ---------- */
@@ -1225,31 +1225,24 @@ function handleIslandClick() {
   const card  = row.parentElement;
   const grid  = card.querySelector(':scope > [data-html2canvas-ignore]');
   if (!grid) return;
-  const btns    = Array.from(grid.querySelectorAll('button'));
-  const addBtn  = row.querySelector('.days-add-btn');
+  const btns     = Array.from(grid.querySelectorAll('button'));
+  const addBtn   = row.querySelector('.days-add-btn');
   const daysTabs = document.getElementById('days-tabs');
   const timeline = document.getElementById('timeline-container');
-  const sc    = document.getElementById('main-scroll');
-  const hdr   = document.getElementById('dynamic-island-header');
+  const sc       = document.getElementById('main-scroll');
+  const hdr      = document.getElementById('dynamic-island-header');
   const mqMobile = window.matchMedia('(max-width: 767px)');
   const reduce   = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const clamp01  = gsap.utils.clamp(0, 1);
+  const num      = (v) => parseFloat(v) || 0;
+  const io       = (t) => (t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t)); // power2.inOut
 
-  /* ---------- Bọc card vào slot sticky ---------- */
-  const origMb = getComputedStyle(card).marginBottom;
+  /* ---------- Phần tử do script tạo (chỉ gắn vào DOM khi ở SP) ---------- */
   const sentinel = document.createElement('div');
   sentinel.style.cssText = 'height:0;pointer-events:none';
   const slot = document.createElement('div');
   slot.id = 'info-dock-slot';
-  card.parentNode.insertBefore(sentinel, card);
-  card.parentNode.insertBefore(slot, card);
-  slot.appendChild(card);
-  card.classList.add('info-dock-card');
-  card.style.marginBottom = '0';
-  card.style.position = 'relative';
-  slot.style.marginBottom = origMb;
 
-  /* ---------- Tay nắm ---------- */
   const handle = document.createElement('button');
   handle.id = 'info-dock-handle';
   handle.type = 'button';
@@ -1257,231 +1250,244 @@ function handleIslandClick() {
   handle.setAttribute('aria-expanded', 'false');
   handle.setAttribute('data-html2canvas-ignore', '');
   handle.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
-  card.appendChild(handle);
-  const handleIcon = handle.firstElementChild;
 
   /* ---------- Trạng thái ---------- */
-  const S = { p: 0, q: 0 };   // p: tiến độ timeline, q: tiến độ hiện mũi tên
+  const S  = { p: 0, q: 0, m: 0 };  // p: thu (có tính peek) | q: hiện mũi tên | m: thu theo cuộn (cho chừa island)
   const SY = { v: 0 };
-  let tl = null;
+  let active = false;
+  let origMb = '';
+  let D = 1;                // độ dài timeline quy ước (>=1) để chia nhịp stagger
+  let fullHc = 0;
+  let lastRowH = 0;
   let targetP = 0;
   let peek = false;
   let peekY = 0;
-  let lastRowH = 0;
-    let fullHc = 0;
-  let covered = false;
-  let btnsDirty = false;
   let raf = 0;
   let idleT = 0;
+  let rt = 0;
   let driveTw = null;
   let driveKey = '';
+  let scrolls = false;
+  let autoScrolling = false;
+  let fastExpand = false;
+  let covered = false;
+  let collapsedOn = false;
+  let addHidden = false;
+  let handleOn = false;
+  let lastFrameLog = 0;
+
+  /* ---------- Chốt trạng thái ---------- */
+  const SNAP_ON_PX  = 18;      // cuộn xuống quá ngần này thì thu
+  const SNAP_OFF_PX = 4;       // sát đỉnh trang thì mở
+  const EXPAND_AT_TOP = true;  // false = không bao giờ tự mở, chỉ mở bằng mũi tên
+  let snapState = 0;
+  let instantTop = false;      // mở do cuộn về đỉnh -> hiện luôn, không animation
+  let homing = false;          // đang tự trượt về đỉnh sau khi bấm mũi tên
 
   /* ---------- Đọc vị trí cuộn ---------- */
-  const scIsScroller = () => !!sc && /(auto|scroll)/.test(getComputedStyle(sc).overflowY);
-  const getY   = () => Math.max(scIsScroller() ? sc.scrollTop : 0, window.scrollY || 0);
-  const scTop  = () => (scIsScroller() ? sc.getBoundingClientRect().top : 0);
-  const range  = () => (mqMobile.matches ? CFG.rangeMobile : CFG.rangeDesktop);
-  const compactH = () => (mqMobile.matches ? CFG.compactHMobile : CFG.compactHDesktop);
-  const scrollP = () => clamp01((scTop() + CFG.top - sentinel.getBoundingClientRect().top) / range());
-
+  const refreshScroller = () => { scrolls = !!sc && /(auto|scroll)/.test(getComputedStyle(sc).overflowY); };
+  const getY   = () => Math.max(scrolls ? sc.scrollTop : 0, window.scrollY || 0);
+  const scTop  = () => (scrolls ? sc.getBoundingClientRect().top : 0);
+  const readDist = () => scTop() + CFG.top - sentinel.getBoundingClientRect().top;
   const islandCollapsed = () => !!hdr && hdr.classList.contains('island-collapsed');
 
-  /* ---------- Dựng timeline co lại ---------- */
-  function build(reason) {
-    const keep = S.p;
-    if (tl) tl.kill();
-    log('BUILD', { reason: reason || '?', keepP: +keep.toFixed(3), y: Math.round(getY()) });
-
-    gsap.set(card, { clearProps: 'paddingTop,paddingBottom,paddingLeft,paddingRight,rowGap,marginLeft,marginRight,backgroundColor,boxShadow,borderRadius,borderColor' });
-    gsap.set(grid, { clearProps: 'height,paddingTop,borderTopWidth,opacity,overflow' });
-    gsap.set(btns, { clearProps: 'transform,opacity' });
-    gsap.set(row,  { clearProps: 'columnGap' });
-    row.style.minHeight = '';
-    if (addBtn) gsap.set(addBtn, { clearProps: 'width,marginRight,transform,opacity' });
-    slot.style.height = 'auto';
-    slot.style.marginRight = '0px';
-
-    const fullH = card.offsetHeight;
-    slot.style.height = fullH + 'px';
-        fullHc = fullH;
-
-    const rowH  = row.offsetHeight;
-    lastRowH    = rowH;
-    row.style.minHeight = rowH + 'px';
-    const isM   = mqMobile.matches;
-    const cp    = Math.max(isM ? 2 : 6, Math.round((compactH() - rowH - 2) / 2));
-    const inset = isM ? 0 : CFG.deskInset;
-    const px    = isM ? 8 : 12;
-    const rad   = compactH() / 2;
-    const islandOff = (isM && hdr) ? CFG.islandOffset : 0;
-
-    log('BUILD-measure', { fullH, rowH, cp, inset, px, rad, islandOff, range: range() });
-
-    tl = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
-
-    tl.fromTo(card,
-      { boxShadow: '0 20px 60px rgba(0,0,0,0.05), inset 0 0 0 rgba(255,255,255,0)' },
-      {
-        paddingTop: cp, paddingBottom: cp, paddingLeft: px, paddingRight: px,
-        rowGap: 0, marginLeft: inset, marginRight: inset,
-        borderRadius: rad,
-        borderColor: 'rgba(203,213,225,0.7)',
-        backgroundColor: 'rgba(241,245,249,0.92)',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.16), inset 0 2px 4px rgba(255,255,255,0.85)',
-        ease: 'power2.inOut', duration: 1
-      }, 0);
-
-    // Chừa chỗ cho island: dùng chung p và ease với phần thu nội dung
-    tl.to(slot, {
-      marginRight: islandOff,
-      ease: 'power2.inOut', duration: 1
-    }, 0);
-
-    tl.to(grid, {
-      height: 0, paddingTop: 0, borderTopWidth: 0, opacity: 0,
-      ease: 'power2.inOut', duration: 1
-    }, 0);
-
-    tl.to(btns, {
-      scale: 0.5, y: -14, opacity: 0,
-      ease: 'power2.in', duration: 0.4,
-      stagger: { each: 0.05, from: 'end' }
-    }, 0);
-
-    if (addBtn) {
-      tl.to(addBtn, {
-        width: 0, marginRight: 0, scale: 0.2, opacity: 0,
-        ease: 'power2.inOut', duration: 0.7
-      }, 0);
-      tl.to(row, { columnGap: 0, ease: 'power2.inOut', duration: 0.7 }, 0);
-    }
-
-    tl.progress(keep);
+  function snapP() {
+    if (homing) return snapState;
+    const dist = readDist();
+    const prev = snapState;
+    if (EXPAND_AT_TOP && dist <= SNAP_OFF_PX) snapState = 0;
+    else if (dist >= SNAP_ON_PX) snapState = 1;
+    if (prev === 1 && snapState === 0) instantTop = true;
+    return snapState;
   }
 
-  /* ---------- Vẽ mỗi frame ---------- */
-  let lastFrameLog = 0;
-  let lastP = 0;
+  // Viên thuốc đang nằm trong vùng info mặc định?
+  const inHome = () => readDist() < fullHc - CFG.compactH;
+
+  /* ---------- Bật / tắt theo breakpoint (chỉ SP) ---------- */
+  function activate() {
+    if (active) return;
+    active = true;
+
+    origMb = getComputedStyle(card).marginBottom;
+    card.parentNode.insertBefore(sentinel, card);
+    card.parentNode.insertBefore(slot, card);
+    slot.appendChild(card);
+    card.classList.add('info-dock-card');
+    card.style.marginBottom = '0';
+    slot.style.marginBottom = origMb;
+    card.appendChild(handle);
+    row.classList.add('idock-row');
+    grid.classList.add('idock-grid');
+    btns.forEach((b) => b.classList.add('idock-btn'));
+
+    refreshScroller();
+    S.p = S.q = S.m = 0;
+    snapState = 0; instantTop = false; homing = false; driveKey = '';
+    build('activate');
+
+    // Trạng thái ban đầu đặt thẳng, không tween
+    const p = snapP();
+    instantTop = false;
+    targetP = p;
+    S.p = S.q = S.m = p;
+    updateCover();
+    apply();
+  }
+
+  function deactivate() {
+    if (!active) return;
+    active = false;
+
+    if (peek) {
+      peek = false;
+      handle.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('pointerdown', onDocPointer);
+      card.removeEventListener('click', onCardClick);
+    }
+    gsap.killTweensOf(S);
+    gsap.killTweensOf(SY);
+    clearTimeout(rt); clearTimeout(idleT);
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    homing = false; autoScrolling = false; driveTw = null; driveKey = '';
+
+    slot.parentNode.insertBefore(card, slot);
+    slot.remove(); sentinel.remove(); handle.remove();
+    card.classList.remove('info-dock-card');
+    card.style.marginBottom = '';
+    row.classList.remove('idock-row');
+    row.style.minHeight = '';
+    grid.classList.remove('idock-grid');
+    btns.forEach((b) => { b.classList.remove('idock-btn'); b.style.removeProperty('--bs'); });
+    if (addBtn) {
+      addBtn.style.pointerEvents = '';
+      addBtn.removeAttribute('aria-hidden');
+      addBtn.removeAttribute('tabindex');
+    }
+    slot.style.cssText = '';
+    slot.removeAttribute('data-collapsed');
+    slot.removeAttribute('data-handle');
+    slot.removeAttribute('data-covered');
+    collapsedOn = false; addHidden = false; handleOn = false; covered = false;
+  }
+
+  /* ---------- Đo kích thước gốc, đẩy sang biến CSS ---------- */
+  function build(reason) {
+    const st = slot.style;
+    slot.removeAttribute('data-collapsed');
+    collapsedOn = false;
+    st.setProperty('--es', '0');
+    st.setProperty('--e', '0');
+    st.setProperty('--e7', '0');
+    st.setProperty('--t', '0');
+    st.height = 'auto';
+    row.style.minHeight = '';
+
+    const fullH = card.offsetHeight;
+    st.height = fullH + 'px';        // slot giữ nguyên chiều cao -> timeline không bị xô
+    fullHc = fullH;
+
+    const csC = getComputedStyle(card);
+    const csG = getComputedStyle(grid);
+    const csR = getComputedStyle(row);
+    const rowH = row.offsetHeight;
+    lastRowH = rowH;
+    row.style.minHeight = rowH + 'px';
+
+    const cp = Math.max(2, Math.round((CFG.compactH - rowH - 2) / 2));
+
+    st.setProperty('--pt0', num(csC.paddingTop) + 'px');
+    st.setProperty('--pb0', num(csC.paddingBottom) + 'px');
+    st.setProperty('--pl0', num(csC.paddingLeft) + 'px');
+    st.setProperty('--pr0', num(csC.paddingRight) + 'px');
+    st.setProperty('--rg0', num(csC.rowGap) + 'px');
+    st.setProperty('--r0',  num(csC.borderTopLeftRadius) + 'px');
+    st.setProperty('--bw0', num(csC.borderTopWidth) + 'px');
+    st.setProperty('--bg0', csC.backgroundColor);
+    st.setProperty('--cp', cp + 'px');
+    st.setProperty('--px', CFG.edgePad + 'px');
+    st.setProperty('--rad', (CFG.compactH / 2) + 'px');
+    st.setProperty('--mr', (hdr ? CFG.islandOffset : 0) + 'px');
+
+    st.setProperty('--gh',  num(csG.height) + 'px');
+    st.setProperty('--gpt', num(csG.paddingTop) + 'px');
+    st.setProperty('--gbt', num(csG.borderTopWidth) + 'px');
+
+    if (addBtn) {
+      const csA = getComputedStyle(addBtn);
+      st.setProperty('--aw',  num(csA.width) + 'px');
+      st.setProperty('--amr', num(csA.marginRight) + 'px');
+    }
+    st.setProperty('--cg', num(csR.columnGap) + 'px');
+
+    // Stagger nút: nút cuối chạy trước (0.05 mỗi nút), mỗi nút 0.4
+    const n = btns.length;
+    btns.forEach((b, i) => b.style.setProperty('--bs', (0.05 * (n - 1 - i)).toFixed(3)));
+    D = Math.max(1, 0.4 + 0.05 * Math.max(0, n - 1));
+
+    log('BUILD', { reason: reason || '?', fullH, rowH, cp, D });
+    apply();
+  }
+
+  /* ---------- Vẽ: chỉ ghi biến CSS, CSS lo phần còn lại ---------- */
   function apply() {
     const p = S.p;
-    tl.progress(p);
+    const t = p * D;
+    const st = slot.style;
 
-    grid.style.overflow = p > 0.001 ? 'hidden' : '';
-    card.style.setProperty('--edge', (12 * clamp01((p - 0.3) / 0.5)).toFixed(2) + 'px');
+    st.setProperty('--t',   t.toFixed(4));
+    st.setProperty('--e',   io(Math.min(1, t)).toFixed(4));
+    st.setProperty('--e7',  io(Math.min(1, t / 0.7)).toFixed(4));
+    st.setProperty('--es',  io(Math.min(1, S.m * D)).toFixed(4));   // chừa island theo tiến độ cuộn, KHÔNG theo peek
+    st.setProperty('--edge', (12 * clamp01((p - 0.3) / 0.5)).toFixed(2) + 'px');
+    st.setProperty('--ha',  clamp01((S.q - 0.8) / 0.2).toFixed(3));
 
-    if (p < 0.001) {
-      if (btnsDirty) {
-        gsap.set(btns, { clearProps: 'transform' });
-        if (addBtn) gsap.set(addBtn, { clearProps: 'transform' });
-        btnsDirty = false;
-      }
-    } else {
-      btnsDirty = true;
-    }
+    const c = p > 0.001;
+    if (c !== collapsedOn) { collapsedOn = c; slot.toggleAttribute('data-collapsed', c); }
+
+    const hv = S.q > 0.8;
+    if (hv !== handleOn) { handleOn = hv; slot.toggleAttribute('data-handle', hv); }
 
     if (addBtn) {
       const hide = p > 0.5;
-      addBtn.style.pointerEvents = hide ? 'none' : '';
-      addBtn.setAttribute('aria-hidden', hide ? 'true' : 'false');
-      addBtn.tabIndex = hide ? -1 : 0;
+      if (hide !== addHidden) {
+        addHidden = hide;
+        addBtn.style.pointerEvents = hide ? 'none' : '';
+        addBtn.setAttribute('aria-hidden', hide ? 'true' : 'false');
+        addBtn.tabIndex = hide ? -1 : 0;
+      }
     }
-
-    const ha = clamp01((S.q - 0.8) / 0.2);
-    gsap.set(handle, { autoAlpha: ha });
 
     if (DEBUG) {
       const now = performance.now();
-      if (targetP > p + 0.02 && p < lastP - 0.005 && !peek) {
-        log('REVERSAL', { p: +p.toFixed(3), lastP: +lastP.toFixed(3), targetP: +targetP.toFixed(3) });
-      }
-      lastP = p;
-      if (now - lastFrameLog > 40) {
+      if (now - lastFrameLog > 60) {
         lastFrameLog = now;
-        const r = card.getBoundingClientRect();
-        log('frame', {
-          p: +p.toFixed(3), q: +S.q.toFixed(3), tgt: +targetP.toFixed(3),
-          y: Math.round(getY()),
-          cardH: Math.round(r.height), cardW: Math.round(r.width),
-          gridH: Math.round(grid.getBoundingClientRect().height),
-          handleA: +ha.toFixed(2),
-          slotA: +(+getComputedStyle(slot).opacity).toFixed(2),
-          peek
-        });
+        log('frame', { p: +p.toFixed(3), q: +S.q.toFixed(3), m: +S.m.toFixed(3), tgt: targetP, y: Math.round(getY()), peek });
       }
     }
   }
 
   /* ---------- Né island đang mở rộng ---------- */
   function updateCover() {
-    const c = mqMobile.matches && !!hdr && !islandCollapsed() && targetP > 0.05;
+    const c = !!hdr && !islandCollapsed() && targetP > 0.05;
     if (c === covered) return;
     covered = c;
-    log('COVER', { covered: c, targetP: +targetP.toFixed(3), islandCollapsed: islandCollapsed() });
-    gsap.to(slot, { autoAlpha: c ? 0 : 1, y: c ? -14 : 0, duration: 0.3, overwrite: 'auto' });
+    log('COVER', { covered: c });
+    slot.toggleAttribute('data-covered', c);
   }
 
-  // Chỉ phản ứng khi trạng thái collapse thật sự đổi (chặn mutation lặp)
   let lastCollapsed = islandCollapsed();
   function syncIsland() {
+    if (!active) return;
     const now = islandCollapsed();
     if (now === lastCollapsed) return;
     lastCollapsed = now;
-    log('ISLAND-class', { collapsed: now });
     updateCover();
   }
 
-    /* ---------- Chốt trạng thái (bật/tắt, theo hướng cuộn) ---------- */
-    /* ---------- Chốt trạng thái (bật/tắt, theo hướng cuộn) ---------- */
-  const SNAP_ON_PX  = 18;      // cuộn xuống quá ngần này thì thu
-  const SNAP_OFF_PX = 4;       // sát đỉnh trang thì mở
-  const EXPAND_AT_TOP = true;  // false = không bao giờ tự mở, chỉ mở bằng mũi tên
-  let snapState = 0;
-  let instantTop = false;      // lần mở này do cuộn về đỉnh -> hiện luôn, không animation
-  let homing = false;          // đang tự trượt về đỉnh sau khi bấm mũi tên
-
-  function snapP() {
-    if (homing) return snapState;
-
-    const dist = scTop() + CFG.top - sentinel.getBoundingClientRect().top;
-    const prev = snapState;
-
-    if (EXPAND_AT_TOP && dist <= SNAP_OFF_PX) snapState = 0;
-    else if (dist >= SNAP_ON_PX) snapState = 1;
-
-    if (prev === 1 && snapState === 0) instantTop = true;
-    return snapState;
-  }
-
-    // Viên thuốc đang nằm trong vùng info mặc định (vùng slot còn phủ tới đáy viên thuốc)?
-  function inHome() {
-    const dist = scTop() + CFG.top - sentinel.getBoundingClientRect().top;
-    return dist < fullHc - compactH();
-  }
-
-  // Bấm mũi tên khi đang ở vùng info mặc định: trượt lên top rồi mở ngay tại chỗ mặc định
-  function goHome() {
-    log('GO-HOME');
-    homing = true;
-    const finish = () => {
-      homing = false;
-      snapState = 0;
-      drive(scrollP());
-    };
-    const y = getY();
-    if (y <= 2) { finish(); return; }
-    SY.v = y;
-    gsap.to(SY, {
-      v: 0,
-      duration: reduce ? 0 : 0.55,
-      ease: 'power3.out',
-      overwrite: true,
-      onUpdate: () => scrollToY(SY.v),
-      onComplete: finish
-    });
-  }
-
   /* ---------- Điều khiển tiến độ ---------- */
-  function drive(raw) {
+  function drive() {
+    if (!active) return;
     const p = snapP();
     targetP = p;
     const tgt = peek ? 0 : p;
@@ -1493,25 +1499,24 @@ function handleIslandClick() {
       instantTop = false;
       if (!peek && tgt === 0) {
         if (driveTw) driveTw.kill();
-        S.p = 0; S.q = 0;
-        driveKey = '0|0';
+        S.p = 0; S.q = 0; S.m = 0;
+        driveKey = '0|0|0';
         apply();
         return;
       }
     }
 
-    const key = tgt + '|' + q;
-
+    const key = tgt + '|' + q + '|' + p;
     const same = key === driveKey;
     if (same && driveTw && driveTw.isActive()) return;
-    if (same && Math.abs(S.p - tgt) < 0.0005 && Math.abs(S.q - q) < 0.0005) return;
+    if (same && Math.abs(S.p - tgt) < 0.0005 && Math.abs(S.q - q) < 0.0005 && Math.abs(S.m - p) < 0.0005) return;
     driveKey = key;
 
-    const dur = reduce ? 0 : (tgt < S.p ? CFG.smoothExpand : CFG.smooth);
-    log('DRIVE', { raw: +raw.toFixed(3), tgt, from: +S.p.toFixed(3), dur });
+    let dur = reduce ? 0 : (tgt < S.p ? CFG.smoothExpand : CFG.smooth);
+    if (fastExpand) { dur = reduce ? 0 : CFG.homeExpand; fastExpand = false; }
+
     driveTw = gsap.to(S, {
-      p: tgt,
-      q,
+      p: tgt, q, m: p,
       duration: dur,
       ease: 'power3.out',
       overwrite: 'auto',
@@ -1520,45 +1525,69 @@ function handleIslandClick() {
     });
   }
 
-  let lastScrollLog = 0;
+  const hasScrollEnd = 'onscrollend' in window;
   function onScroll() {
-    // Chốt trạng thái cuối khi ngừng cuộn
-    clearTimeout(idleT);
-    idleT = setTimeout(() => drive(scrollP()), 140);
-
+    if (!active) return;
+    if (!hasScrollEnd) { clearTimeout(idleT); idleT = setTimeout(drive, 140); }
     if (raf) return;
     raf = requestAnimationFrame(() => {
       raf = 0;
-      const y = getY();
-      if (DEBUG) {
-        const now = performance.now();
-        if (now - lastScrollLog > 120) {
-          lastScrollLog = now;
-          log('scroll', { y: Math.round(y), scrollP: +scrollP().toFixed(3) });
-        }
-      }
-      if (peek && Math.abs(y - peekY) > 48) closePeek();
-      drive(scrollP());
+      if (!active) return;
+      if (peek && Math.abs(getY() - peekY) > 48) closePeek();
+      drive();
     });
   }
 
   /* ---------- Peek ---------- */
+  const onDocPointer = (e) => { if (!card.contains(e.target)) closePeek(); };
+  const onCardClick = (e) => {
+    const b = e.target.closest('button');
+    if (b && grid.contains(b)) setTimeout(closePeek, 150);
+  };
+
   function openPeek() {
-    if (peek || targetP < 0.9) return;
+    if (!active || peek || targetP < 0.9) return;
     log('PEEK-open');
     peek = true;
     peekY = getY();
     handle.setAttribute('aria-expanded', 'true');
-    gsap.to(handleIcon, { rotation: 180, duration: 0.4, ease: 'back.out(2)' });
-    drive(targetP);
+    document.addEventListener('pointerdown', onDocPointer, { passive: true });
+    card.addEventListener('click', onCardClick);
+    drive();
   }
   function closePeek() {
     if (!peek) return;
     log('PEEK-close');
     peek = false;
     handle.setAttribute('aria-expanded', 'false');
-    gsap.to(handleIcon, { rotation: 0, duration: 0.4, ease: 'back.out(2)' });
-    drive(scrollP());
+    document.removeEventListener('pointerdown', onDocPointer);
+    card.removeEventListener('click', onCardClick);
+    drive();
+  }
+
+  // Bấm mũi tên khi viên thuốc nằm trong vùng info mặc định: trượt lên top rồi bung nhanh tại chỗ
+  function goHome() {
+    log('GO-HOME');
+    homing = true;
+    const finish = () => {
+      autoScrolling = false;
+      homing = false;
+      snapState = 0;          // đặt trước để không bị coi là "cuộn về đỉnh" (instant)
+      fastExpand = true;
+      drive();
+    };
+    const y = getY();
+    if (y <= 2) { finish(); return; }
+    autoScrolling = true;
+    SY.v = y;
+    gsap.to(SY, {
+      v: 0,
+      duration: reduce ? 0 : CFG.homeScroll,
+      ease: 'power3.out',
+      overwrite: true,
+      onUpdate: () => scrollToY(SY.v),
+      onComplete: finish
+    });
   }
 
   handle.addEventListener('click', () => {
@@ -1566,24 +1595,18 @@ function handleIslandClick() {
     else if (targetP >= 0.9 && inHome()) goHome();
     else openPeek();
   });
-    document.addEventListener('pointerdown', (e) => {
-    if (peek && !card.contains(e.target)) closePeek();
-  }, { passive: true });
-  card.addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (peek && b && grid.contains(b)) setTimeout(closePeek, 150);
-  });
 
   /* ---------- Đổi ngày ---------- */
   function scrollToY(v) {
-    if (scIsScroller()) sc.scrollTo({ top: v, behavior: 'instant' });
+    if (scrolls) sc.scrollTo({ top: v, behavior: 'instant' });
     else window.scrollTo({ top: v, behavior: 'instant' });
   }
 
   function focusTimeline() {
-    if (CFG.onDayChange === 'keep') return;
+    if (!active || CFG.onDayChange === 'keep') return;
     closePeek();
     requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!active) return;
       const y = getY();
       let target;
       if (CFG.onDayChange === 'top') {
@@ -1591,25 +1614,32 @@ function handleIslandClick() {
       } else {
         const sentY  = sentinel.getBoundingClientRect().top - scTop() + y;
         const tlY    = timeline.getBoundingClientRect().top - scTop() + y;
-        const fullyCompactY = sentY + range() - CFG.top;
-        target = Math.max(tlY - (CFG.top + compactH() + 10), fullyCompactY);
+        const fullyCompactY = sentY + CFG.range - CFG.top;
+        target = Math.max(tlY - (CFG.top + CFG.compactH + 10), fullyCompactY);
       }
       log('FOCUS-timeline', { y: Math.round(y), target: Math.round(target) });
       if (y <= target + 2) return;
 
+      autoScrolling = true;
       SY.v = y;
       gsap.to(SY, {
         v: target,
         duration: reduce ? 0 : 0.55,
         ease: 'power3.out',
         overwrite: true,
-        onUpdate: () => scrollToY(SY.v)
+        onUpdate: () => scrollToY(SY.v),
+        onComplete: () => { autoScrolling = false; }
       });
     }));
   }
 
-  const stopAutoScroll = () => { gsap.killTweensOf(SY); homing = false; };
-    window.addEventListener('wheel', stopAutoScroll, { passive: true });
+  const stopAutoScroll = () => {
+    if (!autoScrolling) return;
+    autoScrolling = false;
+    homing = false;
+    gsap.killTweensOf(SY);
+  };
+  window.addEventListener('wheel', stopAutoScroll, { passive: true });
   window.addEventListener('touchstart', stopAutoScroll, { passive: true });
 
   if (daysTabs) {
@@ -1622,12 +1652,12 @@ function handleIslandClick() {
 
   /* ---------- Dựng lại khi layout đổi ---------- */
   function rebuild(reason) {
+    if (!active) return;
+    refreshScroller();
     build(reason);
-    apply();
-    drive(scrollP());
+    drive();
   }
 
-  let rt = 0;
   let pendingReason = '';
   const debounced = (reason) => {
     pendingReason = reason;
@@ -1637,19 +1667,22 @@ function handleIslandClick() {
 
   let lastW = window.innerWidth;
   window.addEventListener('resize', () => {
-    log('RESIZE', { w: window.innerWidth, h: window.innerHeight, widthChanged: window.innerWidth !== lastW });
-    if (window.innerWidth === lastW) return;
+    if (!active || window.innerWidth === lastW) return;
     lastW = window.innerWidth;
     debounced('resize-width');
   });
   window.addEventListener('load', () => rebuild('window-load'));
-  if (mqMobile.addEventListener) mqMobile.addEventListener('change', () => rebuild('mq-change'));
+
+  const onMq = (e) => (e.matches ? activate() : deactivate());
+  if (mqMobile.addEventListener) mqMobile.addEventListener('change', onMq);
+  else if (mqMobile.addListener) mqMobile.addListener(onMq);
 
   if ('ResizeObserver' in window) {
     new ResizeObserver(() => {
+      if (!active) return;
       const d = row.offsetHeight - lastRowH;
       if (Math.abs(d) > 1) {
-        log('ROW-resized', { rowH: row.offsetHeight, lastRowH, d, p: +S.p.toFixed(3) });
+        log('ROW-resized', { rowH: row.offsetHeight, lastRowH, d });
         debounced('row-resize');
       }
     }).observe(row);
@@ -1663,10 +1696,13 @@ function handleIslandClick() {
   /* ---------- Khởi động ---------- */
   if (sc) sc.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('scroll', onScroll, { passive: true });
+  if (hasScrollEnd) {
+    const onEnd = () => { if (active) drive(); };
+    if (sc) sc.addEventListener('scrollend', onEnd, { passive: true });
+    window.addEventListener('scrollend', onEnd, { passive: true });
+  }
 
-  build('init');
-  apply();
-  drive(scrollP());
+  if (mqMobile.matches) activate();
 
   /* ---------- Debug API ---------- */
   const debugApi = {
@@ -1674,18 +1710,16 @@ function handleIslandClick() {
     clear() { LOG.length = 0; console.log('[InfoDock] đã xóa log'); },
     summary() {
       const count = {};
-      LOG.forEach(e => { count[e.tag] = (count[e.tag] || 0) + 1; });
+      LOG.forEach((e) => { count[e.tag] = (count[e.tag] || 0) + 1; });
       console.log('Số lần mỗi loại sự kiện:', count);
-      console.log('Các lần BUILD:', LOG.filter(e => e.tag === 'BUILD'));
-      console.log('Các lần REVERSAL (p quay đầu):', LOG.filter(e => e.tag === 'REVERSAL'));
-      console.log('Các lần ROW-resized:', LOG.filter(e => e.tag === 'ROW-resized'));
-      console.log('Các lần RESIZE:', LOG.filter(e => e.tag === 'RESIZE'));
-      console.log('Các lần ISLAND-class / COVER:', LOG.filter(e => e.tag === 'ISLAND-class' || e.tag === 'COVER'));
-      console.table(LOG.filter(e => e.tag === 'frame').map(({ t, p, q, tgt, y, cardH, cardW, gridH, handleA, slotA }) => ({ t, p, q, tgt, y, cardH, cardW, gridH, handleA, slotA })));
+      console.log('BUILD:', LOG.filter((e) => e.tag === 'BUILD'));
+      console.log('ROW-resized:', LOG.filter((e) => e.tag === 'ROW-resized'));
+      console.log('COVER:', LOG.filter((e) => e.tag === 'COVER'));
+      console.table(LOG.filter((e) => e.tag === 'frame'));
     },
     dump() {
-      const text = JSON.stringify(LOG.filter(e => e.tag !== 'scroll'));
-      if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => console.log('[InfoDock] đã copy log vào clipboard (' + LOG.length + ' dòng)'));
+      const text = JSON.stringify(LOG);
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => console.log('[InfoDock] đã copy log (' + LOG.length + ' dòng)'));
       else console.log(text);
       return text;
     }
