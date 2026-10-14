@@ -2410,6 +2410,206 @@ const TL_VEHICLE_FX = (() => {
     };
 })();
 
+/* ===== TripPlanner stamp: GSAP jelly hop + loop feather + letter wave ===== */
+const TP_ISLAND = (() => {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const S = new WeakMap();
+  const isl = (t) => (t && t.closest ? t.closest(".tp-island") : null);
+  let pressed = null;
+
+  /* tách chữ 1 lần cho mỗi lần render */
+  function split(el) {
+    if (!el || el.dataset.split) return;
+    const t = el.textContent;
+    el.setAttribute("aria-label", t);
+    el.innerHTML = [...t].map((c) => `<span aria-hidden="true">${c}</span>`).join("");
+    el.dataset.split = "1";
+  }
+
+  /* khởi tạo lười: timeline render lại thì phần tử mới tự được khởi tạo */
+  function ensure(btn) {
+    let s = S.get(btn);
+    if (s) return s;
+    const q = (sel) => btn.querySelector(sel);
+    s = {
+      clip: q(".tp-island__clip"),
+      sheen: q(".tp-island__sheen"),
+      bead: q(".tp-island__bead"),
+      feather: q(".tp-island__bead i"),
+      heart: q(".tp-island__heart"),
+      strong: q(".tp-island__credit strong"),
+      tl: null,
+      t: 0,
+    };
+    split(s.strong);
+    s.letters = s.strong ? s.strong.querySelectorAll("span") : [];
+    gsap.set(btn, { transformPerspective: 700, transformOrigin: "50% 50%" });
+    gsap.set(s.sheen, { skewX: -20, xPercent: -140, opacity: 0 });
+    s.rx = gsap.quickTo(btn, "rotationX", { duration: 0.5, ease: "power3.out" });
+    s.ry = gsap.quickTo(btn, "rotationY", { duration: 0.5, ease: "power3.out" });
+    S.set(btn, s);
+    return s;
+  }
+
+  function resetFx(s) {
+    gsap.set(s.bead, { x: 0, y: 0 });
+    gsap.set(s.feather, { rotation: 0 });
+    gsap.set(s.heart, { scale: 1 });
+    gsap.set(s.letters, { y: 0, scale: 1, clearProps: "color" });
+    gsap.set(s.sheen, { opacity: 0 });
+  }
+
+  function ripple(btn, s, e) {
+    const r = btn.getBoundingClientRect();
+    const d = Math.hypot(r.width, r.height) * 2;
+    const el = document.createElement("span");
+    el.className = "tp-ripple";
+    el.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left}px;top:${e.clientY - r.top}px`;
+    s.clip.appendChild(el);
+    gsap.fromTo(
+      el,
+      { xPercent: -50, yPercent: -50, scale: 0, opacity: 0.7 },
+      { scale: 1, opacity: 0, duration: 0.8, ease: "power3.out", onComplete: () => el.remove() }
+    );
+  }
+
+  /* thả tay mà không click (kéo ra ngoài) -> bung về */
+  function release(btn) {
+    gsap.to(btn, { scaleX: 1, scaleY: 1, y: 0, duration: 0.9, ease: "elastic.out(1,0.4)", overwrite: "auto" });
+  }
+
+  function play(btn, s) {
+    s.tl && s.tl.kill();
+    resetFx(s);
+
+    const tl = gsap.timeline();
+    s.tl = tl;
+
+    /* 1. nhảy bật + tiếp đất bẹp + dao động tắt dần */
+    tl.to(btn, { y: -16, scaleX: 0.94, scaleY: 1.12, rotationZ: -2.5, duration: 0.2, ease: "power2.out" }, 0)
+      .to(btn, { y: 0, scaleX: 1.1, scaleY: 0.86, duration: 0.16, ease: "power2.in" })
+      .to(btn, { scaleX: 1, scaleY: 1, duration: 1.4, ease: "elastic.out(1.1,0.3)" })
+      .to(btn, { rotationZ: 0, duration: 1.2, ease: "elastic.out(1,0.25)" }, 0.2);
+
+    /* 2. bead lông vũ bay vòng tròn phía trên rồi về chỗ cũ */
+    const R = 20;
+    const p = { a: 0 };
+    tl.to(
+      p,
+      {
+        a: Math.PI * 2,
+        duration: 1.05,
+        ease: "power2.inOut",
+        onUpdate() {
+          gsap.set(s.bead, {
+            x: R * Math.sin(p.a),
+            y: -R * (1 - Math.cos(p.a)),
+            scale: 1 + 0.25 * Math.sin(p.a / 2),
+          });
+        },
+        onComplete() {
+          gsap.set(s.bead, { x: 0, y: 0, scale: 1 });
+        },
+      },
+      0.1
+    );
+    tl.to(
+      s.feather,
+      { rotation: 720, duration: 1.05, ease: "power2.inOut", onComplete: () => gsap.set(s.feather, { rotation: 0 }) },
+      0.1
+    );
+
+    /* 3. vệt sáng quét ngang mặt kính */
+    tl.fromTo(
+      s.sheen,
+      { xPercent: -140, opacity: 0.85 },
+      { xPercent: 420, duration: 0.95, ease: "power2.inOut" },
+      0.22
+    ).set(s.sheen, { opacity: 0 });
+
+    /* 4. chữ duyanh.dev nhảy sóng */
+    if (s.letters.length)
+      tl.to(
+        s.letters,
+        {
+          keyframes: [
+            { y: -7, scale: 1.28, color: "#0f172a", duration: 0.16, ease: "power2.out" },
+            { y: 0, scale: 1, color: "#475569", duration: 0.7, ease: "elastic.out(1,0.3)" },
+          ],
+          stagger: 0.05,
+        },
+        0.3
+      );
+
+    /* 5. tim đập hai nhịp */
+    tl.fromTo(s.heart, { scale: 1 }, { scale: 1.8, duration: 0.13, ease: "power2.out", yoyo: true, repeat: 3 }, 0.35);
+
+    try { navigator.vibrate && navigator.vibrate(12); } catch (_) {}
+  }
+
+  function bind() {
+    if (bind.done || typeof gsap === "undefined") return;
+    bind.done = true;
+
+    document.addEventListener("pointerdown", (e) => {
+      const btn = isl(e.target);
+      if (!btn || reduce.matches) return;
+      const s = ensure(btn);
+      clearTimeout(s.t);
+      s.tl && s.tl.kill();
+      resetFx(s);
+      pressed = btn;
+      gsap.to(btn, { scaleX: 1.05, scaleY: 0.9, duration: 0.14, ease: "power2.out", overwrite: "auto" });
+      ripple(btn, s, e);
+    });
+
+    /* nhả tay: chờ click; nếu không có click thì bung về */
+    const up = () => {
+      if (!pressed) return;
+      const btn = pressed;
+      pressed = null;
+      const s = S.get(btn);
+      if (s) s.t = setTimeout(() => release(btn), 90);
+    };
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", up);
+
+    document.addEventListener("click", (e) => {
+      const btn = isl(e.target);
+      if (!btn || reduce.matches) return;
+      const s = ensure(btn);
+      clearTimeout(s.t);
+      play(btn, s);
+    });
+
+    /* nghiêng 3D theo chuột (desktop) */
+    document.addEventListener("pointermove", (e) => {
+      if (e.pointerType !== "mouse" || reduce.matches) return;
+      const btn = isl(e.target);
+      if (!btn) return;
+      const s = ensure(btn);
+      const r = btn.getBoundingClientRect();
+      s.ry(((e.clientX - r.left) / r.width - 0.5) * 14);
+      s.rx(-((e.clientY - r.top) / r.height - 0.5) * 14);
+    });
+    document.addEventListener("pointerout", (e) => {
+      const btn = isl(e.target);
+      if (!btn || btn.contains(e.relatedTarget) || reduce.matches) return;
+      const s = ensure(btn);
+      s.rx(0);
+      s.ry(0);
+      if (pressed === btn) {
+        pressed = null;
+        release(btn);
+      }
+    });
+  }
+
+  return { bind };
+})();
+
+TP_ISLAND.bind();
+
 const renderTimeline = () => {
             const trip = state.trips.find(t => t.id === state.activeTripId);
             const day = trip.days.find(d => d.date === state.activeDayDate);
@@ -2690,14 +2890,14 @@ const renderTimeline = () => {
             html += `
                 <div class="tl-extra ml-0 md:ml-16 mt-4 mb-8 text-center pb-8">
   <div class="tp-stamp" id="tpStamp">
-    <div class="tp-stamp__glass" id="tpStampGlass">
-      <span class="tp-stamp__bead" aria-hidden="true"><i class="fa-solid fa-feather"></i></span>
-      <p class="tp-stamp__ver">TripPlanner 1.4.3</p>
-      <span class="tp-stamp__sep" aria-hidden="true"></span>
-      <p class="tp-stamp__credit">
-        Made with <i class="fa-solid fa-heart"></i> by <strong>duyanh.dev</strong>
-      </p>
-    </div>
+    <button class="tp-island" id="tpIsland" type="button">
+      <span class="tp-island__clip" aria-hidden="true"><span class="tp-island__sheen"></span></span>
+      <span class="tp-island__bead" aria-hidden="true"><i class="fa-solid fa-feather"></i></span>
+      <span class="tp-island__text">
+        <span class="tp-island__name">TripPlanner <em>1.4.3</em></span>
+        <span class="tp-island__credit">Made with <i class="fa-solid fa-heart tp-island__heart" aria-hidden="true"></i> by <strong>duyanh.dev</strong></span>
+      </span>
+    </button>
   </div>
 </div>
             `;
