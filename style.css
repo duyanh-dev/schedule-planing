@@ -684,6 +684,7 @@ html[data-animation-on="true"] #gt-modal {
   pointer-events: auto;
   position: relative;
   isolation: isolate;
+  will-change: transform;          /* giữ layer cố định -> không bị demote làm blur raster lại */
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05);
 }
 
@@ -723,7 +724,16 @@ html[data-animation-on="true"] #gt-modal {
   height: calc(var(--gh) * (1 - var(--e)));
   padding-top: calc(var(--gpt) * (1 - var(--e)));
   border-top-width: calc(var(--gbt) * (1 - var(--e)));
-  opacity: calc(1 - var(--e));
+  /* KHÔNG opacity ở đây: opacity<1 giết backdrop-filter của nút con.
+     Nút tự mờ dần theo stagger rồi. */
+}
+
+/* Bóng/ring của nút không bị cắt cụt khi grid đang đầy, chỉ cắt cứng khi thu hẳn */
+@supports (overflow-clip-margin: 1px) {
+  #info-dock-slot[data-collapsed] .idock-grid {
+    overflow: clip;
+    overflow-clip-margin: calc(28px * (1 - var(--e)));
+  }
 }
 
 /* Từng nút: nút cuối biến mất trước (stagger), dùng translate/scale riêng
@@ -792,3 +802,24 @@ html[data-animation-on="true"] #gt-modal {
 /* Xoay mũi tên bằng CSS (trước đây dùng GSAP) */
 #info-dock-handle i { transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); }
 #info-dock-handle[aria-expanded="true"] i { transform: rotate(180deg); }
+
+.idock-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+}
+.idock-sheen > i {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 38%;
+  background: linear-gradient(100deg,
+    transparent 0%, rgba(255,255,255,0) 20%,
+    rgba(255,255,255,.55) 50%,
+    rgba(255,255,255,0) 80%, transparent 100%);
+  transform: translateX(-130%) skewX(-18deg);   /* nằm ngoài khi nghỉ */
+}
