@@ -1163,37 +1163,33 @@ function handleIslandClick() {
     const islandHeader = document.getElementById('dynamic-island-header');
     if (!islandHeader) return;
 
-    /* ---- Cấu hình độ nhạy ---- */
-    const TOP_PX          = 50;   // sát đỉnh trang thì luôn bung
-    const COLLAPSE_DOWN_PX = 14;  // phải vuốt xuống liên tục ngần này mới thu
-    const EXPAND_UP_PX     = 100; // phải vuốt lên liên tục ngần này mới bung (tăng = đỡ nhạy)
-
     let lastScrollY = window.scrollY;
-    let dir = 0;      // 1 = đang xuống, -1 = đang lên
-    let run = 0;      // quãng cuộn liên tục theo hướng hiện tại (px)
+
+    // Chỉ cho bung khi viên thuốc đã về vị trí mặc định.
+    // PC (không có viên thuốc): chỉ bung khi sát đỉnh trang.
+    const canExpand = () => {
+        const home = window.InfoDock && window.InfoDock.isHome ? window.InfoDock.isHome() : null;
+        return home === null ? window.scrollY <= 50 : home;
+    };
 
     window.addEventListener('scroll', () => {
-        const y = window.scrollY;
-        const dy = y - lastScrollY;
-        lastScrollY = y;
+        const currentScrollY = window.scrollY;
 
         // --- LOGIC 1: Đổi màu Xám khi rời khỏi đỉnh (> 20px) ---
-        islandHeader.classList.toggle('island-scrolled', y > 20);
+        if (currentScrollY > 20) {
+            islandHeader.classList.add('island-scrolled');
+        } else {
+            islandHeader.classList.remove('island-scrolled');
+        }
 
-        if (dy === 0) return;
-
-        // --- LOGIC 2: Thu gọn / Bung ra có ngưỡng ---
-        const d = dy > 0 ? 1 : -1;
-        if (d !== dir) { dir = d; run = 0; }   // đổi hướng -> đếm lại từ đầu
-        run += Math.abs(dy);
-
-        if (y <= TOP_PX) {
-            islandHeader.classList.remove('island-collapsed');
-        } else if (dir === 1 && run >= COLLAPSE_DOWN_PX) {
+        // --- LOGIC 2: Thu khi cuộn xuống; chỉ bung khi viên thuốc đã về mặc định ---
+        if (currentScrollY > 50 && currentScrollY > lastScrollY) {
             islandHeader.classList.add('island-collapsed');
-        } else if (dir === -1 && run >= EXPAND_UP_PX) {
+        } else if (currentScrollY <= 50 || (currentScrollY < lastScrollY && canExpand())) {
             islandHeader.classList.remove('island-collapsed');
         }
+
+        lastScrollY = currentScrollY;
     }, { passive: true });
 });
 
@@ -1337,8 +1333,16 @@ function handleIslandClick() {
   }
 
   // Viên thuốc đang nằm trong vùng info mặc định?
-  const inHome = () => readDist() < fullHc - CFG.compactH;
-
+// Viên thuốc đã về vị trí mặc định (bung)? Cùng điều kiện với snapP nhưng không đổi trạng thái.
+// Trả về null khi không active (PC) để bên ngoài tự quyết.
+const isHome = () => {
+  if (!active) return null;
+  if (homing) return true;                              // đang trượt về đỉnh sau khi bấm mũi tên
+  if (!EXPAND_AT_TOP) return false;
+  const dist = readDist();
+  const ahead = Math.min(40, vUp * CFG.lookAheadMs);    // giống lookahead của snapP -> header và viên thuốc bung cùng lúc
+  return dist - ahead <= SNAP_OFF_PX || (snapState === 0 && dist < SNAP_ON_PX);
+};
   /* ---------- Bật / tắt theo breakpoint (chỉ SP) ---------- */
   function activate() {
     if (active) return;
@@ -1838,12 +1842,13 @@ function handleIslandClick() {
   };
 
   window.InfoDock = {
-    refresh: () => rebuild('api-refresh'),
-    open: openPeek,
-    close: closePeek,
-    focusTimeline,
-    debug: debugApi
-  };
+  refresh: () => rebuild('api-refresh'),
+  open: openPeek,
+  close: closePeek,
+  focusTimeline,
+  isHome,
+  debug: debugApi
+};
   window.InfoDockDebug = debugApi;
 })();
         
